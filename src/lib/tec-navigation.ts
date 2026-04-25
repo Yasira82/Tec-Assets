@@ -1,6 +1,6 @@
 export const TEC_ROUTES = {
   HUB:       'https://tec-app.vercel.app/hub',
-  SETTINGS:  'https://tec-app.vercel.app/profile',  // ← غيّر لـ /profile
+  SETTINGS:  'https://tec-app.vercel.app/profile',
   DASHBOARD: 'https://tec-app.vercel.app/dashboard',
 } as const;
 
