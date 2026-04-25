@@ -4,7 +4,6 @@ const path = require('path');
 const nextConfig = {
   eslint:  { ignoreDuringBuilds: false },
   output:  'standalone',
-  // ✅ حذف outputFileTracingRoot — مش محتاجه في standalone repo
 
   images: {
     formats:         ['image/avif', 'image/webp'],
@@ -54,6 +53,14 @@ const nextConfig = {
       {
         source: '/api/(.*)',
         headers: [{ key: 'Cache-Control', value: 'no-store, max-age=0' }],
+      },
+      {
+        // ✅ Pi Network domain validation
+        source: '/validation-key.txt',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'Content-Type',  value: 'text/plain; charset=utf-8'           },
+        ],
       },
     ];
   },
