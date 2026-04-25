@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title:       'TEC Domain',
-  description: 'TEC Ecosystem — Pi Network Super App',
+  title:       'TEC Assets — Digital Ownership',
+  description: 'Manage your Pi Network digital assets — domains, NFTs, portfolio',
 };
 
 export default function RootLayout({
@@ -14,10 +14,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-        <script
-          src="https://sdk.minepi.com/pi-sdk.js"
-          async
-        />
+        <script src="https://sdk.minepi.com/pi-sdk.js" async />
         <script
           dangerouslySetInnerHTML={{
             __html: `
