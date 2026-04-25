@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test('homepage shows Assets branding', async ({ page }) => {
   await page.goto('/');
-  // ✅ exact match للـ heading بس
+  // ✅ بيظهر Loading screen قبل الـ SSO redirect
   await expect(page.getByText('Assets', { exact: true }).first()).toBeVisible();
 });
 
-test('login button visible', async ({ page }) => {
+test('homepage shows connecting message', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Login with Pi')).toBeVisible();
+  await expect(page.getByText('Connecting to TEC...')).toBeVisible();
 });
