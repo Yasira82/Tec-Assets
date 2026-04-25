@@ -1,13 +1,6 @@
-import { z } from 'zod';
+import { z }          from 'zod';
 import { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
-
-// ══════════════════════════════════════════════════════════════
-//  BFF Handler Factory — v3
-//  JWT cookie auth + KYC guard + Zod + structured errors
-// ══════════════════════════════════════════════════════════════
-
-// ─── Error Model ─────────────────────────────────────────────
+import { jwtVerify }  from 'jose';
 
 export class AppError extends Error {
   constructor(
@@ -28,19 +21,11 @@ export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') { super(message, 403, 'FORBIDDEN'); }
 }
 
-export class NotFoundError extends AppError {
-  constructor(resource = 'Resource') { super(`${resource} not found`, 404, 'NOT_FOUND'); }
-}
-
-// ─── Context ──────────────────────────────────────────────────
-
 export interface BFFContext {
   userId:      string;
   kycVerified: boolean;
   requestId:   string;
 }
-
-// ─── Auth Extractor ───────────────────────────────────────────
 
 async function extractContext(req: NextRequest): Promise<BFFContext> {
   const token = req.cookies.get('tec_access_token')?.value;
@@ -69,40 +54,33 @@ async function extractContext(req: NextRequest): Promise<BFFContext> {
   }
 }
 
-// ─── Handler Config ───────────────────────────────────────────
+export const GATEWAY_URL =
+  process.env.API_GATEWAY_URL ??
+  process.env.NEXT_PUBLIC_API_GATEWAY_URL ??
+  'https://api-gateway-production-6a68.up.railway.app';
 
-export interface HandlerConfig<TInput, TOutput> {
+export function createHandler<TInput = Record<string, never>, TOutput = unknown>(config: {
   schema?:      z.ZodSchema<TInput>;
-  requireAuth?: boolean;  // default: true
-  requireKYC?:  boolean;  // default: false
+  requireAuth?: boolean;
+  requireKYC?:  boolean;
   handler: (args: {
     input: TInput;
     ctx:   BFFContext;
     req:   NextRequest;
   }) => Promise<TOutput>;
-}
-
-// ─── Factory ──────────────────────────────────────────────────
-
-export function createHandler<TInput = Record<string, never>, TOutput = unknown>(
-  config: HandlerConfig<TInput, TOutput>,
-) {
+}) {
   return async (req: NextRequest): Promise<Response> => {
-    const startMs = Date.now();
     let ctx: BFFContext = { userId: 'anonymous', kycVerified: false, requestId: crypto.randomUUID() };
 
     try {
-      // 1) Auth
       if (config.requireAuth !== false) {
         ctx = await extractContext(req);
       }
 
-      // 2) KYC guard
       if (config.requireKYC && !ctx.kycVerified) {
         throw new ForbiddenError('KYC_REQUIRED');
       }
 
-      // 3) Parse + validate body
       let input: TInput = {} as TInput;
       if (config.schema) {
         let body: unknown = {};
@@ -110,60 +88,28 @@ export function createHandler<TInput = Record<string, never>, TOutput = unknown>
         input = config.schema.parse(body);
       }
 
-      // 4) Execute handler
       const result = await config.handler({ input, ctx, req });
-
-      // 5) Log success
-      console.info('[BFF]', {
-        path:      req.nextUrl.pathname,
-        method:    req.method,
-        userId:    ctx.userId,
-        requestId: ctx.requestId,
-        ms:        Date.now() - startMs,
-        status:    200,
-      });
-
       return Response.json(result, {
         headers: { 'X-Request-Id': ctx.requestId },
       });
 
     } catch (err) {
-      // Zod validation error
       if (err instanceof z.ZodError) {
-        console.warn('[BFF] Validation error', {
-          path:      req.nextUrl.pathname,
-          requestId: ctx.requestId,
-          errors:    err.flatten(),
-        });
         return Response.json(
           { error: 'VALIDATION_ERROR', details: err.flatten() },
-          { status: 400, headers: { 'X-Request-Id': ctx.requestId } },
+          { status: 400 },
         );
       }
-
-      // Known app error
       if (err instanceof AppError) {
-        console.warn('[BFF] App error', {
-          path:      req.nextUrl.pathname,
-          requestId: ctx.requestId,
-          code:      err.code,
-          message:   err.message,
-        });
         return Response.json(
           { error: err.code, message: err.message },
-          { status: err.status, headers: { 'X-Request-Id': ctx.requestId } },
+          { status: err.status },
         );
       }
-
-      // Unknown error
-      console.error('[BFF] Unexpected error', {
-        path:      req.nextUrl.pathname,
-        requestId: ctx.requestId,
-        err,
-      });
+      console.error('[BFF]', err);
       return Response.json(
         { error: 'INTERNAL_ERROR', message: 'Something went wrong' },
-        { status: 500, headers: { 'X-Request-Id': ctx.requestId } },
+        { status: 500 },
       );
     }
   };
