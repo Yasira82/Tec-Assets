@@ -370,11 +370,11 @@ function AssetsPageInner() {
         borderTop: '1px solid #ffffff08', display: 'flex', padding: '10px 0 22px',
       }}>
         {[
-          { icon: '💎', label: 'Assets',    tab: 'assets'    as MainTab, action: () => setActiveTab('assets')    },
-          { icon: '📊', label: 'Portfolio', tab: 'portfolio' as MainTab, action: () => setActiveTab('portfolio') },
-          { icon: '🌐', label: 'Domains',   tab: 'domains'   as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('domains'); } },
-          { icon: '⚙️', label: 'Settings',  tab: null,                   action: () => goToTEC('SETTINGS')       },
-          { icon: '🔷', label: 'TEC Hub',   tab: null,                   action: () => goToTEC('HUB')            },
+          { icon: '💎', label: 'Assets',    tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('all'); }     },
+{ icon: '📊', label: 'Portfolio', tab: 'portfolio' as MainTab, action: () => setActiveTab('portfolio')                               },
+{ icon: '🌐', label: 'Domains',   tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('domains'); }  },
+{ icon: '⚙️', label: 'Settings',  tab: null,                   action: () => goToTEC('SETTINGS')                                    },
+{ icon: '🔷', label: 'TEC Hub',   tab: null,                   action: () => goToTEC('HUB')                                         },
         ].map(item => (
           <button key={item.label} onClick={item.action} className="btn"
             style={{
