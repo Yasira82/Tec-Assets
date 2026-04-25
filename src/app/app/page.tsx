@@ -1,19 +1,22 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter }  from 'next/navigation';
-import { usePiAuth }  from '@/lib-client/hooks/usePiAuth';
+import { usePiAuth }     from '@/lib-client/hooks/usePiAuth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+const SSO_URL =
+  'https://tec-app.vercel.app/api/auth/sso?target=' +
+  encodeURIComponent('https://tec-assets.vercel.app');
 
 // ── Types ─────────────────────────────────────────────────
 interface Asset {
-  id:           string;
-  name:         string;
-  asset_type:   string;
-  value:        number | string;
-  currency:     string;
-  status:       string;
-  created_at:   string;
+  id:         string;
+  name:       string;
+  asset_type: string;
+  value:      number | string;
+  currency:   string;
+  status:     string;
+  created_at: string;
 }
 
 interface WalletData {
@@ -22,13 +25,22 @@ interface WalletData {
   walletId: string | null;
 }
 
+// ── Helper ────────────────────────────────────────────────
+const getTokenFromCookie = (): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('tec_access_token='));
+  return match ? match.split('=')[1] : null;
+};
+
 // ── Asset Card ────────────────────────────────────────────
 function AssetCard({ asset }: { asset: Asset }) {
   const typeEmoji: Record<string, string> = {
-    domain:   '🌐',
-    nft:      '🎨',
-    token:    '🪙',
-    default:  '💎',
+    domain:  '🌐',
+    nft:     '🎨',
+    token:   '🪙',
+    default: '💎',
   };
 
   return (
@@ -47,8 +59,10 @@ function AssetCard({ asset }: { asset: Asset }) {
         {typeEmoji[asset.asset_type] ?? typeEmoji.default}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{
+          fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
           {asset.name}
         </div>
         <div style={{ fontSize: 11, color: '#4a4a5a', textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -74,8 +88,11 @@ function AssetCard({ asset }: { asset: Asset }) {
 function Skeleton() {
   return (
     <div style={{ minHeight: '100vh', background: '#020205', padding: '0 0 90px' }}>
-      <style>{`@keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} } .sk{animation:shimmer 1.4s ease infinite;background:#0d0d14;border-radius:14px}`}</style>
-      <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <style>{`
+        @keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} }
+        .sk { animation: shimmer 1.4s ease infinite; background: #0d0d14; border-radius: 14px; }
+      `}</style>
+      <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between' }}>
         <div className="sk" style={{ width: 80, height: 28 }} />
         <div className="sk" style={{ width: 36, height: 36, borderRadius: '50%' }} />
       </div>
@@ -92,48 +109,50 @@ function Skeleton() {
 // ── Main ──────────────────────────────────────────────────
 function AssetsPageInner() {
   const { user, isAuthenticated, isLoading, logout } = usePiAuth();
-  const router = useRouter();
 
-  const [wallet,       setWallet]       = useState<WalletData | null>(null);
-  const [assets,       setAssets]       = useState<Asset[]>([]);
-  const [activeTab,    setActiveTab]    = useState<'all' | 'domains' | 'nfts'>('all');
-  const [dataLoading,  setDataLoading]  = useState(true);
+  const [wallet,      setWallet]      = useState<WalletData | null>(null);
+  const [assets,      setAssets]      = useState<Asset[]>([]);
+  const [activeTab,   setActiveTab]   = useState<'all' | 'domains' | 'nfts'>('all');
+  const [dataLoading, setDataLoading] = useState(true);
 
+  // ✅ تحقق من الـ cookie مباشرة — منع الـ redirect loop
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.replace('/');
-  }, [isLoading, isAuthenticated, router]);
+    if (isLoading) return;
+    const token = getTokenFromCookie();
+    if (!token && !isAuthenticated) {
+      window.location.href = SSO_URL;
+    }
+  }, [isLoading, isAuthenticated]);
 
   const fetchData = useCallback(async () => {
-    if (!user?.id) return;
+    const token = getTokenFromCookie();
+    if (!token) return;
     setDataLoading(true);
     try {
       const [walletRes, assetsRes] = await Promise.all([
         fetch('/api/bff/wallet/balance', { credentials: 'include', cache: 'no-store' }),
         fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
       ]);
-
-      if (walletRes.ok) {
-        const data = await walletRes.json();
-        setWallet(data);
-      }
-
+      if (walletRes.ok) setWallet(await walletRes.json());
       if (assetsRes.ok) {
         const data = await assetsRes.json();
         setAssets(data?.data ?? data?.assets ?? []);
       }
     } catch { /* silent */ }
     finally { setDataLoading(false); }
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (isLoading || !isAuthenticated) return <Skeleton />;
+  // ✅ تحقق من الـ cookie مش بس الـ state
+  const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
+  if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered = activeTab === 'all'
+  const filtered    = activeTab === 'all'
     ? assets
     : assets.filter(a => a.asset_type === (activeTab === 'domains' ? 'domain' : 'nft'));
 
-  const totalValue = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const totalValue  = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
 
   return (
     <div style={{
@@ -144,7 +163,6 @@ function AssetsPageInner() {
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} }
-        @keyframes pulse   { 0%,100%{opacity:1}50%{opacity:.4} }
         .fade-in { animation: slideUp 0.4s ease; }
         .btn:active { transform: scale(0.97); }
       `}</style>
@@ -166,8 +184,11 @@ function AssetsPageInner() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 12, color: '#d4af37' }}>@{user?.piUsername}</div>
           <button className="btn" onClick={logout}
-            style={{ background: '#ffffff08', border: '1px solid #ffffff10', borderRadius: 10,
-              padding: '6px 12px', color: '#6b6b7a', fontSize: 11, cursor: 'pointer' }}>
+            style={{
+              background: '#ffffff08', border: '1px solid #ffffff10',
+              borderRadius: 10, padding: '6px 12px',
+              color: '#6b6b7a', fontSize: 11, cursor: 'pointer',
+            }}>
             Logout
           </button>
         </div>
@@ -191,9 +212,9 @@ function AssetsPageInner() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {[
-              { label: 'Balance',  value: wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—' },
-              { label: 'Assets',   value: assets.length.toString() },
-              { label: 'Domains',  value: assets.filter(a => a.asset_type === 'domain').length.toString() },
+              { label: 'Balance', value: wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—' },
+              { label: 'Assets',  value: assets.length.toString() },
+              { label: 'Domains', value: assets.filter(a => a.asset_type === 'domain').length.toString() },
             ].map(s => (
               <div key={s.label} style={{ background: '#ffffff05', borderRadius: 12, padding: '10px 12px' }}>
                 <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
@@ -204,27 +225,23 @@ function AssetsPageInner() {
         </div>
       </div>
 
-     {/* ── Tabs ── */}
-<div style={{ padding: '16px 16px 0', display: 'flex', gap: 8 }}>
-  {(['all', 'domains', 'nfts'] as const).map(tab => (
-    <button key={tab} onClick={() => setActiveTab(tab)}
-      style={{
-        padding:    '8px 18px',
-        borderRadius: 20,
-        cursor:     'pointer',
-        fontSize:   12,
-        fontWeight: 600,
-        letterSpacing: 1,
-        textTransform: 'uppercase' as const,
-        background: activeTab === tab ? '#d4af3720' : '#ffffff08',
-        color:      activeTab === tab ? '#d4af37'   : '#6b6b7a',
-        border:     activeTab === tab ? '1px solid #d4af3740' : '1px solid transparent',
-        transition: 'all 0.2s',
-      }}>
-      {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
-    </button>
-  ))}
-</div> 
+      {/* ── Tabs ── */}
+      <div style={{ padding: '16px 16px 0', display: 'flex', gap: 8 }}>
+        {(['all', 'domains', 'nfts'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '8px 18px', borderRadius: 20, cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, letterSpacing: 1,
+              textTransform: 'uppercase' as const,
+              background: activeTab === tab ? '#d4af3720' : '#ffffff08',
+              color:      activeTab === tab ? '#d4af37'   : '#6b6b7a',
+              border:     activeTab === tab ? '1px solid #d4af3740' : '1px solid transparent',
+              transition: 'all 0.2s',
+            }}>
+            {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
+          </button>
+        ))}
+      </div>
 
       {/* ── Assets List ── */}
       <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -259,16 +276,25 @@ function AssetsPageInner() {
           { icon: '⚙️', label: 'Settings',  active: false, action: () => {} },
         ].map(item => (
           <button key={item.label} onClick={item.action} className="btn"
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 3, background: 'none', border: 'none', cursor: 'pointer' }}>
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 3,
+              background: 'none', border: 'none', cursor: 'pointer',
+            }}>
             <span style={{ fontSize: 20 }}>{item.icon}</span>
-            <span style={{ fontSize: 9, letterSpacing: 1, textTransform: 'uppercase',
+            <span style={{
+              fontSize: 9, letterSpacing: 1, textTransform: 'uppercase',
               fontWeight: item.active ? 700 : 400,
-              color: item.active ? '#d4af37' : '#4a4a5a' }}>
+              color: item.active ? '#d4af37' : '#4a4a5a',
+            }}>
               {item.label}
             </span>
-            {item.active && <span style={{ width: 4, height: 4, borderRadius: '50%',
-              background: '#d4af37', marginTop: -2 }} />}
+            {item.active && (
+              <span style={{
+                width: 4, height: 4, borderRadius: '50%',
+                background: '#d4af37', marginTop: -2,
+              }} />
+            )}
           </button>
         ))}
       </nav>
