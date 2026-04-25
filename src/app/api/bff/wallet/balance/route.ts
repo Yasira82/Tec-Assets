@@ -1,14 +1,12 @@
-import { createHandler } from '@/lib/bff/createHandler';
+import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 
 export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
-    const token      = req.cookies.get('tec_access_token')?.value ?? '';
-    const gatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL
-                    ?? 'https://api-gateway-production-6a68.up.railway.app';
+    const token = req.cookies.get('tec_access_token')?.value ?? '';
 
     const res = await fetch(
-      `${gatewayUrl}/api/wallets?userId=${encodeURIComponent(ctx.userId)}`,
+      `${GATEWAY_URL}/api/wallets?userId=${encodeURIComponent(ctx.userId)}`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
