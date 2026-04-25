@@ -204,22 +204,27 @@ function AssetsPageInner() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div style={{ padding: '16px 16px 0', display: 'flex', gap: 8 }}>
-        {(['all', 'domains', 'nfts'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '8px 18px', borderRadius: 20, border: 'none', cursor: 'pointer',
-              fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
-              background: activeTab === tab ? '#d4af3720' : '#ffffff08',
-              color:      activeTab === tab ? '#d4af37'   : '#6b6b7a',
-              border:     activeTab === tab ? '1px solid #d4af3740' : '1px solid transparent',
-              transition: 'all 0.2s',
-            }}>
-            {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
-          </button>
-        ))}
-      </div>
+     {/* ── Tabs ── */}
+<div style={{ padding: '16px 16px 0', display: 'flex', gap: 8 }}>
+  {(['all', 'domains', 'nfts'] as const).map(tab => (
+    <button key={tab} onClick={() => setActiveTab(tab)}
+      style={{
+        padding:    '8px 18px',
+        borderRadius: 20,
+        cursor:     'pointer',
+        fontSize:   12,
+        fontWeight: 600,
+        letterSpacing: 1,
+        textTransform: 'uppercase' as const,
+        background: activeTab === tab ? '#d4af3720' : '#ffffff08',
+        color:      activeTab === tab ? '#d4af37'   : '#6b6b7a',
+        border:     activeTab === tab ? '1px solid #d4af3740' : '1px solid transparent',
+        transition: 'all 0.2s',
+      }}>
+      {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
+    </button>
+  ))}
+</div> 
 
       {/* ── Assets List ── */}
       <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
