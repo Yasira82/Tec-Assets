@@ -1,6 +1,6 @@
-import { z }          from 'zod';
-import { NextRequest } from 'next/server';
-import { jwtVerify }  from 'jose';
+import { z }           from 'zod';
+import { NextRequest }  from 'next/server';
+import { jwtVerify }   from 'jose';
 
 export class AppError extends Error {
   constructor(
@@ -29,10 +29,19 @@ export interface BFFContext {
 
 async function extractContext(req: NextRequest): Promise<BFFContext> {
   const token = req.cookies.get('tec_access_token')?.value;
+
+  // ── Debug ─────────────────────────────────────────────
+  console.log('[BFF] cookies:', req.cookies.getAll().map(c => c.name).join(', '));
+  console.log('[BFF] token exists:', !!token);
+  console.log('[BFF] token prefix:', token?.substring(0, 20));
+
   if (!token) throw new UnauthorizedError();
 
   const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET not configured');
+  if (!secret) {
+    console.error('[BFF] JWT_SECRET not configured');
+    throw new Error('JWT_SECRET not configured');
+  }
 
   try {
     const encoded       = new TextEncoder().encode(secret);
@@ -43,12 +52,15 @@ async function extractContext(req: NextRequest): Promise<BFFContext> {
     const userId = payload.sub;
     if (!userId) throw new UnauthorizedError();
 
+    console.log('[BFF] auth ok — userId:', userId);
+
     return {
       userId,
       kycVerified: (payload as Record<string, unknown>).kycVerified === true,
       requestId:   req.headers.get('x-request-id') ?? crypto.randomUUID(),
     };
   } catch (err) {
+    console.error('[BFF] JWT error:', (err as Error).message);
     if (err instanceof AppError) throw err;
     throw new UnauthorizedError();
   }
@@ -70,7 +82,11 @@ export function createHandler<TInput = Record<string, never>, TOutput = unknown>
   }) => Promise<TOutput>;
 }) {
   return async (req: NextRequest): Promise<Response> => {
-    let ctx: BFFContext = { userId: 'anonymous', kycVerified: false, requestId: crypto.randomUUID() };
+    let ctx: BFFContext = {
+      userId:      'anonymous',
+      kycVerified: false,
+      requestId:   crypto.randomUUID(),
+    };
 
     try {
       if (config.requireAuth !== false) {
@@ -106,7 +122,7 @@ export function createHandler<TInput = Record<string, never>, TOutput = unknown>
           { status: err.status },
         );
       }
-      console.error('[BFF]', err);
+      console.error('[BFF] Unexpected error:', err);
       return Response.json(
         { error: 'INTERNAL_ERROR', message: 'Something went wrong' },
         { status: 500 },
