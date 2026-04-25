@@ -1,0 +1,13 @@
+{
+  "headers": [
+    {
+      "source": "/validation-key.txt",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" },
+        { "key": "Content-Type",  "value": "text/plain; charset=utf-8" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
+    }
+  ]
+}
