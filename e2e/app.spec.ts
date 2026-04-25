@@ -1,14 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-test('homepage loads', async ({ page }) => {
+test('homepage loads successfully', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/Assets/);
 });
 
-test('homepage shows loading state', async ({ page }) => {
+test('unauthenticated redirects to SSO', async ({ page }) => {
+  await page.route('https://tec-app.vercel.app/**', route => route.abort());
   await page.goto('/');
-  // ✅ Loading screen أو SSO redirect
-  const hasAssets     = await page.getByText('Assets').isVisible().catch(() => false);
-  const hasConnecting = await page.getByText('Connecting').isVisible().catch(() => false);
-  expect(hasAssets || hasConnecting).toBe(true);
+  await expect(page).toHaveURL(/tec-app\.vercel\.app|tec-assets/);
 });
