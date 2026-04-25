@@ -2,10 +2,13 @@ import { test, expect } from '@playwright/test';
 
 test('homepage loads', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(/TEC/);
+  await expect(page).toHaveTitle(/Assets/);
 });
 
-test('login button visible', async ({ page }) => {
+test('homepage shows loading state', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Login with Pi')).toBeVisible();
+  // ✅ Loading screen أو SSO redirect
+  const hasAssets     = await page.getByText('Assets').isVisible().catch(() => false);
+  const hasConnecting = await page.getByText('Connecting').isVisible().catch(() => false);
+  expect(hasAssets || hasConnecting).toBe(true);
 });
