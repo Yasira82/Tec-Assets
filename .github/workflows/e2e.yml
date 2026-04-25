@@ -31,6 +31,11 @@ jobs:
           NEXT_PUBLIC_PI_SANDBOX:      'true'
           E2E_MODE:                    'true'
 
+      - name: Copy static files for standalone
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+
       - name: Run E2E
         run: npm run test:e2e
         env:
