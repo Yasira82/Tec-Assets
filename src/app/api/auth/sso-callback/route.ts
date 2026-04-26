@@ -44,6 +44,11 @@ export async function GET(req: NextRequest) {
     const accessToken = payload.accessToken as string;
     const user        = payload.user as Record<string, unknown>;
 
+    // ── Debug ─────────────────────────────────────────────
+    console.log('[SSO] callback — userId:', payload.sub);
+    console.log('[SSO] accessToken prefix:', accessToken?.substring(0, 20));
+    console.log('[SSO] setting cookies...');
+
     const res = NextResponse.redirect(new URL('/app', req.url));
 
     res.cookies.set('tec_access_token', accessToken, {
@@ -70,9 +75,11 @@ export async function GET(req: NextRequest) {
       maxAge:   60 * 60 * 24,
     });
 
+    console.log('[SSO] redirect → /app');
     return res;
 
-  } catch {
+  } catch (err) {
+    console.error('[SSO] error:', (err as Error).message);
     return NextResponse.redirect(new URL('/', req.url));
   }
 }
