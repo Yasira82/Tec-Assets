@@ -67,7 +67,7 @@ export const logout = async (): Promise<void> => {
     document.cookie = `tec_access_token=; ${cookieBase}`;
     document.cookie = `tec_user=; ${cookieBase}`;
     document.cookie = `tec_csrf=; ${cookieBase}`;
-    sdk.clearAuthToken();
+    // ✅ مش بنستدعي sdk هنا عشان مش Pi app
   } catch (err) {
     console.error('[Pi Auth] Logout error:', err);
   } finally {
