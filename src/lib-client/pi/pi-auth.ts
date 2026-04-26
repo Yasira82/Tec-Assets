@@ -57,16 +57,28 @@ export const getStoredUser = () => {
       .find(row => row.startsWith('tec_user='));
     if (!match) return null;
     const value = match.substring(match.indexOf('=') + 1);
-    return JSON.parse(decodeURIComponent(value));
+    // ✅ double decode — SSO بيعمل encodeURIComponent
+    const decoded = decodeURIComponent(value);
+    return JSON.parse(decoded);
   } catch { return null; }
 };
 
-export const logout = async () => {
+// ── Logout ────────────────────────────────────────────────
+export const logout = async (): Promise<void> => {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    // ✅ امسح الـ cookies
+    const cookieBase = 'path=/; secure; samesite=none; max-age=0';
+    document.cookie = `tec_access_token=; ${cookieBase}`;
+    document.cookie = `tec_user=; ${cookieBase}`;
+    document.cookie = `tec_csrf=; ${cookieBase}`;
+
+    // ✅ امسح الـ SDK token
     sdk.clearAuthToken();
   } catch (err) {
-    console.error('[Pi Auth] Logout failed:', err);
+    console.error('[Pi Auth] Logout error:', err);
+  } finally {
+    // ✅ دايماً روح لـ tec.pi
+    window.location.href = 'https://tec-app.vercel.app';
   }
 };
 
@@ -175,7 +187,6 @@ const _addBreadcrumb = (message: string, data: Record<string, unknown>): void =>
   } catch {}
 };
 
-// ── Helper — قراءة CSRF token من الـ cookie ───────────────
 const getCsrfToken = (): string => {
   if (typeof document === 'undefined') return '';
   return document.cookie
@@ -184,7 +195,6 @@ const getCsrfToken = (): string => {
     ?.split('=')?.[1] ?? '';
 };
 
-// ── Resolve Incomplete Payment — بعد الـ login ────────────
 let _pendingPaymentId: string | null = null;
 
 interface IncompletePayment {
@@ -195,37 +205,25 @@ const handleIncompletePayment = (payment: unknown): void => {
   const p           = payment as IncompletePayment;
   const piPaymentId = p?.identifier;
   if (!piPaymentId) return;
-
   _pendingPaymentId = piPaymentId;
-  _addBreadcrumb('Incomplete payment detected — will resolve after login', { piPaymentId });
+  _addBreadcrumb('Incomplete payment detected', { piPaymentId });
 };
 
 const resolveIncompleteAfterLogin = async (piPaymentId: string): Promise<void> => {
   const csrfToken = getCsrfToken();
-
-  // ── Step 1: Backend ──────────────────────────────────────
   try {
     const res = await fetch('/api/payment/resolve-incomplete', {
       method:      'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        // ✅ CSRF token — بدونه الـ middleware بيرجع 403
-        'x-csrf-token': csrfToken,
-      },
-      body: JSON.stringify({ pi_payment_id: piPaymentId }),
+      headers:     { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+      body:        JSON.stringify({ pi_payment_id: piPaymentId }),
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      _reportResolved(piPaymentId, 'backend', data?.action);
-      return;
-    }
+    if (res.ok) { _reportResolved(piPaymentId, 'backend', data?.action); return; }
     _captureError('resolve-incomplete backend failed', { piPaymentId, status: res.status, data });
   } catch (err) {
     _captureError('resolve-incomplete network error', { piPaymentId, error: String(err) });
   }
-
-  // ── Step 2: SDK ───────────────────────────────────────────
   try {
     const result = await sdk.payment.resolveIncomplete(piPaymentId);
     _reportResolved(piPaymentId, 'sdk', result?.status);
@@ -233,54 +231,35 @@ const resolveIncompleteAfterLogin = async (piPaymentId: string): Promise<void> =
   } catch (sdkErr) {
     _captureError('SDK resolve failed', { piPaymentId, error: String(sdkErr) });
   }
-
-  // ── Step 3: Cancel ────────────────────────────────────────
   try {
     const res = await fetch('/api/payment/cancel', {
       method:      'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-csrf-token': csrfToken,
-      },
-      body: JSON.stringify({ pi_payment_id: piPaymentId }),
+      headers:     { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+      body:        JSON.stringify({ pi_payment_id: piPaymentId }),
     });
-    if (res.ok) {
-      _reportResolved(piPaymentId, 'cancel');
-    } else {
-      _captureError('All recovery attempts failed', { piPaymentId, cancelStatus: res.status });
-    }
+    if (res.ok) { _reportResolved(piPaymentId, 'cancel'); }
+    else { _captureError('All recovery attempts failed', { piPaymentId, cancelStatus: res.status }); }
   } catch (err) {
     _captureError('Cancel network error', { piPaymentId, error: String(err) });
   }
 };
 
-// ── SDK Wait ──────────────────────────────────────────────
 export const waitForPiSDK = (timeout = 15000): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (typeof window !== 'undefined' && window.__TEC_PI_ERROR) {
-      reject(new Error(ERRORS.SDK_LOAD_FAILED));
-      return;
+      reject(new Error(ERRORS.SDK_LOAD_FAILED)); return;
     }
     if (typeof window !== 'undefined' && typeof window.Pi !== 'undefined' && window.__TEC_PI_READY) {
-      resolve();
-      return;
+      resolve(); return;
     }
     const timer = setTimeout(() => {
       window.removeEventListener('tec-pi-ready', onReady);
       window.removeEventListener('tec-pi-error', onError);
       reject(new Error(ERRORS.SDK_LOAD_FAILED));
     }, timeout);
-    const onReady = () => {
-      clearTimeout(timer);
-      window.removeEventListener('tec-pi-error', onError);
-      resolve();
-    };
-    const onError = () => {
-      clearTimeout(timer);
-      window.removeEventListener('tec-pi-ready', onReady);
-      reject(new Error(ERRORS.SDK_INIT_FAILED));
-    };
+    const onReady = () => { clearTimeout(timer); window.removeEventListener('tec-pi-error', onError); resolve(); };
+    const onError = () => { clearTimeout(timer); window.removeEventListener('tec-pi-ready', onReady); reject(new Error(ERRORS.SDK_INIT_FAILED)); };
     window.addEventListener('tec-pi-ready', onReady, { once: true });
     window.addEventListener('tec-pi-error', onError, { once: true });
   });
@@ -306,14 +285,10 @@ const authenticateWithTimeout = async (timeout?: number): Promise<PiAuthResult> 
   });
 };
 
-// ── Login with Pi ─────────────────────────────────────────
 export const loginWithPi = async (): Promise<TecAuthResponse> => {
-  if (!isPiBrowser()) {
-    throw new Error(ERRORS.NOT_PI_BROWSER);
-  }
+  if (!isPiBrowser()) throw new Error(ERRORS.NOT_PI_BROWSER);
 
   _pendingPaymentId = null;
-
   const piAuth = await authenticateWithTimeout();
 
   const res = await fetch('/api/auth/pi-login', {
@@ -323,13 +298,10 @@ export const loginWithPi = async (): Promise<TecAuthResponse> => {
     body:        JSON.stringify({ accessToken: piAuth.accessToken }),
   });
 
-  if (!res.ok) {
-    throw new Error(ERRORS.SAVE_FAILED);
-  }
+  if (!res.ok) throw new Error(ERRORS.SAVE_FAILED);
 
   const data = await res.json();
 
-  // ✅ الآن فيه cookie + CSRF — نعالج الـ incomplete payment
   if (_pendingPaymentId) {
     void resolveIncompleteAfterLogin(_pendingPaymentId);
     _pendingPaymentId = null;
@@ -348,14 +320,10 @@ export const loginWithPi = async (): Promise<TecAuthResponse> => {
       subscriptionPlan: data.user.subscriptionPlan,
       createdAt:        data.user.createdAt,
     },
-    tokens: {
-      accessToken:  '',
-      refreshToken: '',
-    },
+    tokens: { accessToken: '', refreshToken: '' },
   };
 };
 
-// ── FCM Token Registration ────────────────────────────────
 const _registerFCMToken = async (_accessToken: string): Promise<void> => {
   // FCM optional — add @/lib/firebase if needed
 };
