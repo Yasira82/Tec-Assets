@@ -8,9 +8,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ height: '100%' }}>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+        <style>{`
+          *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { height: 100%; width: 100%; background: #020205; }
+          body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+        `}</style>
         <script src="https://sdk.minepi.com/pi-sdk.js" async />
         <script
           dangerouslySetInnerHTML={{
