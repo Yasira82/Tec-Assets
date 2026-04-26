@@ -1,15 +1,12 @@
-import type { Metadata } from 'next';
+import type { Metadata }  from 'next';
+import { LocaleProvider } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title:       'TEC Assets — Digital Ownership',
   description: 'Manage your Pi Network digital assets — domains, NFTs, portfolio',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -37,7 +34,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <LocaleProvider>
+          {children}
+        </LocaleProvider>
+      </body>
     </html>
   );
 }
