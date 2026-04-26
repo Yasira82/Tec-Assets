@@ -271,40 +271,41 @@ function AssetsPageInner() {
       `}</style>
 
       {/* ── Header ── */}
-      <header style={{
-        padding: '14px 20px', borderBottom: '1px solid #ffffff08',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)',
-        backdropFilter: 'blur(20px)', zIndex: 100,
+<header style={{
+  padding: '14px 20px', borderBottom: '1px solid #ffffff08',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)',
+  backdropFilter: 'blur(20px)', zIndex: 100,
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <button className="btn" onClick={() => goToTEC('HUB')}
+      style={{
+        background: '#ffffff08', border: '1px solid #ffffff10',
+        borderRadius: 10, padding: '6px 10px',
+        color: '#d4af37', fontSize: 16, cursor: 'pointer',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn" onClick={() => goToTEC('HUB')}
-            style={{
-              background: '#ffffff08', border: '1px solid #ffffff10',
-              borderRadius: 10, padding: '6px 10px',
-              color: '#d4af37', fontSize: 16, cursor: 'pointer',
-            }}>
-            🔷
-          </button>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
-            <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 12, color: '#d4af37' }}>
-            {user?.piUsername ? `@${user.piUsername}` : ''}
-          </div>
-          <button className="btn" onClick={logout}
-            style={{
-              background: '#ffffff08', border: '1px solid #ffffff10',
-              borderRadius: 10, padding: '6px 12px',
-              color: '#6b6b7a', fontSize: 11, cursor: 'pointer',
-            }}>
-            Logout
-          </button>
-        </div>
-      </header>
+      🔷
+    </button>
+    <div>
+      <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
+      <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
+    </div>
+  </div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ fontSize: 12, color: '#d4af37' }}>
+      {user?.piUsername ? `@${user.piUsername}` : ''}
+    </div>
+    {/* ✅ شيل Logout من هنا — موجود في Settings */}
+    <button className="btn" onClick={() => router.push('/app/settings')}
+      style={{
+        background: '#ffffff08', border: '1px solid #ffffff10',
+        borderRadius: 10, padding: '6px 10px',
+        color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+      }}>
+      ⚙️
+    </button>
+  </div>
+</header>
 
       {/* ── Portfolio Card ── */}
       {activeTab !== 'portfolio' && (
