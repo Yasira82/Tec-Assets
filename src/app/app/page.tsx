@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter }       from 'next/navigation';
 import { usePiAuth }       from '@/lib-client/hooks/usePiAuth';
 import { ErrorBoundary }   from '@/components/ErrorBoundary';
 import { goToTEC }         from '@/lib/tec-navigation';
+import { useSettings }     from '@/lib/hooks/useSettings';
 
 const SSO_URL =
   'https://tec-app.vercel.app/api/auth/sso?target=' +
@@ -37,8 +39,10 @@ const getTokenFromCookie = (): string | null => {
   return match ? match.split('=')[1] : null;
 };
 
+const maskValue = (value: string): string => '****';
+
 // ── Asset Card ────────────────────────────────────────────
-function AssetCard({ asset }: { asset: Asset }) {
+function AssetCard({ asset, showValues }: { asset: Asset; showValues: boolean }) {
   const typeEmoji: Record<string, string> = {
     domain:  '🌐',
     nft:     '🎨',
@@ -74,7 +78,7 @@ function AssetCard({ asset }: { asset: Asset }) {
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: '#d4af37' }}>
-          {Number(asset.value).toFixed(2)} π
+          {showValues ? `${Number(asset.value).toFixed(2)} π` : maskValue('')}
         </div>
         <div style={{
           fontSize: 10, fontWeight: 600, letterSpacing: 1,
@@ -88,15 +92,23 @@ function AssetCard({ asset }: { asset: Asset }) {
 }
 
 // ── Portfolio Tab ─────────────────────────────────────────
-function PortfolioTab({ assets, wallet }: { assets: Asset[]; wallet: WalletData | null }) {
-  const totalValue   = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
-  const domainCount  = assets.filter(a => a.asset_type === 'domain').length;
-  const nftCount     = assets.filter(a => a.asset_type === 'nft').length;
-  const tokenCount   = assets.filter(a => a.asset_type === 'token').length;
+function PortfolioTab({
+  assets, wallet, showValues, hideBalance,
+}: {
+  assets:      Asset[];
+  wallet:      WalletData | null;
+  showValues:  boolean;
+  hideBalance: boolean;
+}) {
+  const totalValue  = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const domainCount = assets.filter(a => a.asset_type === 'domain').length;
+  const nftCount    = assets.filter(a => a.asset_type === 'nft').length;
+  const tokenCount  = assets.filter(a => a.asset_type === 'token').length;
+
+  const fmt = (v: string) => hideBalance ? '****' : v;
 
   return (
     <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Summary */}
       <div style={{
         borderRadius: 20, padding: '20px',
         background: 'linear-gradient(135deg,#1a1208,#0d0d14)',
@@ -106,12 +118,12 @@ function PortfolioTab({ assets, wallet }: { assets: Asset[]; wallet: WalletData 
           TOTAL PORTFOLIO
         </div>
         <div style={{ fontSize: 32, fontWeight: 900, color: '#d4af37', marginBottom: 16 }}>
-          {totalValue.toFixed(2)} π
+          {fmt(`${totalValue.toFixed(2)} π`)}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { label: 'Pi Balance', value: wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—' },
-            { label: 'Assets Value', value: `${totalValue.toFixed(2)} π` },
+            { label: 'Pi Balance',   value: wallet ? fmt(`${Number(wallet.balance).toFixed(2)} π`) : '—' },
+            { label: 'Assets Value', value: showValues ? fmt(`${totalValue.toFixed(2)} π`) : '****'      },
           ].map(s => (
             <div key={s.label} style={{ background: '#ffffff05', borderRadius: 12, padding: '12px' }}>
               <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
@@ -121,15 +133,14 @@ function PortfolioTab({ assets, wallet }: { assets: Asset[]; wallet: WalletData 
         </div>
       </div>
 
-      {/* Breakdown */}
       <div style={{ borderRadius: 20, padding: '20px', background: '#0d0d14', border: '1px solid #ffffff08' }}>
         <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 12 }}>
           ASSET BREAKDOWN
         </div>
         {[
-          { label: '🌐 Domains', count: domainCount  },
-          { label: '🎨 NFTs',    count: nftCount     },
-          { label: '🪙 Tokens',  count: tokenCount   },
+          { label: '🌐 Domains', count: domainCount },
+          { label: '🎨 NFTs',    count: nftCount    },
+          { label: '🪙 Tokens',  count: tokenCount  },
         ].map(item => (
           <div key={item.label} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -141,9 +152,7 @@ function PortfolioTab({ assets, wallet }: { assets: Asset[]; wallet: WalletData 
         ))}
       </div>
 
-      {/* Back to TEC */}
-      <button
-        onClick={() => goToTEC('DASHBOARD')}
+      <button onClick={() => goToTEC('DASHBOARD')}
         style={{
           padding: '14px', borderRadius: 16,
           background: 'linear-gradient(135deg,#d4af37,#b8882a)',
@@ -181,12 +190,26 @@ function Skeleton() {
 // ── Main ──────────────────────────────────────────────────
 function AssetsPageInner() {
   const { user, isAuthenticated, isLoading, logout } = usePiAuth();
+  const { settings, loaded }                         = useSettings();
+  const router                                       = useRouter();
 
   const [wallet,      setWallet]      = useState<WalletData | null>(null);
   const [assets,      setAssets]      = useState<Asset[]>([]);
   const [activeTab,   setActiveTab]   = useState<MainTab>('assets');
   const [assetFilter, setAssetFilter] = useState<'all' | 'domains' | 'nfts'>('all');
   const [dataLoading, setDataLoading] = useState(true);
+
+  // ✅ Apply defaultTab from settings
+  useEffect(() => {
+    if (!loaded) return;
+    if (settings.defaultTab === 'domains') {
+      setActiveTab('assets');
+      setAssetFilter('domains');
+    } else if (settings.defaultTab === 'nfts') {
+      setActiveTab('assets');
+      setAssetFilter('nfts');
+    }
+  }, [loaded, settings.defaultTab]);
 
   // ✅ تحقق من الـ cookie مباشرة
   useEffect(() => {
@@ -220,11 +243,19 @@ function AssetsPageInner() {
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered = assetFilter === 'all'
+  const filtered   = assetFilter === 'all'
     ? assets
     : assets.filter(a => a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
 
   const totalValue = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+
+  const displayBalance = settings.hideBalance
+    ? '****'
+    : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
+
+  const displayTotal = settings.hideBalance
+    ? '****'
+    : `${totalValue.toFixed(2)}`;
 
   return (
     <div style={{
@@ -247,7 +278,6 @@ function AssetsPageInner() {
         backdropFilter: 'blur(20px)', zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Back to TEC */}
           <button className="btn" onClick={() => goToTEC('HUB')}
             style={{
               background: '#ffffff08', border: '1px solid #ffffff10',
@@ -276,7 +306,7 @@ function AssetsPageInner() {
         </div>
       </header>
 
-      {/* ── Portfolio Card (Summary) ── */}
+      {/* ── Portfolio Card ── */}
       {activeTab !== 'portfolio' && (
         <div style={{ padding: '16px 16px 0' }} className="fade-in">
           <div style={{
@@ -289,13 +319,15 @@ function AssetsPageInner() {
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
-                {dataLoading ? '—' : totalValue.toFixed(2)}
+                {dataLoading ? '—' : displayTotal}
               </span>
-              <span style={{ fontSize: 20, color: '#d4af3780' }}>π</span>
+              <span style={{ fontSize: 20, color: '#d4af3780' }}>
+                {settings.hideBalance ? '' : 'π'}
+              </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {[
-                { label: 'Balance', value: wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—' },
+                { label: 'Balance', value: displayBalance },
                 { label: 'Assets',  value: assets.length.toString() },
                 { label: 'Domains', value: assets.filter(a => a.asset_type === 'domain').length.toString() },
               ].map(s => (
@@ -331,7 +363,12 @@ function AssetsPageInner() {
 
       {/* ── Content ── */}
       {activeTab === 'portfolio' ? (
-        <PortfolioTab assets={assets} wallet={wallet} />
+        <PortfolioTab
+          assets={assets}
+          wallet={wallet}
+          showValues={settings.showValues}
+          hideBalance={settings.hideBalance}
+        />
       ) : (
         <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {dataLoading ? (
@@ -346,8 +383,7 @@ function AssetsPageInner() {
               <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
                 Your digital assets will appear here
               </div>
-              <button
-                onClick={() => goToTEC('HUB')}
+              <button onClick={() => goToTEC('HUB')}
                 style={{
                   marginTop: 20, padding: '12px 24px',
                   background: 'linear-gradient(135deg,#d4af37,#b8882a)',
@@ -358,7 +394,13 @@ function AssetsPageInner() {
               </button>
             </div>
           ) : (
-            filtered.map(asset => <AssetCard key={asset.id} asset={asset} />)
+            filtered.map(asset => (
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                showValues={settings.showValues}
+              />
+            ))
           )}
         </div>
       )}
@@ -370,11 +412,11 @@ function AssetsPageInner() {
         borderTop: '1px solid #ffffff08', display: 'flex', padding: '10px 0 22px',
       }}>
         {[
-          { icon: '💎', label: 'Assets',    tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('all'); }     },
-{ icon: '📊', label: 'Portfolio', tab: 'portfolio' as MainTab, action: () => setActiveTab('portfolio')                               },
-{ icon: '🌐', label: 'Domains',   tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('domains'); }  },
-{ icon: '⚙️', label: 'Settings',  tab: null,                   action: () => goToTEC('SETTINGS')                                    },
-{ icon: '🔷', label: 'TEC Hub',   tab: null,                   action: () => goToTEC('HUB')                                         },
+          { icon: '💎', label: 'Assets',    tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('all'); }    },
+          { icon: '📊', label: 'Portfolio', tab: 'portfolio' as MainTab, action: () => setActiveTab('portfolio')                              },
+          { icon: '🌐', label: 'Domains',   tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('domains'); } },
+          { icon: '⚙️', label: 'Settings',  tab: null,                   action: () => router.push('/app/settings')                          },
+          { icon: '🔷', label: 'TEC Hub',   tab: null,                   action: () => goToTEC('HUB')                                        },
         ].map(item => (
           <button key={item.label} onClick={item.action} className="btn"
             style={{
@@ -409,4 +451,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-            }
+}
