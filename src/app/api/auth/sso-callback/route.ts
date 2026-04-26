@@ -37,17 +37,14 @@ export async function GET(req: NextRequest) {
 
     const jti = payload.jti;
     if (!jti) return NextResponse.json({ error: 'missing_jti' }, { status: 401 });
-
     if (isJtiUsed(jti)) return NextResponse.json({ error: 'replay_detected' }, { status: 401 });
     markJtiUsed(jti);
 
     const accessToken = payload.accessToken as string;
     const user        = payload.user as Record<string, unknown>;
 
-    // ── Debug ─────────────────────────────────────────────
-    console.log('[SSO] callback — userId:', payload.sub);
-    console.log('[SSO] accessToken prefix:', accessToken?.substring(0, 20));
-    console.log('[SSO] setting cookies...');
+    console.log('[SSO] userId:', payload.sub);
+    console.log('[SSO] piUsername:', user?.piUsername);
 
     const res = NextResponse.redirect(new URL('/app', req.url));
 
@@ -59,7 +56,8 @@ export async function GET(req: NextRequest) {
       maxAge:   60 * 60 * 24,
     });
 
-    res.cookies.set('tec_user', encodeURIComponent(JSON.stringify(user)), {
+    // ✅ بدون encodeURIComponent — getStoredUser بيعمل decode
+    res.cookies.set('tec_user', JSON.stringify(user), {
       httpOnly: false,
       secure:   true,
       sameSite: 'none',
@@ -75,7 +73,6 @@ export async function GET(req: NextRequest) {
       maxAge:   60 * 60 * 24,
     });
 
-    console.log('[SSO] redirect → /app');
     return res;
 
   } catch (err) {
