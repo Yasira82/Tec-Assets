@@ -31,11 +31,15 @@ async function extractContext(req: NextRequest): Promise<BFFContext> {
   const token = req.cookies.get('tec_access_token')?.value;
 
   // ── Debug ─────────────────────────────────────────────
-  console.log('[BFF] cookies:', req.cookies.getAll().map(c => c.name).join(', '));
+  const allCookies = req.cookies.getAll().map(c => c.name);
+  console.log('[BFF] cookies:', allCookies.join(', ') || 'NONE');
   console.log('[BFF] token exists:', !!token);
-  console.log('[BFF] token prefix:', token?.substring(0, 20));
+  console.log('[BFF] token prefix:', token?.substring(0, 20) ?? 'N/A');
 
-  if (!token) throw new UnauthorizedError();
+  if (!token) {
+    console.warn('[BFF] No tec_access_token cookie found');
+    throw new UnauthorizedError();
+  }
 
   const secret = process.env.JWT_SECRET;
   if (!secret) {
