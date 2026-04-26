@@ -1,9 +1,30 @@
 'use client';
 
 import { useRouter }     from 'next/navigation';
+import { useEffect }     from 'react';
 import { usePiAuth }     from '@/lib-client/hooks/usePiAuth';
 import { useSettings }   from '@/lib/hooks/useSettings';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// ── Theme Colors ──────────────────────────────────────────
+const THEMES = {
+  dark: {
+    bg:         '#020205',
+    surface:    '#0d0d14',
+    border:     '#ffffff08',
+    text:       '#ffffff',
+    subtext:    '#6b6b7a',
+    card:       '#0d0d14',
+  },
+  light: {
+    bg:         '#f5f5f7',
+    surface:    '#ffffff',
+    border:     '#00000010',
+    text:       '#1a1a2e',
+    subtext:    '#6b6b7a',
+    card:       '#ffffff',
+  },
+};
 
 // ── Toggle ────────────────────────────────────────────────
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -57,26 +78,27 @@ function Select<T extends string>({
 }
 
 // ── Section ───────────────────────────────────────────────
-function Section({ title, icon, children }: {
+function Section({ title, icon, children, theme }: {
   title:    string;
   icon:     string;
   children: React.ReactNode;
+  theme:    typeof THEMES.dark;
 }) {
   return (
     <div style={{
-      background:   '#0d0d14',
-      border:       '1px solid #ffffff08',
+      background:   theme.surface,
+      border:       `1px solid ${theme.border}`,
       borderRadius: 20,
       overflow:     'hidden',
       marginBottom: 12,
     }}>
       <div style={{
-        padding:    '14px 20px',
-        borderBottom: '1px solid #ffffff06',
-        display:    'flex', alignItems: 'center', gap: 8,
+        padding:      '14px 20px',
+        borderBottom: `1px solid ${theme.border}`,
+        display:      'flex', alignItems: 'center', gap: 8,
       }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#6b6b7a', letterSpacing: 2, textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: theme.subtext, letterSpacing: 2, textTransform: 'uppercase' }}>
           {title}
         </span>
       </div>
@@ -86,21 +108,22 @@ function Section({ title, icon, children }: {
 }
 
 // ── Row ───────────────────────────────────────────────────
-function Row({ label, desc, children }: {
+function Row({ label, desc, children, theme }: {
   label:    string;
   desc?:    string;
   children: React.ReactNode;
+  theme:    typeof THEMES.dark;
 }) {
   return (
     <div style={{
-      padding:     '14px 20px',
-      display:     'flex', alignItems: 'center', justifyContent: 'space-between',
-      borderBottom: '1px solid #ffffff04',
-      gap:         12,
+      padding:      '14px 20px',
+      display:      'flex', alignItems: 'center', justifyContent: 'space-between',
+      borderBottom: `1px solid ${theme.border}04`,
+      gap:          12,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{label}</div>
-        {desc && <div style={{ fontSize: 11, color: '#4a4a5a', marginTop: 2 }}>{desc}</div>}
+        <div style={{ fontSize: 14, color: theme.text, fontWeight: 500 }}>{label}</div>
+        {desc && <div style={{ fontSize: 11, color: theme.subtext, marginTop: 2 }}>{desc}</div>}
       </div>
       {children}
     </div>
@@ -109,17 +132,35 @@ function Row({ label, desc, children }: {
 
 // ── Main ──────────────────────────────────────────────────
 function SettingsPageInner() {
-  const { user, logout }          = usePiAuth();
-  const { settings, update, reset } = useSettings();
-  const router                    = useRouter();
+  const { user, logout }              = usePiAuth();
+  const { settings, update, reset }   = useSettings();
+  const router                        = useRouter();
+
+  // ✅ الـ theme الفعلي — system = dark لو مفيش preference
+  const resolvedTheme = settings.theme === 'system'
+    ? (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : settings.theme;
+
+  const theme = THEMES[resolvedTheme];
+
+  // ✅ تطبيق الـ theme على الـ body
+  useEffect(() => {
+    document.body.style.background = theme.bg;
+    document.body.style.color      = theme.text;
+    return () => {
+      document.body.style.background = '';
+      document.body.style.color      = '';
+    };
+  }, [theme]);
 
   return (
     <div style={{
-      minHeight:   '100vh',
-      background:  '#020205',
-      color:       '#fff',
-      fontFamily:  '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+      minHeight:     '100vh',
+      background:    theme.bg,
+      color:         theme.text,
+      fontFamily:    '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
       paddingBottom: 40,
+      transition:    'background 0.3s ease, color 0.3s ease',
     }}>
       <style>{`
         .btn:active { transform: scale(0.97); }
@@ -129,49 +170,45 @@ function SettingsPageInner() {
 
       {/* ── Header ── */}
       <header style={{
-        padding:      '14px 20px',
-        borderBottom: '1px solid #ffffff08',
-        display:      'flex', alignItems: 'center', gap: 12,
-        position:     'sticky', top: 0,
-        background:   'rgba(2,2,5,0.95)',
+        padding:        '14px 20px',
+        borderBottom:   `1px solid ${theme.border}`,
+        display:        'flex', alignItems: 'center', gap: 12,
+        position:       'sticky', top: 0,
+        background:     resolvedTheme === 'dark' ? 'rgba(2,2,5,0.95)' : 'rgba(245,245,247,0.95)',
         backdropFilter: 'blur(20px)', zIndex: 100,
       }}>
         <button className="btn" onClick={() => router.back()}
           style={{
-            background: '#ffffff08', border: '1px solid #ffffff10',
+            background: theme.surface, border: `1px solid ${theme.border}`,
             borderRadius: 10, padding: '6px 12px',
             color: '#d4af37', fontSize: 14, cursor: 'pointer',
           }}>
           ←
         </button>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>Settings</div>
-          <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ASSETS</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: theme.text }}>Settings</div>
+          <div style={{ fontSize: 9, color: theme.subtext, letterSpacing: 2 }}>TEC ASSETS</div>
         </div>
       </header>
 
       <div style={{ padding: '16px 16px 0' }} className="fade-in">
 
         {/* ── Profile ── */}
-        <Section title="Profile" icon="👤">
-          <div style={{
-            padding: '20px',
-            display: 'flex', alignItems: 'center', gap: 16,
-          }}>
+        <Section title="Profile" icon="👤" theme={theme}>
+          <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
               background: 'linear-gradient(135deg,#d4af37,#b8882a)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, fontWeight: 900, color: '#0a0800',
-              flexShrink: 0,
+              fontSize: 22, fontWeight: 900, color: '#0a0800', flexShrink: 0,
             }}>
               {user?.piUsername?.[0]?.toUpperCase() ?? '?'}
             </div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: theme.text }}>
                 @{user?.piUsername ?? '—'}
               </div>
-              <div style={{ fontSize: 11, color: '#4a4a5a', marginTop: 3 }}>
+              <div style={{ fontSize: 11, color: theme.subtext, marginTop: 3 }}>
                 {user?.role ?? 'Member'} · {user?.subscriptionPlan ?? 'Free'}
               </div>
               <div style={{
@@ -187,19 +224,19 @@ function SettingsPageInner() {
         </Section>
 
         {/* ── Appearance ── */}
-        <Section title="Appearance" icon="🎨">
-          <Row label="Theme" desc="Choose your preferred theme">
+        <Section title="Appearance" icon="🎨" theme={theme}>
+          <Row label="Theme" desc="Applied instantly" theme={theme}>
             <Select
               value={settings.theme}
               onChange={v => update('theme', v)}
               options={[
                 { value: 'dark',   label: '🌙 Dark'   },
                 { value: 'light',  label: '☀️ Light'  },
-                { value: 'system', label: '⚙️ System' },
+                { value: 'system', label: '⚙️ Auto'   },
               ]}
             />
           </Row>
-          <Row label="Language" desc="Display language">
+          <Row label="Language" desc="Display language" theme={theme}>
             <Select
               value={settings.language}
               onChange={v => update('language', v)}
@@ -212,14 +249,14 @@ function SettingsPageInner() {
         </Section>
 
         {/* ── Assets Display ── */}
-        <Section title="Assets Display" icon="💎">
-          <Row label="Show Values" desc="Display π values on assets">
+        <Section title="Assets Display" icon="💎" theme={theme}>
+          <Row label="Show Values" desc="Display π values on assets" theme={theme}>
             <Toggle value={settings.showValues} onChange={v => update('showValues', v)} />
           </Row>
-          <Row label="Hide Balance" desc="Blur your portfolio balance">
+          <Row label="Hide Balance" desc="Blur your portfolio balance" theme={theme}>
             <Toggle value={settings.hideBalance} onChange={v => update('hideBalance', v)} />
           </Row>
-          <Row label="Currency" desc="Value display currency">
+          <Row label="Currency" desc="Value display currency" theme={theme}>
             <Select
               value={settings.currency}
               onChange={v => update('currency', v)}
@@ -229,7 +266,7 @@ function SettingsPageInner() {
               ]}
             />
           </Row>
-          <Row label="Default Tab" desc="Tab shown on open">
+          <Row label="Default Tab" desc="Tab shown on open" theme={theme}>
             <Select
               value={settings.defaultTab}
               onChange={v => update('defaultTab', v)}
@@ -243,35 +280,35 @@ function SettingsPageInner() {
         </Section>
 
         {/* ── Notifications ── */}
-        <Section title="Notifications" icon="🔔">
-          <Row label="Asset Updates" desc="Notify when assets change">
+        <Section title="Notifications" icon="🔔" theme={theme}>
+          <Row label="Asset Updates" desc="Notify when assets change" theme={theme}>
             <Toggle value={settings.notifyAssets} onChange={v => update('notifyAssets', v)} />
           </Row>
-          <Row label="Price Alerts" desc="Pi price movement alerts">
+          <Row label="Price Alerts" desc="Pi price movement alerts" theme={theme}>
             <Toggle value={settings.notifyPrice} onChange={v => update('notifyPrice', v)} />
           </Row>
         </Section>
 
         {/* ── Privacy ── */}
-        <Section title="Privacy" icon="🔒">
-          <Row label="Hide Balance" desc="Show **** instead of amount">
+        <Section title="Privacy" icon="🔒" theme={theme}>
+          <Row label="Hide Balance" desc="Show **** instead of amount" theme={theme}>
             <Toggle value={settings.hideBalance} onChange={v => update('hideBalance', v)} />
           </Row>
         </Section>
 
         {/* ── About ── */}
-        <Section title="About" icon="ℹ️">
-          <Row label="Version">
-            <span style={{ fontSize: 13, color: '#6b6b7a' }}>1.0.0</span>
+        <Section title="About" icon="ℹ️" theme={theme}>
+          <Row label="Version" theme={theme}>
+            <span style={{ fontSize: 13, color: theme.subtext }}>1.0.0</span>
           </Row>
-          <Row label="Domain">
-            <span style={{ fontSize: 13, color: '#6b6b7a' }}>assets.pi</span>
+          <Row label="Domain" theme={theme}>
+            <span style={{ fontSize: 13, color: theme.subtext }}>assets.pi</span>
           </Row>
-          <Row label="Ecosystem">
+          <Row label="Ecosystem" theme={theme}>
             <span style={{ fontSize: 13, color: '#d4af37' }}>TEC · 24 Apps</span>
           </Row>
-          <Row label="Built on">
-            <span style={{ fontSize: 13, color: '#6b6b7a' }}>Pi Network</span>
+          <Row label="Built on" theme={theme}>
+            <span style={{ fontSize: 13, color: theme.subtext }}>Pi Network</span>
           </Row>
         </Section>
 
@@ -280,8 +317,8 @@ function SettingsPageInner() {
           <button className="btn" onClick={reset}
             style={{
               padding: '14px', borderRadius: 16,
-              background: '#ffffff08', border: '1px solid #ffffff10',
-              color: '#6b6b7a', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              background: theme.surface, border: `1px solid ${theme.border}`,
+              color: theme.subtext, fontSize: 14, fontWeight: 600, cursor: 'pointer',
             }}>
             Reset to Defaults
           </button>
@@ -306,4 +343,4 @@ export default function SettingsPage() {
       <SettingsPageInner />
     </ErrorBoundary>
   );
-}
+          }
