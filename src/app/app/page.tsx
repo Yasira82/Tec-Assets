@@ -6,6 +6,7 @@ import { usePiAuth }       from '@/lib-client/hooks/usePiAuth';
 import { ErrorBoundary }   from '@/components/ErrorBoundary';
 import { goToTEC }         from '@/lib/tec-navigation';
 import { useSettings }     from '@/lib/hooks/useSettings';
+import { GlobalNav }       from '@yasser172/tec-ui';
 
 const SSO_URL =
   'https://tec-app.vercel.app/api/auth/sso?target=' +
@@ -39,7 +40,7 @@ const getTokenFromCookie = (): string | null => {
   return match ? match.split('=')[1] : null;
 };
 
-const maskValue = (value: string): string => '****';
+const maskValue = (_value: string): string => '****';
 
 // ── Asset Card ────────────────────────────────────────────
 function AssetCard({ asset, showValues }: { asset: Asset; showValues: boolean }) {
@@ -189,9 +190,9 @@ function Skeleton() {
 
 // ── Main ──────────────────────────────────────────────────
 function AssetsPageInner() {
-  const { user, isAuthenticated, isLoading, logout } = usePiAuth();
-  const { settings, loaded }                         = useSettings();
-  const router                                       = useRouter();
+  const { user, isAuthenticated, isLoading } = usePiAuth();
+  const { settings, loaded }                 = useSettings();
+  const router                               = useRouter();
 
   const [wallet,      setWallet]      = useState<WalletData | null>(null);
   const [assets,      setAssets]      = useState<Asset[]>([]);
@@ -199,7 +200,6 @@ function AssetsPageInner() {
   const [assetFilter, setAssetFilter] = useState<'all' | 'domains' | 'nfts'>('all');
   const [dataLoading, setDataLoading] = useState(true);
 
-  // ✅ Apply defaultTab from settings
   useEffect(() => {
     if (!loaded) return;
     if (settings.defaultTab === 'domains') {
@@ -211,7 +211,6 @@ function AssetsPageInner() {
     }
   }, [loaded, settings.defaultTab]);
 
-  // ✅ تحقق من الـ cookie مباشرة
   useEffect(() => {
     if (isLoading) return;
     const token = getTokenFromCookie();
@@ -271,41 +270,40 @@ function AssetsPageInner() {
       `}</style>
 
       {/* ── Header ── */}
-<header style={{
-  padding: '14px 20px', borderBottom: '1px solid #ffffff08',
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)',
-  backdropFilter: 'blur(20px)', zIndex: 100,
-}}>
-  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-    <button className="btn" onClick={() => goToTEC('HUB')}
-      style={{
-        background: '#ffffff08', border: '1px solid #ffffff10',
-        borderRadius: 10, padding: '6px 10px',
-        color: '#d4af37', fontSize: 16, cursor: 'pointer',
+      <header style={{
+        padding: '14px 20px', borderBottom: '1px solid #ffffff08',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)',
+        backdropFilter: 'blur(20px)', zIndex: 100,
       }}>
-      🔷
-    </button>
-    <div>
-      <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
-      <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
-    </div>
-  </div>
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-    <div style={{ fontSize: 12, color: '#d4af37' }}>
-      {user?.piUsername ? `@${user.piUsername}` : ''}
-    </div>
-    {/* ✅ شيل Logout من هنا — موجود في Settings */}
-    <button className="btn" onClick={() => router.push('/app/settings')}
-      style={{
-        background: '#ffffff08', border: '1px solid #ffffff10',
-        borderRadius: 10, padding: '6px 10px',
-        color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
-      }}>
-      ⚙️
-    </button>
-  </div>
-</header>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button className="btn" onClick={() => goToTEC('HUB')}
+            style={{
+              background: '#ffffff08', border: '1px solid #ffffff10',
+              borderRadius: 10, padding: '6px 10px',
+              color: '#d4af37', fontSize: 16, cursor: 'pointer',
+            }}>
+            🔷
+          </button>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
+            <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 12, color: '#d4af37' }}>
+            {user?.piUsername ? `@${user.piUsername}` : ''}
+          </div>
+          <button className="btn" onClick={() => router.push('/app/settings')}
+            style={{
+              background: '#ffffff08', border: '1px solid #ffffff10',
+              borderRadius: 10, padding: '6px 10px',
+              color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+            }}>
+            ⚙️
+          </button>
+        </div>
+      </header>
 
       {/* ── Portfolio Card ── */}
       {activeTab !== 'portfolio' && (
@@ -406,42 +404,42 @@ function AssetsPageInner() {
         </div>
       )}
 
-      {/* ── Bottom Nav ── */}
-      <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: 'rgba(10,10,18,0.97)', backdropFilter: 'blur(20px)',
-        borderTop: '1px solid #ffffff08', display: 'flex', padding: '10px 0 22px',
-      }}>
-        {[
-          { icon: '💎', label: 'Assets',    tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('all'); }    },
-          { icon: '📊', label: 'Portfolio', tab: 'portfolio' as MainTab, action: () => setActiveTab('portfolio')                              },
-          { icon: '🌐', label: 'Domains',   tab: 'assets'    as MainTab, action: () => { setActiveTab('assets'); setAssetFilter('domains'); } },
-          { icon: '⚙️', label: 'Settings',  tab: null,                   action: () => router.push('/app/settings')                          },
-          { icon: '🔷', label: 'TEC Hub',   tab: null,                   action: () => goToTEC('HUB')                                        },
-        ].map(item => (
-          <button key={item.label} onClick={item.action} className="btn"
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 3,
-              background: 'none', border: 'none', cursor: 'pointer',
-            }}>
-            <span style={{ fontSize: 18 }}>{item.icon}</span>
-            <span style={{
-              fontSize: 8, letterSpacing: 1, textTransform: 'uppercase',
-              fontWeight: item.tab === activeTab ? 700 : 400,
-              color: item.tab === activeTab ? '#d4af37' : '#4a4a5a',
-            }}>
-              {item.label}
-            </span>
-            {item.tab === activeTab && (
-              <span style={{
-                width: 4, height: 4, borderRadius: '50%',
-                background: '#d4af37', marginTop: -2,
-              }} />
-            )}
-          </button>
-        ))}
-      </nav>
+      {/* ── Bottom Nav — من @yasser172/tec-ui ── */}
+      <GlobalNav
+        currentApp="assets"
+        items={[
+          {
+            icon:   '💎',
+            label:  'Assets',
+            app:    'assets',
+            action: () => { setActiveTab('assets'); setAssetFilter('all'); },
+          },
+          {
+            icon:   '📊',
+            label:  'Portfolio',
+            app:    null,
+            action: () => setActiveTab('portfolio'),
+          },
+          {
+            icon:   '🌐',
+            label:  'Domains',
+            app:    null,
+            action: () => { setActiveTab('assets'); setAssetFilter('domains'); },
+          },
+          {
+            icon:   '⚙️',
+            label:  'Settings',
+            app:    'settings',
+            action: () => router.push('/app/settings'),
+          },
+          {
+            icon:   '🔷',
+            label:  'TEC Hub',
+            app:    null,
+            action: () => goToTEC('HUB'),
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -452,4 +450,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-}
+      }
