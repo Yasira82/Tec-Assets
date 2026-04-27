@@ -1,13 +1,12 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 
 interface RawAsset {
-  id:            string;
-  slug:          string;
-  category:      string;
-  status:        string;
-  metadata?:     Record<string, unknown>;
-  createdAt:     string;
-  transactionId: string;
+  id:        string;
+  slug:      string;
+  category:  string;
+  status:    string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
 }
 
 export const GET = createHandler({
@@ -15,8 +14,9 @@ export const GET = createHandler({
   handler: async ({ ctx, req }) => {
     const token = req.cookies.get('tec_access_token')?.value ?? '';
 
+    // ✅ الـ route الصح
     const res = await fetch(
-      `${GATEWAY_URL}/api/assets?userId=${encodeURIComponent(ctx.userId)}`,
+      `${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -28,10 +28,8 @@ export const GET = createHandler({
 
     if (!res.ok) return { data: [], total: 0 };
 
-    const raw = await res.json();
-
-    // ✅ normalize field names
-    const assets = (raw?.data ?? raw?.assets ?? []).map((a: RawAsset) => ({
+    const raw    = await res.json();
+    const assets = (raw?.data ?? []).map((a: RawAsset) => ({
       id:         a.id,
       name:       a.slug,
       asset_type: a.category?.toLowerCase() ?? 'domain',
