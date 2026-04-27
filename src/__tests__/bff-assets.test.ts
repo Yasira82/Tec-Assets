@@ -3,15 +3,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+// ✅ Helper — NextRequest mock صح
+const makeRequest = (token = 'tok') => ({
+  cookies: {
+    get:    (name: string) => name === 'tec_access_token' ? { value: token } : undefined,
+    getAll: () => [],
+  },
+  headers: {
+    get: (name: string) => name === 'x-request-id' ? 'req-123' : null,
+  },
+  url: 'https://tec-assets.vercel.app/api/bff/assets/list',
+});
+
 describe('BFF Assets List', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.API_GATEWAY_URL = 'https://gateway.test';
     process.env.INTERNAL_SECRET = 'test-secret';
+    process.env.JWT_SECRET      = 'test-jwt-secret';
   });
 
-  it('returns empty array when gateway returns 404', async () => {
+  it('throws when gateway returns 404', async () => {
     mockFetch.mockResolvedValueOnce({
       ok:     false,
       status: 404,
@@ -20,44 +33,37 @@ describe('BFF Assets List', () => {
 
     const { GET } = await import('@/app/api/bff/assets/list/route');
 
-    const req = {
-      cookies: { get: (name: string) => name === 'tec_access_token' ? { value: 'tok' } : undefined },
-      headers: { get: () => null },
-    };
-
     try {
-      await GET(req as any);
+      await GET(makeRequest() as any);
+      expect.fail('should have thrown');
     } catch (e: any) {
-      expect(e.message).toContain('Gateway');
+      expect(e.message).toContain('404');
     }
   });
 
   it('normalizes asset fields correctly', async () => {
-    const raw = {
-      data: [{
-        id:        'asset-1',
-        slug:      'assets.pi',
-        category:  'DOMAIN',
-        status:    'ACTIVE',
-        createdAt: '2026-04-27T00:00:00Z',
-      }],
-    };
+    // ✅ mock JWT verify
+    vi.doMock('jsonwebtoken', () => ({
+      verify: () => ({ sub: 'user-123', id: 'user-123' }),
+    }));
 
     mockFetch.mockResolvedValueOnce({
       ok:     true,
       status: 200,
-      json:   async () => raw,
+      json:   async () => ({
+        data: [{
+          id:        'asset-1',
+          slug:      'assets.pi',
+          category:  'DOMAIN',
+          status:    'ACTIVE',
+          createdAt: '2026-04-27T00:00:00Z',
+        }],
+      }),
     });
 
     const { GET } = await import('@/app/api/bff/assets/list/route');
-
-    const req = {
-      cookies: { get: (name: string) => name === 'tec_access_token' ? { value: 'tok' } : undefined },
-      headers: { get: () => 'req-123' },
-    };
-
-    const res   = await GET(req as any);
-    const data  = await res.json();
+    const res     = await GET(makeRequest() as any);
+    const data    = await res.json();
 
     expect(data.data[0].name).toBe('assets.pi');
     expect(data.data[0].asset_type).toBe('domain');
