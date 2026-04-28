@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       {
         algorithms: ['HS256'],
         issuer:     'tec.pi',
-        audience:   'https://tec-assets.vercel.app',
+        audience:   'https://tec-assets-app.vercel.app',
       },
     );
 
