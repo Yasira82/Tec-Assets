@@ -71,7 +71,7 @@ export const logout = async (): Promise<void> => {
   } catch (err) {
     console.error('[Pi Auth] Logout error:', err);
   } finally {
-    window.location.href = 'https://tec-app.vercel.app';
+    window.location.href = 'https://tec-app-frontend.vercel.app';
   }
 };
 
