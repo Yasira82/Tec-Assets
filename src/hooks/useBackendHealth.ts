@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { checkBackendHealth, HealthStatus }  from '../lib/health-check';
 
 export function useBackendHealth(intervalMs = 0) {
-  const [health,     setHealth]     = useState<HealthStatus>({ online: true });
-  const [isChecking, setIsChecking] = useState(false);
+  // ✅ null = لسه ما اتفحصش — مش offline
+  const [health,     setHealth]     = useState<HealthStatus | null>(null);
+  const [isChecking, setIsChecking] = useState(true); // ✅ ابدأ بـ true
 
   const check = useCallback(async () => {
     setIsChecking(true);
@@ -22,5 +23,11 @@ export function useBackendHealth(intervalMs = 0) {
     return () => clearTimeout(initial);
   }, [check, intervalMs]);
 
-  return { ...health, isChecking, recheckHealth: check };
+  return {
+    online:       health?.online ?? true, // ✅ افترض online لحد ما يتحقق
+    status:       health?.status,
+    error:        health?.error,
+    isChecking,
+    recheckHealth: check,
+  };
 }
