@@ -61,8 +61,8 @@ function AssetCard({
   showValues,
   onListForSale,
 }: {
-  asset:        Asset;
-  showValues:   boolean;
+  asset:         Asset;
+  showValues:    boolean;
   onListForSale: (asset: Asset) => void;
 }) {
   const typeEmoji: Record<string, string> = {
@@ -99,8 +99,10 @@ function AssetCard({
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1,
-          color: asset.status === 'active' ? '#7ee7c0' : '#6b6b7a' }}>
+        <div style={{
+          fontSize: 10, fontWeight: 600, letterSpacing: 1,
+          color: asset.status === 'active' ? '#7ee7c0' : '#6b6b7a',
+        }}>
           {asset.status}
         </div>
         <button
@@ -117,10 +119,10 @@ function AssetCard({
   );
 }
 
-// ── List for Sale Modal ───────────────────────────────────
+// ── List for Sale / Update Price Modal ────────────────────
 function ListForSaleModal({
   asset,
-  listing,  // ✅ لو موجود = update mode
+  listing,
   onClose,
   onSuccess,
 }: {
@@ -144,7 +146,6 @@ function ListForSaleModal({
 
     try {
       if (isUpdate) {
-        // ✅ Update price
         const res = await fetch('/api/bff/marketplace/update-price', {
           method:      'PATCH',
           credentials: 'include',
@@ -153,7 +154,6 @@ function ListForSaleModal({
         });
         if (!res.ok) { setError('Failed to update price'); return; }
       } else {
-        // ✅ New listing
         const res = await fetch('/api/bff/marketplace/list', {
           method:      'POST',
           credentials: 'include',
@@ -283,9 +283,11 @@ function ListForSaleModal({
 function MarketplaceCard({
   listing,
   currentUserId,
+  onEditPrice,
 }: {
   listing:       Listing;
   currentUserId: string;
+  onEditPrice:   (listing: Listing) => void;
 }) {
   const typeEmoji: Record<string, string> = {
     domain:  '🌐',
@@ -339,7 +341,13 @@ function MarketplaceCard({
           {listing.price}π
         </div>
         {isOwn ? (
-          <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 1 }}>YOUR LISTING</div>
+          <button onClick={() => onEditPrice(listing)} style={{
+            padding: '5px 12px', borderRadius: 10,
+            background: '#d4af3715', border: '1px solid #d4af3740',
+            color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          }}>
+            Edit Price
+          </button>
         ) : (
           <button onClick={handleBuy} style={{
             padding: '6px 14px', borderRadius: 10,
@@ -453,13 +461,14 @@ function AssetsPageInner() {
   const { settings, loaded }                 = useSettings();
   const router                               = useRouter();
 
-  const [wallet,       setWallet]       = useState<WalletData | null>(null);
-  const [assets,       setAssets]       = useState<Asset[]>([]);
-  const [listings,     setListings]     = useState<Listing[]>([]);
-  const [activeTab,    setActiveTab]    = useState<MainTab>('assets');
-  const [assetFilter,  setAssetFilter]  = useState<'all' | 'domains' | 'nfts'>('all');
-  const [dataLoading,  setDataLoading]  = useState(true);
-  const [listingAsset, setListingAsset] = useState<Asset | null>(null);
+  const [wallet,         setWallet]         = useState<WalletData | null>(null);
+  const [assets,         setAssets]         = useState<Asset[]>([]);
+  const [listings,       setListings]       = useState<Listing[]>([]);
+  const [activeTab,      setActiveTab]      = useState<MainTab>('assets');
+  const [assetFilter,    setAssetFilter]    = useState<'all' | 'domains' | 'nfts'>('all');
+  const [dataLoading,    setDataLoading]    = useState(true);
+  const [listingAsset,   setListingAsset]   = useState<Asset | null>(null);
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
   useEffect(() => {
     if (!loaded) return;
@@ -508,13 +517,13 @@ function AssetsPageInner() {
     finally { setDataLoading(false); }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(); },    [fetchData]);
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered  = assetFilter === 'all'
+  const filtered   = assetFilter === 'all'
     ? assets
     : assets.filter(a => a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
 
@@ -543,11 +552,12 @@ function AssetsPageInner() {
         input[type=number] { -moz-appearance: textfield; }
       `}</style>
 
-      {/* List for Sale Modal */}
-      {listingAsset && (
+      {/* ── Modals ── */}
+      {(listingAsset || editingListing) && (
         <ListForSaleModal
-          asset={listingAsset}
-          onClose={() => setListingAsset(null)}
+          asset={listingAsset ?? undefined}
+          listing={editingListing ?? undefined}
+          onClose={() => { setListingAsset(null); setEditingListing(null); }}
           onSuccess={() => { fetchListings(); fetchData(); }}
         />
       )}
@@ -626,9 +636,9 @@ function AssetsPageInner() {
       {/* ── Tabs ── */}
       <div style={{ padding: '16px 16px 0', display: 'flex', gap: 8, overflowX: 'auto' }}>
         {([
-          { key: 'assets',      label: '💎 My Assets'   },
-          { key: 'marketplace', label: '🛒 Marketplace'  },
-          { key: 'portfolio',   label: '📊 Portfolio'    },
+          { key: 'assets',      label: '💎 My Assets'  },
+          { key: 'marketplace', label: '🛒 Marketplace' },
+          { key: 'portfolio',   label: '📊 Portfolio'   },
         ] as const).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             style={{
@@ -644,7 +654,7 @@ function AssetsPageInner() {
         ))}
       </div>
 
-      {/* ── Asset Filter (My Assets only) ── */}
+      {/* ── Asset Filter ── */}
       {activeTab === 'assets' && (
         <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8 }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
@@ -671,7 +681,10 @@ function AssetsPageInner() {
         {activeTab === 'assets' && (
           dataLoading ? (
             [1,2,3].map(i => (
-              <div key={i} style={{ height: 76, background: '#0d0d14', borderRadius: 18, animation: 'shimmer 1.4s ease infinite' }} />
+              <div key={i} style={{
+                height: 76, background: '#0d0d14', borderRadius: 18,
+                animation: 'shimmer 1.4s ease infinite',
+              }} />
             ))
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -727,6 +740,7 @@ function AssetsPageInner() {
                 key={listing.id}
                 listing={listing}
                 currentUserId={user?.id ?? ''}
+                onEditPrice={setEditingListing}
               />
             ))
           )
@@ -790,4 +804,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-      }
+}
