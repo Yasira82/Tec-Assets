@@ -9,8 +9,8 @@ import { useSettings }     from '@/lib/hooks/useSettings';
 import { GlobalNav }       from '@yasser172/tec-ui';
 
 const SSO_URL =
-  'https://tec-app.vercel.app/api/auth/sso?target=' +
-  encodeURIComponent('https://tec-assets.vercel.app');
+  'https://tec-app-frontend.vercel.app/api/auth/sso?target=' +
+  encodeURIComponent('https://tec-assets-app.vercel.app');
 
 // ── Types ─────────────────────────────────────────────────
 interface Asset {
