@@ -140,10 +140,8 @@ function ListForSaleModal({
   const handleSubmit = async () => {
     const p = parseFloat(price);
     if (!p || p <= 0) { setError('Enter a valid price'); return; }
-
     setLoading(true);
     setError('');
-
     try {
       if (isUpdate) {
         const res = await fetch('/api/bff/marketplace/update-price', {
@@ -167,7 +165,6 @@ function ListForSaleModal({
         });
         if (!res.ok) { setError('Failed to list asset'); return; }
       }
-
       onSuccess();
       onClose();
     } catch {
@@ -192,14 +189,12 @@ function ListForSaleModal({
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
           <div style={{ width: 40, height: 4, borderRadius: 2, background: '#ffffff20' }} />
         </div>
-
         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
           {isUpdate ? 'Update Price' : 'List for Sale'}
         </div>
         <div style={{ fontSize: 12, color: '#4a4a5a', marginBottom: 20 }}>
           {isUpdate ? listing.title : `${asset?.name} · ${asset?.asset_type}`}
         </div>
-
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
             {isUpdate ? 'NEW PRICE (π)' : 'PRICE (π)'}
@@ -223,7 +218,6 @@ function ListForSaleModal({
             />
           </div>
         </div>
-
         {!isUpdate && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
@@ -243,11 +237,9 @@ function ListForSaleModal({
             />
           </div>
         )}
-
         {error && (
           <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12 }}>{error}</div>
         )}
-
         <button
           onClick={handleSubmit}
           disabled={loading || !price}
@@ -265,7 +257,6 @@ function ListForSaleModal({
               ? `Update to ${price || '0'}π`
               : `List for ${price || '0'}π`}
         </button>
-
         <button onClick={onClose} style={{
           width: '100%', padding: '14px', marginTop: 10,
           background: 'none', border: '1px solid #ffffff10',
@@ -279,15 +270,75 @@ function ListForSaleModal({
   );
 }
 
+// ── Cancel Confirm Modal ──────────────────────────────────
+function CancelConfirmModal({
+  listing,
+  onClose,
+  onConfirm,
+  loading,
+}: {
+  listing:   Listing;
+  onClose:   () => void;
+  onConfirm: () => void;
+  loading:   boolean;
+}) {
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(0,0,0,0.7)', zIndex: 300,
+        backdropFilter: 'blur(4px)',
+      }} />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
+        background: '#0d0d14', borderTop: '1px solid #e74c3c30',
+        borderRadius: '24px 24px 0 0', padding: '24px 20px 40px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#ffffff20' }} />
+        </div>
+        <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 12 }}>🗑️</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: 8 }}>
+          Cancel Listing?
+        </div>
+        <div style={{ fontSize: 13, color: '#4a4a5a', textAlign: 'center', marginBottom: 24 }}>
+          {listing.title} · {listing.price}π
+        </div>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          style={{
+            width: '100%', padding: '16px',
+            background: 'linear-gradient(135deg,#7f1d1d,#991b1b)',
+            border: 'none', borderRadius: 16,
+            color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+          }}>
+          {loading ? 'Cancelling...' : 'Yes, Cancel Listing'}
+        </button>
+        <button onClick={onClose} style={{
+          width: '100%', padding: '14px', marginTop: 10,
+          background: 'none', border: '1px solid #ffffff10',
+          borderRadius: 16, color: '#4a4a5a',
+          fontSize: 14, cursor: 'pointer',
+        }}>
+          Keep Listing
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── Marketplace Card ──────────────────────────────────────
 function MarketplaceCard({
   listing,
   currentUserId,
   onEditPrice,
+  onCancel,
 }: {
   listing:       Listing;
   currentUserId: string;
   onEditPrice:   (listing: Listing) => void;
+  onCancel:      (listing: Listing) => void;
 }) {
   const typeEmoji: Record<string, string> = {
     domain:  '🌐',
@@ -341,13 +392,22 @@ function MarketplaceCard({
           {listing.price}π
         </div>
         {isOwn ? (
-          <button onClick={() => onEditPrice(listing)} style={{
-            padding: '5px 12px', borderRadius: 10,
-            background: '#d4af3715', border: '1px solid #d4af3740',
-            color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-          }}>
-            Edit Price
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+            <button onClick={() => onEditPrice(listing)} style={{
+              padding: '5px 12px', borderRadius: 10,
+              background: '#d4af3715', border: '1px solid #d4af3740',
+              color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>
+              Edit Price
+            </button>
+            <button onClick={() => onCancel(listing)} style={{
+              padding: '5px 12px', borderRadius: 10,
+              background: '#e74c3c15', border: '1px solid #e74c3c40',
+              color: '#e74c3c', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>
+              Cancel
+            </button>
+          </div>
         ) : (
           <button onClick={handleBuy} style={{
             padding: '6px 14px', borderRadius: 10,
@@ -461,32 +521,30 @@ function AssetsPageInner() {
   const { settings, loaded }                 = useSettings();
   const router                               = useRouter();
 
-  const [wallet,         setWallet]         = useState<WalletData | null>(null);
-  const [assets,         setAssets]         = useState<Asset[]>([]);
-  const [listings,       setListings]       = useState<Listing[]>([]);
-  const [activeTab,      setActiveTab]      = useState<MainTab>('assets');
-  const [assetFilter,    setAssetFilter]    = useState<'all' | 'domains' | 'nfts'>('all');
-  const [dataLoading,    setDataLoading]    = useState(true);
-  const [listingAsset,   setListingAsset]   = useState<Asset | null>(null);
-  const [editingListing, setEditingListing] = useState<Listing | null>(null);
+  const [wallet,           setWallet]           = useState<WalletData | null>(null);
+  const [assets,           setAssets]           = useState<Asset[]>([]);
+  const [listings,         setListings]         = useState<Listing[]>([]);
+  const [activeTab,        setActiveTab]        = useState<MainTab>('assets');
+  const [assetFilter,      setAssetFilter]      = useState<'all' | 'domains' | 'nfts'>('all');
+  const [dataLoading,      setDataLoading]      = useState(true);
+  const [listingAsset,     setListingAsset]     = useState<Asset | null>(null);
+  const [editingListing,   setEditingListing]   = useState<Listing | null>(null);
+  const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
+  const [cancelLoading,    setCancelLoading]    = useState(false);
 
   useEffect(() => {
     if (!loaded) return;
     if (settings.defaultTab === 'domains') {
-      setActiveTab('assets');
-      setAssetFilter('domains');
+      setActiveTab('assets'); setAssetFilter('domains');
     } else if (settings.defaultTab === 'nfts') {
-      setActiveTab('assets');
-      setAssetFilter('nfts');
+      setActiveTab('assets'); setAssetFilter('nfts');
     }
   }, [loaded, settings.defaultTab]);
 
   useEffect(() => {
     if (isLoading) return;
     const token = getTokenFromCookie();
-    if (!token && !isAuthenticated) {
-      window.location.href = SSO_URL;
-    }
+    if (!token && !isAuthenticated) window.location.href = SSO_URL;
   }, [isLoading, isAuthenticated]);
 
   const fetchListings = useCallback(async () => {
@@ -517,7 +575,25 @@ function AssetsPageInner() {
     finally { setDataLoading(false); }
   }, []);
 
-  useEffect(() => { fetchData(); },    [fetchData]);
+  const handleCancelConfirm = useCallback(async () => {
+    if (!cancellingListing) return;
+    setCancelLoading(true);
+    try {
+      const res = await fetch('/api/bff/marketplace/cancel', {
+        method:      'PATCH',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: cancellingListing.id }),
+      });
+      if (res.ok) { fetchListings(); fetchData(); }
+    } catch { /* silent */ }
+    finally {
+      setCancelLoading(false);
+      setCancellingListing(null);
+    }
+  }, [cancellingListing, fetchListings, fetchData]);
+
+  useEffect(() => { fetchData(); },     [fetchData]);
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
@@ -527,13 +603,9 @@ function AssetsPageInner() {
     ? assets
     : assets.filter(a => a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
 
-  const totalValue = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
-
-  const displayBalance = settings.hideBalance
-    ? '****'
-    : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
-
-  const displayTotal = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
+  const totalValue     = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const displayBalance = settings.hideBalance ? '****' : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
+  const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
   return (
     <div style={{
@@ -559,6 +631,15 @@ function AssetsPageInner() {
           listing={editingListing ?? undefined}
           onClose={() => { setListingAsset(null); setEditingListing(null); }}
           onSuccess={() => { fetchListings(); fetchData(); }}
+        />
+      )}
+
+      {cancellingListing && (
+        <CancelConfirmModal
+          listing={cancellingListing}
+          onClose={() => setCancellingListing(null)}
+          onConfirm={handleCancelConfirm}
+          loading={cancelLoading}
         />
       )}
 
@@ -677,7 +758,6 @@ function AssetsPageInner() {
       {/* ── Content ── */}
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* My Assets */}
         {activeTab === 'assets' && (
           dataLoading ? (
             [1,2,3].map(i => (
@@ -715,7 +795,6 @@ function AssetsPageInner() {
           )
         )}
 
-        {/* Marketplace */}
         {activeTab === 'marketplace' && (
           listings.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -741,12 +820,12 @@ function AssetsPageInner() {
                 listing={listing}
                 currentUserId={user?.id ?? ''}
                 onEditPrice={setEditingListing}
+                onCancel={setCancellingListing}
               />
             ))
           )
         )}
 
-        {/* Portfolio */}
         {activeTab === 'portfolio' && (
           <PortfolioTab
             assets={assets}
@@ -804,4 +883,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-}
+          }
