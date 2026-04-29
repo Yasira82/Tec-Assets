@@ -5,5 +5,5 @@ export const TEC_ROUTES = {
 } as const;
 
 export const goToTEC = (path: keyof typeof TEC_ROUTES): void => {
-  window.location.href = TEC_ROUTES[path];
+  window.location.replace(TEC_ROUTES[path]);
 };
