@@ -12,6 +12,8 @@ const SSO_URL =
   'https://tec-app-frontend.vercel.app/api/auth/sso?target=' +
   encodeURIComponent('https://tec-assets-app.vercel.app');
 
+const TEC_PAY_URL = 'https://tec-app-frontend.vercel.app/pay';
+
 // ── Types ─────────────────────────────────────────────────
 interface Asset {
   id:         string;
@@ -23,13 +25,26 @@ interface Asset {
   created_at: string;
 }
 
+interface Listing {
+  id:          string;
+  asset_id:    string;
+  seller_id:   string;
+  price:       number;
+  currency:    string;
+  status:      string;
+  title:       string;
+  description: string;
+  category:    string;
+  created_at:  string;
+}
+
 interface WalletData {
   balance:  number;
   currency: string;
   walletId: string | null;
 }
 
-type MainTab = 'assets' | 'portfolio' | 'domains';
+type MainTab = 'assets' | 'portfolio' | 'marketplace';
 
 // ── Helper ────────────────────────────────────────────────
 const getTokenFromCookie = (): string | null => {
@@ -40,10 +55,16 @@ const getTokenFromCookie = (): string | null => {
   return match ? match.split('=')[1] : null;
 };
 
-const maskValue = (_value: string): string => '****';
-
 // ── Asset Card ────────────────────────────────────────────
-function AssetCard({ asset, showValues }: { asset: Asset; showValues: boolean }) {
+function AssetCard({
+  asset,
+  showValues,
+  onListForSale,
+}: {
+  asset:        Asset;
+  showValues:   boolean;
+  onListForSale: (asset: Asset) => void;
+}) {
   const typeEmoji: Record<string, string> = {
     domain:  '🌐',
     nft:     '🎨',
@@ -77,16 +98,245 @@ function AssetCard({ asset, showValues }: { asset: Asset; showValues: boolean })
           {asset.asset_type}
         </div>
       </div>
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#d4af37' }}>
-          {showValues ? `${Number(asset.value).toFixed(2)} π` : maskValue('')}
-        </div>
-        <div style={{
-          fontSize: 10, fontWeight: 600, letterSpacing: 1,
-          color: asset.status === 'active' ? '#7ee7c0' : '#6b6b7a',
-        }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1,
+          color: asset.status === 'active' ? '#7ee7c0' : '#6b6b7a' }}>
           {asset.status}
         </div>
+        <button
+          onClick={() => onListForSale(asset)}
+          style={{
+            padding: '5px 12px', borderRadius: 10,
+            background: '#d4af3715', border: '1px solid #d4af3740',
+            color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          }}>
+          List for Sale
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── List for Sale Modal ───────────────────────────────────
+function ListForSaleModal({
+  asset,
+  onClose,
+  onSuccess,
+}: {
+  asset:     Asset;
+  onClose:   () => void;
+  onSuccess: () => void;
+}) {
+  const [price,    setPrice]    = useState('');
+  const [desc,     setDesc]     = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+
+  const handleSubmit = async () => {
+    const p = parseFloat(price);
+    if (!p || p <= 0) { setError('Enter a valid price'); return; }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/bff/marketplace/list', {
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assetId:     asset.id,
+          price:       p,
+          title:       asset.name,
+          description: desc,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data?.error ?? 'Failed to list asset');
+        return;
+      }
+
+      onSuccess();
+      onClose();
+    } catch {
+      setError('Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(0,0,0,0.7)', zIndex: 300,
+        backdropFilter: 'blur(4px)',
+      }} />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
+        background: '#0d0d14', borderTop: '1px solid #d4af3720',
+        borderRadius: '24px 24px 0 0', padding: '24px 20px 40px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#ffffff20' }} />
+        </div>
+
+        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
+          List for Sale
+        </div>
+        <div style={{ fontSize: 12, color: '#4a4a5a', marginBottom: 20 }}>
+          {asset.name} · {asset.asset_type}
+        </div>
+
+        {/* Price Input */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
+            PRICE (π)
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: '#0a0a12', border: '1px solid #d4af3740',
+            borderRadius: 14, padding: '12px 16px',
+          }}>
+            <span style={{ fontFamily: 'Georgia,serif', fontSize: 20, color: '#d4af37' }}>π</span>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={price}
+              onChange={e => setPrice(e.target.value)}
+              placeholder="0.00"
+              autoFocus
+              style={{
+                flex: 1, background: 'none', border: 'none', outline: 'none',
+                color: '#fff', fontSize: 18, fontWeight: 700,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Description */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
+            DESCRIPTION (optional)
+          </div>
+          <textarea
+            value={desc}
+            onChange={e => setDesc(e.target.value)}
+            placeholder="Describe your asset..."
+            rows={2}
+            style={{
+              width: '100%', background: '#0a0a12',
+              border: '1px solid #ffffff10', borderRadius: 14,
+              padding: '12px 16px', color: '#fff', fontSize: 13,
+              outline: 'none', resize: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {error && (
+          <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12 }}>{error}</div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !price}
+          style={{
+            width: '100%', padding: '16px',
+            background: price ? 'linear-gradient(135deg,#d4af37,#b8882a)' : '#ffffff10',
+            border: 'none', borderRadius: 16,
+            color: price ? '#0a0800' : '#4a4a5a',
+            fontSize: 15, fontWeight: 800, cursor: price ? 'pointer' : 'default',
+          }}>
+          {loading ? 'Listing...' : `List for ${price || '0'}π`}
+        </button>
+
+        <button onClick={onClose} style={{
+          width: '100%', padding: '14px', marginTop: 10,
+          background: 'none', border: '1px solid #ffffff10',
+          borderRadius: 16, color: '#4a4a5a',
+          fontSize: 14, cursor: 'pointer',
+        }}>
+          Cancel
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Marketplace Card ──────────────────────────────────────
+function MarketplaceCard({
+  listing,
+  currentUserId,
+}: {
+  listing:       Listing;
+  currentUserId: string;
+}) {
+  const typeEmoji: Record<string, string> = {
+    domain:  '🌐',
+    nft:     '🎨',
+    token:   '🪙',
+    default: '💎',
+  };
+
+  const isOwn = listing.seller_id === currentUserId;
+
+  const handleBuy = () => {
+    const params = new URLSearchParams({
+      asset_id:   listing.asset_id,
+      asset_type: listing.category,
+      name:       listing.title,
+      price:      listing.price.toString(),
+      listing_id: listing.id,
+      return_url: 'https://tec-assets-app.vercel.app/app',
+    });
+    window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
+  };
+
+  return (
+    <div style={{
+      background: '#0d0d14', border: '1px solid #d4af3720',
+      borderRadius: 18, padding: '16px 20px',
+      display: 'flex', alignItems: 'center', gap: 14,
+    }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 14,
+        background: 'linear-gradient(135deg,#1a1208,#0d0d14)',
+        border: '1px solid #d4af3730',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 24, flexShrink: 0,
+      }}>
+        {typeEmoji[listing.category] ?? typeEmoji.default}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {listing.title}
+        </div>
+        <div style={{ fontSize: 11, color: '#4a4a5a', textTransform: 'uppercase', letterSpacing: 1 }}>
+          {listing.category}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        <div style={{ fontSize: 16, fontWeight: 900, color: '#d4af37' }}>
+          {listing.price}π
+        </div>
+        {isOwn ? (
+          <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 1 }}>YOUR LISTING</div>
+        ) : (
+          <button onClick={handleBuy} style={{
+            padding: '6px 14px', borderRadius: 10,
+            background: 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
+            border: '1px solid #7ee7c040',
+            color: '#7ee7c0', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}>
+            Buy
+          </button>
+        )}
       </div>
     </div>
   );
@@ -105,7 +355,6 @@ function PortfolioTab({
   const domainCount = assets.filter(a => a.asset_type === 'domain').length;
   const nftCount    = assets.filter(a => a.asset_type === 'nft').length;
   const tokenCount  = assets.filter(a => a.asset_type === 'token').length;
-
   const fmt = (v: string) => hideBalance ? '****' : v;
 
   return (
@@ -124,7 +373,7 @@ function PortfolioTab({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
             { label: 'Pi Balance',   value: wallet ? fmt(`${Number(wallet.balance).toFixed(2)} π`) : '—' },
-            { label: 'Assets Value', value: showValues ? fmt(`${totalValue.toFixed(2)} π`) : '****'      },
+            { label: 'Assets Value', value: showValues ? fmt(`${totalValue.toFixed(2)} π`) : '****' },
           ].map(s => (
             <div key={s.label} style={{ background: '#ffffff05', borderRadius: 12, padding: '12px' }}>
               <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
@@ -133,7 +382,6 @@ function PortfolioTab({
           ))}
         </div>
       </div>
-
       <div style={{ borderRadius: 20, padding: '20px', background: '#0d0d14', border: '1px solid #ffffff08' }}>
         <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 12 }}>
           ASSET BREAKDOWN
@@ -152,14 +400,12 @@ function PortfolioTab({
           </div>
         ))}
       </div>
-
-      <button onClick={() => goToTEC('DASHBOARD')}
-        style={{
-          padding: '14px', borderRadius: 16,
-          background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-          border: 'none', color: '#0a0800',
-          fontSize: 14, fontWeight: 700, cursor: 'pointer',
-        }}>
+      <button onClick={() => goToTEC('DASHBOARD')} style={{
+        padding: '14px', borderRadius: 16,
+        background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+        border: 'none', color: '#0a0800',
+        fontSize: 14, fontWeight: 700, cursor: 'pointer',
+      }}>
         🔷 View Full Dashboard
       </button>
     </div>
@@ -194,11 +440,13 @@ function AssetsPageInner() {
   const { settings, loaded }                 = useSettings();
   const router                               = useRouter();
 
-  const [wallet,      setWallet]      = useState<WalletData | null>(null);
-  const [assets,      setAssets]      = useState<Asset[]>([]);
-  const [activeTab,   setActiveTab]   = useState<MainTab>('assets');
-  const [assetFilter, setAssetFilter] = useState<'all' | 'domains' | 'nfts'>('all');
-  const [dataLoading, setDataLoading] = useState(true);
+  const [wallet,       setWallet]       = useState<WalletData | null>(null);
+  const [assets,       setAssets]       = useState<Asset[]>([]);
+  const [listings,     setListings]     = useState<Listing[]>([]);
+  const [activeTab,    setActiveTab]    = useState<MainTab>('assets');
+  const [assetFilter,  setAssetFilter]  = useState<'all' | 'domains' | 'nfts'>('all');
+  const [dataLoading,  setDataLoading]  = useState(true);
+  const [listingAsset, setListingAsset] = useState<Asset | null>(null);
 
   useEffect(() => {
     if (!loaded) return;
@@ -219,6 +467,16 @@ function AssetsPageInner() {
     }
   }, [isLoading, isAuthenticated]);
 
+  const fetchListings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bff/marketplace', { credentials: 'include', cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setListings(data?.listings ?? []);
+      }
+    } catch { /* silent */ }
+  }, []);
+
   const fetchData = useCallback(async () => {
     const token = getTokenFromCookie();
     if (!token) return;
@@ -238,11 +496,12 @@ function AssetsPageInner() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchListings(); }, [fetchListings]);
 
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered   = assetFilter === 'all'
+  const filtered  = assetFilter === 'all'
     ? assets
     : assets.filter(a => a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
 
@@ -252,9 +511,7 @@ function AssetsPageInner() {
     ? '****'
     : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
 
-  const displayTotal = settings.hideBalance
-    ? '****'
-    : `${totalValue.toFixed(2)}`;
+  const displayTotal = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
   return (
     <div style={{
@@ -265,9 +522,22 @@ function AssetsPageInner() {
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} }
+        @keyframes spin    { to{transform:rotate(360deg)} }
         .fade-in { animation: slideUp 0.4s ease; }
         .btn:active { transform: scale(0.97); }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        input[type=number] { -moz-appearance: textfield; }
       `}</style>
+
+      {/* List for Sale Modal */}
+      {listingAsset && (
+        <ListForSaleModal
+          asset={listingAsset}
+          onClose={() => setListingAsset(null)}
+          onSuccess={() => { fetchListings(); fetchData(); }}
+        />
+      )}
 
       {/* ── Header ── */}
       <header style={{
@@ -340,18 +610,39 @@ function AssetsPageInner() {
         </div>
       )}
 
-      {/* ── Asset Filter Tabs ── */}
+      {/* ── Tabs ── */}
+      <div style={{ padding: '16px 16px 0', display: 'flex', gap: 8, overflowX: 'auto' }}>
+        {([
+          { key: 'assets',      label: '💎 My Assets'   },
+          { key: 'marketplace', label: '🛒 Marketplace'  },
+          { key: 'portfolio',   label: '📊 Portfolio'    },
+        ] as const).map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+              background: activeTab === tab.key ? '#d4af3720' : '#ffffff08',
+              color:      activeTab === tab.key ? '#d4af37'   : '#6b6b7a',
+              border:     activeTab === tab.key ? '1px solid #d4af3740' : '1px solid transparent',
+              transition: 'all 0.2s',
+            }}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Asset Filter (My Assets only) ── */}
       {activeTab === 'assets' && (
-        <div style={{ padding: '16px 16px 0', display: 'flex', gap: 8 }}>
+        <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8 }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
             <button key={tab} onClick={() => setAssetFilter(tab)}
               style={{
-                padding: '8px 18px', borderRadius: 20, cursor: 'pointer',
-                fontSize: 12, fontWeight: 600, letterSpacing: 1,
+                padding: '6px 14px', borderRadius: 20, cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, letterSpacing: 1,
                 textTransform: 'uppercase' as const,
-                background: assetFilter === tab ? '#d4af3720' : '#ffffff08',
-                color:      assetFilter === tab ? '#d4af37'   : '#6b6b7a',
-                border:     assetFilter === tab ? '1px solid #d4af3740' : '1px solid transparent',
+                background: assetFilter === tab ? '#ffffff12' : 'none',
+                color:      assetFilter === tab ? '#fff'      : '#4a4a5a',
+                border:     assetFilter === tab ? '1px solid #ffffff20' : '1px solid transparent',
                 transition: 'all 0.2s',
               }}>
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
@@ -361,35 +652,29 @@ function AssetsPageInner() {
       )}
 
       {/* ── Content ── */}
-      {activeTab === 'portfolio' ? (
-        <PortfolioTab
-          assets={assets}
-          wallet={wallet}
-          showValues={settings.showValues}
-          hideBalance={settings.hideBalance}
-        />
-      ) : (
-        <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {dataLoading ? (
-            <>
-              <style>{`.sk{animation:shimmer 1.4s ease infinite;background:#0d0d14;border-radius:18px}`}</style>
-              {[1,2,3].map(i => <div key={i} className="sk" style={{ height: 76 }} />)}
-            </>
+      <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* My Assets */}
+        {activeTab === 'assets' && (
+          dataLoading ? (
+            [1,2,3].map(i => (
+              <div key={i} style={{ height: 76, background: '#0d0d14', borderRadius: 18, animation: 'shimmer 1.4s ease infinite' }} />
+            ))
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
               <div style={{ fontSize: 15, color: '#4a4a5a' }}>No assets yet</div>
               <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
-                Your digital assets will appear here
+                Browse the Marketplace to find assets
               </div>
-              <button onClick={() => goToTEC('HUB')}
+              <button onClick={() => setActiveTab('marketplace')}
                 style={{
                   marginTop: 20, padding: '12px 24px',
                   background: 'linear-gradient(135deg,#d4af37,#b8882a)',
                   border: 'none', borderRadius: 14,
                   color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
                 }}>
-                🔷 Go to TEC Hub
+                🛒 Browse Marketplace
               </button>
             </div>
           ) : (
@@ -398,13 +683,55 @@ function AssetsPageInner() {
                 key={asset.id}
                 asset={asset}
                 showValues={settings.showValues}
+                onListForSale={setListingAsset}
               />
             ))
-          )}
-        </div>
-      )}
+          )
+        )}
 
-      {/* ── Bottom Nav — من @yasser172/tec-ui ── */}
+        {/* Marketplace */}
+        {activeTab === 'marketplace' && (
+          listings.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+              <div style={{ fontSize: 15, color: '#4a4a5a' }}>No listings yet</div>
+              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
+                Be the first to list an asset for sale
+              </div>
+              <button onClick={() => setActiveTab('assets')}
+                style={{
+                  marginTop: 20, padding: '12px 24px',
+                  background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                  border: 'none', borderRadius: 14,
+                  color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}>
+                💎 My Assets
+              </button>
+            </div>
+          ) : (
+            listings.map(listing => (
+              <MarketplaceCard
+                key={listing.id}
+                listing={listing}
+                currentUserId={user?.id ?? ''}
+              />
+            ))
+          )
+        )}
+
+        {/* Portfolio */}
+        {activeTab === 'portfolio' && (
+          <PortfolioTab
+            assets={assets}
+            wallet={wallet}
+            showValues={settings.showValues}
+            hideBalance={settings.hideBalance}
+          />
+        )}
+
+      </div>
+
+      {/* ── Bottom Nav ── */}
       <GlobalNav
         currentApp="assets"
         items={[
@@ -415,16 +742,16 @@ function AssetsPageInner() {
             action: () => { setActiveTab('assets'); setAssetFilter('all'); },
           },
           {
+            icon:   '🛒',
+            label:  'Market',
+            app:    null,
+            action: () => setActiveTab('marketplace'),
+          },
+          {
             icon:   '📊',
             label:  'Portfolio',
             app:    null,
             action: () => setActiveTab('portfolio'),
-          },
-          {
-            icon:   '🌐',
-            label:  'Domains',
-            app:    null,
-            action: () => { setActiveTab('assets'); setAssetFilter('domains'); },
           },
           {
             icon:   '⚙️',
