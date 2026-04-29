@@ -3,9 +3,11 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+// ✅ URLs محدثة
+const TEC_APP_URL = 'https://tec-app-frontend.vercel.app';
 const TEC_SSO_URL =
-  'https://tec-app.vercel.app/api/auth/sso?target=' +
-  encodeURIComponent('https://tec-assets.vercel.app');
+  `${TEC_APP_URL}/api/auth/sso?target=` +
+  encodeURIComponent('https://tec-assets-app.vercel.app');
 
 const getTokenFromCookie = (): string | null => {
   if (typeof document === 'undefined') return null;
