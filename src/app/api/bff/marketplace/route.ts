@@ -18,14 +18,21 @@ interface RawListing {
 }
 
 export const GET = createHandler({
-  requireAuth: false,
-  handler: async ({ req }) => {
+  requireAuth: true, // ✅ محتاج token عشان Gateway يقبله
+  handler: async ({ ctx, req }) => {
+    const token = req.cookies.get('tec_access_token')?.value ?? '';
     const { searchParams } = new URL(req.url);
     const query = searchParams.toString();
 
     const res = await fetch(
       `${GATEWAY_URL}/api/assets/marketplace${query ? `?${query}` : ''}`,
-      { cache: 'no-store' },
+      {
+        cache: 'no-store',
+        headers: {
+          Authorization:  `Bearer ${token}`,
+          'x-request-id': ctx.requestId,
+        },
+      },
     );
 
     if (!res.ok) return { listings: [], total: 0 };
