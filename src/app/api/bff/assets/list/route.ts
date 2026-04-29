@@ -12,21 +12,25 @@ interface RawAsset {
 export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
-    const token = req.cookies.get('tec_access_token')?.value ?? '';
+    const token       = req.cookies.get('tec_access_token')?.value ?? '';
+    const internalKey = process.env.INTERNAL_SECRET ?? '';
 
-    // ✅ الـ route الصح
     const res = await fetch(
       `${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-request-id':  ctx.requestId,
+          'Authorization':  `Bearer ${token}`,
+          'x-request-id':   ctx.requestId,
+          'x-internal-key': internalKey,
         },
         cache: 'no-store',
       },
     );
 
-    if (!res.ok) return { data: [], total: 0 };
+    if (!res.ok) {
+      console.error('[BFF] assets/list failed:', res.status, await res.text());
+      return { data: [], total: 0 };
+    }
 
     const raw    = await res.json();
     const assets = (raw?.data ?? []).map((a: RawAsset) => ({
