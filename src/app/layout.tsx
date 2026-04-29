@@ -1,5 +1,6 @@
-import type { Metadata }  from 'next';
-import { LocaleProvider } from '@/lib/i18n';
+import type { Metadata }         from 'next';
+import { LocaleProvider }        from '@/lib/i18n';
+import { BackendOfflineBanner }  from '@/components/BackendOfflineBanner';
 
 export const metadata: Metadata = {
   title:       'TEC Assets — Digital Ownership',
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <LocaleProvider>
+          <BackendOfflineBanner />
           {children}
         </LocaleProvider>
       </body>
