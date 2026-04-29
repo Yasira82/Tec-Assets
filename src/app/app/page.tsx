@@ -120,17 +120,20 @@ function AssetCard({
 // ── List for Sale Modal ───────────────────────────────────
 function ListForSaleModal({
   asset,
+  listing,  // ✅ لو موجود = update mode
   onClose,
   onSuccess,
 }: {
-  asset:     Asset;
+  asset?:    Asset;
+  listing?:  Listing;
   onClose:   () => void;
   onSuccess: () => void;
 }) {
-  const [price,    setPrice]    = useState('');
-  const [desc,     setDesc]     = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const isUpdate = !!listing;
+  const [price,   setPrice]   = useState(isUpdate ? listing.price.toString() : '');
+  const [desc,    setDesc]    = useState(isUpdate ? listing.description : '');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
 
   const handleSubmit = async () => {
     const p = parseFloat(price);
@@ -140,22 +143,29 @@ function ListForSaleModal({
     setError('');
 
     try {
-      const res = await fetch('/api/bff/marketplace/list', {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assetId:     asset.id,
-          price:       p,
-          title:       asset.name,
-          description: desc,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data?.error ?? 'Failed to list asset');
-        return;
+      if (isUpdate) {
+        // ✅ Update price
+        const res = await fetch('/api/bff/marketplace/update-price', {
+          method:      'PATCH',
+          credentials: 'include',
+          headers:     { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: listing.id, price: p }),
+        });
+        if (!res.ok) { setError('Failed to update price'); return; }
+      } else {
+        // ✅ New listing
+        const res = await fetch('/api/bff/marketplace/list', {
+          method:      'POST',
+          credentials: 'include',
+          headers:     { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            assetId:     asset!.id,
+            price:       p,
+            title:       asset!.name,
+            description: desc,
+          }),
+        });
+        if (!res.ok) { setError('Failed to list asset'); return; }
       }
 
       onSuccess();
@@ -184,16 +194,15 @@ function ListForSaleModal({
         </div>
 
         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
-          List for Sale
+          {isUpdate ? 'Update Price' : 'List for Sale'}
         </div>
         <div style={{ fontSize: 12, color: '#4a4a5a', marginBottom: 20 }}>
-          {asset.name} · {asset.asset_type}
+          {isUpdate ? listing.title : `${asset?.name} · ${asset?.asset_type}`}
         </div>
 
-        {/* Price Input */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
-            PRICE (π)
+            {isUpdate ? 'NEW PRICE (π)' : 'PRICE (π)'}
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
@@ -202,9 +211,7 @@ function ListForSaleModal({
           }}>
             <span style={{ fontFamily: 'Georgia,serif', fontSize: 20, color: '#d4af37' }}>π</span>
             <input
-              type="number"
-              min="0.01"
-              step="0.01"
+              type="number" min="0.01" step="0.01"
               value={price}
               onChange={e => setPrice(e.target.value)}
               placeholder="0.00"
@@ -217,24 +224,25 @@ function ListForSaleModal({
           </div>
         </div>
 
-        {/* Description */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
-            DESCRIPTION (optional)
+        {!isUpdate && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
+              DESCRIPTION (optional)
+            </div>
+            <textarea
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
+              placeholder="Describe your asset..."
+              rows={2}
+              style={{
+                width: '100%', background: '#0a0a12',
+                border: '1px solid #ffffff10', borderRadius: 14,
+                padding: '12px 16px', color: '#fff', fontSize: 13,
+                outline: 'none', resize: 'none', boxSizing: 'border-box',
+              }}
+            />
           </div>
-          <textarea
-            value={desc}
-            onChange={e => setDesc(e.target.value)}
-            placeholder="Describe your asset..."
-            rows={2}
-            style={{
-              width: '100%', background: '#0a0a12',
-              border: '1px solid #ffffff10', borderRadius: 14,
-              padding: '12px 16px', color: '#fff', fontSize: 13,
-              outline: 'none', resize: 'none', boxSizing: 'border-box',
-            }}
-          />
-        </div>
+        )}
 
         {error && (
           <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12 }}>{error}</div>
@@ -248,9 +256,14 @@ function ListForSaleModal({
             background: price ? 'linear-gradient(135deg,#d4af37,#b8882a)' : '#ffffff10',
             border: 'none', borderRadius: 16,
             color: price ? '#0a0800' : '#4a4a5a',
-            fontSize: 15, fontWeight: 800, cursor: price ? 'pointer' : 'default',
+            fontSize: 15, fontWeight: 800,
+            cursor: price ? 'pointer' : 'default',
           }}>
-          {loading ? 'Listing...' : `List for ${price || '0'}π`}
+          {loading
+            ? (isUpdate ? 'Updating...' : 'Listing...')
+            : isUpdate
+              ? `Update to ${price || '0'}π`
+              : `List for ${price || '0'}π`}
         </button>
 
         <button onClick={onClose} style={{
