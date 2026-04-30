@@ -71,17 +71,18 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleMint = () => {
-    if (!name || !uploadedUrl) return;
-    const params = new URLSearchParams({
-      asset_type: 'nft',
-      name,
-      price:      MINT_FEE.toString(),
-      listing_id: `nft-mint-${Date.now()}`,
-      asset_id:   `nft-${Date.now()}`,
-      return_url: 'https://tec-assets-app.vercel.app/app',
-    });
-    window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
-  };
+  if (!name || !uploadedUrl) return;
+  const params = new URLSearchParams({
+    asset_type: 'nft',
+    name,
+    price:      MINT_FEE.toString(),
+    listing_id: `nft-mint-${Date.now()}`,
+    asset_id:   `nft-${Date.now()}`,
+    image_url:  uploadedUrl,  // ✅ أضف هنا
+    return_url: 'https://tec-assets-app.vercel.app/app',
+  });
+  window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
+};
 
   return (
     <>
