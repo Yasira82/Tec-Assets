@@ -8,13 +8,13 @@ import { goToTEC }                          from '@/lib/tec-navigation';
 import { useSettings }                      from '@/lib/hooks/useSettings';
 import { GlobalNav }                        from '@yasser172/tec-ui';
 import { Asset, Listing, WalletData, MainTab } from './types';
-import { AssetCard }           from './components/AssetCard';
-import { MarketplaceCard }     from './components/MarketplaceCard';
-import { ListForSaleModal }    from './components/ListForSaleModal';
-import { CancelConfirmModal }  from './components/CancelConfirmModal';
-import { AddDomainModal }      from './components/AddDomainModal';
-import { PortfolioTab }        from './components/PortfolioTab';
-import { Skeleton }            from './components/Skeleton';
+import { AssetCard }          from './components/AssetCard';
+import { MarketplaceCard }    from './components/MarketplaceCard';
+import { ListForSaleModal }   from './components/ListForSaleModal';
+import { CancelConfirmModal } from './components/CancelConfirmModal';
+import { PortfolioTab }       from './components/PortfolioTab';
+import { Skeleton }           from './components/Skeleton';
+import { NFTUploadModal }     from './components/NFTUploadModal';
 
 const SSO_URL = 'https://tec-app-frontend.vercel.app/api/auth/sso?target=' +
   encodeURIComponent('https://tec-assets-app.vercel.app');
@@ -40,7 +40,7 @@ function AssetsPageInner() {
   const [editingListing,    setEditingListing]    = useState<Listing | null>(null);
   const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
   const [cancelLoading,     setCancelLoading]     = useState(false);
-  const [addingDomain,      setAddingDomain]      = useState(false);
+  const [mintingNFT,        setMintingNFT]        = useState(false);
 
   useEffect(() => {
     if (!loaded) return;
@@ -110,7 +110,11 @@ function AssetsPageInner() {
   const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#020205', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif', paddingBottom: 90 }}>
+    <div style={{
+      minHeight: '100vh', background: '#020205', color: '#fff',
+      fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+      paddingBottom: 90,
+    }}>
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} }
@@ -123,7 +127,9 @@ function AssetsPageInner() {
       `}</style>
 
       {/* ── Modals ── */}
-      {addingDomain && <AddDomainModal onClose={() => setAddingDomain(false)} />}
+      {mintingNFT && (
+        <NFTUploadModal onClose={() => setMintingNFT(false)} />
+      )}
 
       {(listingAsset || editingListing) && (
         <ListForSaleModal
@@ -144,9 +150,18 @@ function AssetsPageInner() {
       )}
 
       {/* ── Header ── */}
-      <header style={{ padding: '14px 20px', borderBottom: '1px solid #ffffff08', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)', backdropFilter: 'blur(20px)', zIndex: 100 }}>
+      <header style={{
+        padding: '14px 20px', borderBottom: '1px solid #ffffff08',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)',
+        backdropFilter: 'blur(20px)', zIndex: 100,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn" onClick={() => goToTEC('HUB')} style={{ background: '#ffffff08', border: '1px solid #ffffff10', borderRadius: 10, padding: '6px 10px', color: '#d4af37', fontSize: 16, cursor: 'pointer' }}>
+          <button className="btn" onClick={() => goToTEC('HUB')} style={{
+            background: '#ffffff08', border: '1px solid #ffffff10',
+            borderRadius: 10, padding: '6px 10px',
+            color: '#d4af37', fontSize: 16, cursor: 'pointer',
+          }}>
             🔷
           </button>
           <div>
@@ -155,8 +170,14 @@ function AssetsPageInner() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 12, color: '#d4af37' }}>{user?.piUsername ? `@${user.piUsername}` : ''}</div>
-          <button className="btn" onClick={() => router.push('/app/settings')} style={{ background: '#ffffff08', border: '1px solid #ffffff10', borderRadius: 10, padding: '6px 10px', color: '#6b6b7a', fontSize: 14, cursor: 'pointer' }}>
+          <div style={{ fontSize: 12, color: '#d4af37' }}>
+            {user?.piUsername ? `@${user.piUsername}` : ''}
+          </div>
+          <button className="btn" onClick={() => router.push('/app/settings')} style={{
+            background: '#ffffff08', border: '1px solid #ffffff10',
+            borderRadius: 10, padding: '6px 10px',
+            color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+          }}>
             ⚙️
           </button>
         </div>
@@ -165,11 +186,21 @@ function AssetsPageInner() {
       {/* ── Portfolio Card ── */}
       {activeTab !== 'portfolio' && (
         <div style={{ padding: '16px 16px 0' }} className="fade-in">
-          <div style={{ borderRadius: 24, padding: '22px 24px', background: 'linear-gradient(135deg,#1a1208 0%,#0f0f1a 60%,#0a0f1f 100%)', border: '1px solid #d4af3725' }}>
-            <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
+          <div style={{
+            borderRadius: 24, padding: '22px 24px',
+            background: 'linear-gradient(135deg,#1a1208 0%,#0f0f1a 60%,#0a0f1f 100%)',
+            border: '1px solid #d4af3725',
+          }}>
+            <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
+              PORTFOLIO VALUE
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>{dataLoading ? '—' : displayTotal}</span>
-              <span style={{ fontSize: 20, color: '#d4af3780' }}>{settings.hideBalance ? '' : 'π'}</span>
+              <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
+                {dataLoading ? '—' : displayTotal}
+              </span>
+              <span style={{ fontSize: 20, color: '#d4af3780' }}>
+                {settings.hideBalance ? '' : 'π'}
+              </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {[
@@ -207,7 +238,7 @@ function AssetsPageInner() {
         ))}
       </div>
 
-      {/* ── Asset Filter + Add Domain ── */}
+      {/* ── Asset Filter + NFT ── */}
       {activeTab === 'assets' && (
         <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8, alignItems: 'center' }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
@@ -223,12 +254,15 @@ function AssetsPageInner() {
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
             </button>
           ))}
-          <button onClick={() => setAddingDomain(true)} style={{
+
+          {/* ✅ NFT Mint */}
+          <button onClick={() => setMintingNFT(true)} style={{
             marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
-            background: '#7eb8f715', border: '1px solid #7eb8f740',
-            color: '#7eb8f7', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+            background: '#7b6bc815', border: '1px solid #7b6bc840',
+            color: '#b39ddb', fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', whiteSpace: 'nowrap',
           }}>
-            + Domain
+            + NFT
           </button>
         </div>
       )}
@@ -239,18 +273,33 @@ function AssetsPageInner() {
         {activeTab === 'assets' && (
           dataLoading ? (
             [1,2,3].map(i => (
-              <div key={i} style={{ height: 76, background: '#0d0d14', borderRadius: 18, animation: 'shimmer 1.4s ease infinite' }} />
+              <div key={i} style={{
+                height: 76, background: '#0d0d14', borderRadius: 18,
+                animation: 'shimmer 1.4s ease infinite',
+              }} />
             ))
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
               <div style={{ fontSize: 15, color: '#4a4a5a' }}>No assets yet</div>
-              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>Add your Pi domain or browse the Marketplace</div>
+              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
+                Mint an NFT or browse the Marketplace
+              </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
-                <button onClick={() => setAddingDomain(true)} style={{ padding: '12px 20px', background: 'linear-gradient(135deg,#1a3a5c,#0a2040)', border: '1px solid #7eb8f740', borderRadius: 14, color: '#7eb8f7', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  🌐 Add Domain
+                <button onClick={() => setMintingNFT(true)} style={{
+                  padding: '12px 20px',
+                  background: 'linear-gradient(135deg,#2d1b69,#1a0f3d)',
+                  border: '1px solid #7b6bc840', borderRadius: 14,
+                  color: '#b39ddb', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}>
+                  🎨 Mint NFT
                 </button>
-                <button onClick={() => setActiveTab('marketplace')} style={{ padding: '12px 20px', background: 'linear-gradient(135deg,#d4af37,#b8882a)', border: 'none', borderRadius: 14, color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={() => setActiveTab('marketplace')} style={{
+                  padding: '12px 20px',
+                  background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                  border: 'none', borderRadius: 14,
+                  color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}>
                   🛒 Marketplace
                 </button>
               </div>
@@ -273,8 +322,15 @@ function AssetsPageInner() {
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
               <div style={{ fontSize: 15, color: '#4a4a5a' }}>No listings yet</div>
-              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>Be the first to list an asset for sale</div>
-              <button onClick={() => setActiveTab('assets')} style={{ marginTop: 20, padding: '12px 24px', background: 'linear-gradient(135deg,#d4af37,#b8882a)', border: 'none', borderRadius: 14, color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
+                Be the first to list an asset for sale
+              </div>
+              <button onClick={() => setActiveTab('assets')} style={{
+                marginTop: 20, padding: '12px 24px',
+                background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                border: 'none', borderRadius: 14,
+                color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}>
                 💎 My Assets
               </button>
             </div>
@@ -323,4 +379,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-      }
+                  }
