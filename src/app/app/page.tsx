@@ -101,19 +101,34 @@ function AssetCard({
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
         <div style={{
           fontSize: 10, fontWeight: 600, letterSpacing: 1,
-          color: asset.status === 'active' ? '#7ee7c0' : '#6b6b7a',
+          color: asset.status === 'active'  ? '#7ee7c0'
+               : asset.status === 'on_sale' ? '#d4af37'
+               : '#6b6b7a',
         }}>
-          {asset.status}
+          {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
         </div>
-        <button
-          onClick={() => onListForSale(asset)}
-          style={{
-            padding: '5px 12px', borderRadius: 10,
-            background: '#d4af3715', border: '1px solid #d4af3740',
-            color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+
+        {asset.status === 'active' && (
+          <button
+            onClick={() => onListForSale(asset)}
+            style={{
+              padding: '5px 12px', borderRadius: 10,
+              background: '#d4af3715', border: '1px solid #d4af3740',
+              color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>
+            List for Sale
+          </button>
+        )}
+
+        {asset.status === 'on_sale' && (
+          <div style={{
+            padding: '4px 10px', borderRadius: 10,
+            background: '#d4af3720', border: '1px solid #d4af3740',
+            color: '#d4af37', fontSize: 10, fontWeight: 700,
           }}>
-          List for Sale
-        </button>
+            Listed 🏷️
+          </div>
+        )}
       </div>
     </div>
   );
