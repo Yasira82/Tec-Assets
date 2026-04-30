@@ -1,0 +1,32 @@
+export interface Asset {
+  id:            string;
+  name:          string;
+  asset_type:    string;
+  value:         number | string;
+  currency:      string;
+  status:        string;
+  created_at:    string;
+  listing_id:    string | null;
+  listing_price: number | null;
+}
+
+export interface Listing {
+  id:          string;
+  asset_id:    string;
+  seller_id:   string;
+  price:       number;
+  currency:    string;
+  status:      string;
+  title:       string;
+  description: string;
+  category:    string;
+  created_at:  string;
+}
+
+export interface WalletData {
+  balance:  number;
+  currency: string;
+  walletId: string | null;
+}
+
+export type MainTab = 'assets' | 'portfolio' | 'marketplace';
