@@ -245,11 +245,10 @@ const params = new URLSearchParams({
             color: slug ? '#7eb8f7' : '#4a4a5a',
             fontSize: 15, fontWeight: 800,
             cursor: slug ? 'pointer' : 'default',
-          }}>
           {loading
             ? 'Processing...'
-            : 
-        </: `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}>
+            : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}
+        </button>
 
         <button onClick={onClose} style={{
           width: '100%', padding: '14px', marginTop: 10,
