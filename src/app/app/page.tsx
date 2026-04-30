@@ -130,14 +130,12 @@ function AddDomainModal({
   const [error,   setError]   = useState('');
 
   const getRegistrationFee = (name: string): number => {
-  const len = name.replace('.pi', '').length;
-  if (len <= 3) return 5;
-  if (len <= 5) return 3;
-  if (len <= 9) return 2;
-  return 1;
-};
-
-const REGISTRATION_FEE = getRegistrationFee(slug);
+    const len = name.replace('.pi', '').length;
+    if (len <= 3) return 5;
+    if (len <= 5) return 3;
+    if (len <= 9) return 2;
+    return 1;
+  };
 
   const handlePay = () => {
     const domain = slug.toLowerCase().trim();
@@ -147,16 +145,16 @@ const REGISTRATION_FEE = getRegistrationFee(slug);
     setError('');
 
     const fullDomain = domain.endsWith('.pi') ? domain : `${domain}.pi`;
+    const fee        = getRegistrationFee(fullDomain);
 
-    const fee = getRegistrationFee(fullDomain);
-const params = new URLSearchParams({
-  asset_type: 'domain',
-  name:       fullDomain,
-  price:      fee.toString(),
-  listing_id: `domain-reg-${Date.now()}`,
-  asset_id:   `domain-${Date.now()}`,
-  return_url: `https://tec-assets-app.vercel.app/app`,
-});
+    const params = new URLSearchParams({
+      asset_type: 'domain',
+      name:       fullDomain,
+      price:      fee.toString(),
+      listing_id: `domain-reg-${Date.now()}`,
+      asset_id:   `domain-${Date.now()}`,
+      return_url: 'https://tec-assets-app.vercel.app/app',
+    });
 
     window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
   };
@@ -223,8 +221,14 @@ const params = new URLSearchParams({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: '#6b6b7a' }}>Registration Fee</span>
             <span style={{ fontSize: 15, fontWeight: 700, color: '#d4af37' }}>
-  {getRegistrationFee(slug || '')}π
-</span>
+              {getRegistrationFee(slug || '')}π
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: '#4a4a5a', marginTop: 4 }}>
+            {slug.length <= 3 && slug ? '1-3 chars — premium' :
+             slug.length <= 5 && slug ? '4-5 chars' :
+             slug.length <= 9 && slug ? '6-9 chars' :
+             slug ? '10+ chars' : 'Enter domain name'}
           </div>
         </div>
 
@@ -245,6 +249,7 @@ const params = new URLSearchParams({
             color: slug ? '#7eb8f7' : '#4a4a5a',
             fontSize: 15, fontWeight: 800,
             cursor: slug ? 'pointer' : 'default',
+          }}>
           {loading
             ? 'Processing...'
             : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}
