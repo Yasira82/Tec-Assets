@@ -16,13 +16,15 @@ const TEC_PAY_URL = 'https://tec-app-frontend.vercel.app/pay';
 
 // ── Types ─────────────────────────────────────────────────
 interface Asset {
-  id:         string;
-  name:       string;
-  asset_type: string;
-  value:      number | string;
-  currency:   string;
-  status:     string;
-  created_at: string;
+  id:            string;
+  name:          string;
+  asset_type:    string;
+  value:         number | string;
+  currency:      string;
+  status:        string;
+  created_at:    string;
+  listing_id:    string | null;
+  listing_price: number | null;
 }
 
 interface Listing {
@@ -60,10 +62,12 @@ function AssetCard({
   asset,
   showValues,
   onListForSale,
+  onCancelListing,
 }: {
-  asset:         Asset;
-  showValues:    boolean;
-  onListForSale: (asset: Asset) => void;
+  asset:           Asset;
+  showValues:      boolean;
+  onListForSale:   (asset: Asset) => void;
+  onCancelListing: (listingId: string) => void;
 }) {
   const typeEmoji: Record<string, string> = {
     domain:  '🌐',
@@ -121,12 +125,25 @@ function AssetCard({
         )}
 
         {asset.status === 'on_sale' && (
-          <div style={{
-            padding: '4px 10px', borderRadius: 10,
-            background: '#d4af3720', border: '1px solid #d4af3740',
-            color: '#d4af37', fontSize: 10, fontWeight: 700,
-          }}>
-            Listed 🏷️
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+            <div style={{
+              padding: '4px 10px', borderRadius: 10,
+              background: '#d4af3720', border: '1px solid #d4af3740',
+              color: '#d4af37', fontSize: 10, fontWeight: 700,
+            }}>
+              Listed 🏷️ {asset.listing_price}π
+            </div>
+            {asset.listing_id && (
+              <button
+                onClick={() => onCancelListing(asset.listing_id!)}
+                style={{
+                  padding: '4px 10px', borderRadius: 10,
+                  background: '#e74c3c15', border: '1px solid #e74c3c40',
+                  color: '#e74c3c', fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                }}>
+                Cancel Listing
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -159,7 +176,6 @@ function AddDomainModal({
       setAvailability('unknown');
       return;
     }
-
     const timer = setTimeout(async () => {
       setChecking(true);
       try {
@@ -172,14 +188,13 @@ function AddDomainModal({
         setChecking(false);
       }
     }, 600);
-
     return () => clearTimeout(timer);
   }, [slug]);
 
   const handlePay = () => {
     const domain = slug.toLowerCase().trim();
-    if (!domain)                   { setError('Enter a domain name'); return; }
-    if (availability === 'taken')  { setError('Domain already taken'); return; }
+    if (!domain)                  { setError('Enter a domain name'); return; }
+    if (availability === 'taken') { setError('Domain already taken'); return; }
 
     setLoading(true);
     setError('');
@@ -202,13 +217,13 @@ function AddDomainModal({
   const isDisabled = loading || !slug || availability === 'taken' || checking;
 
   const availabilityColor =
-    checking              ? '#6b6b7a'
+    checking                   ? '#6b6b7a'
     : availability === 'available' ? '#7ee7c0'
     : availability === 'taken'     ? '#e74c3c'
     : '#7eb8f7';
 
   const availabilityText =
-    checking              ? `⏳ Checking ${slug}.pi...`
+    checking                   ? `⏳ Checking ${slug}.pi...`
     : availability === 'available' ? `✅ ${slug}.pi is available!`
     : availability === 'taken'     ? `❌ ${slug}.pi is already taken`
     : slug ? `${slug}.pi` : '';
@@ -228,7 +243,6 @@ function AddDomainModal({
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
           <div style={{ width: 40, height: 4, borderRadius: 2, background: '#ffffff20' }} />
         </div>
-
         <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>🌐</div>
         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: 4 }}>
           Add Your Domain
@@ -266,7 +280,6 @@ function AddDomainModal({
             />
             <span style={{ fontSize: 14, color: '#7eb8f7', fontWeight: 700 }}>.pi</span>
           </div>
-
           {slug && (
             <div style={{
               fontSize: 12, marginTop: 8, textAlign: 'center',
@@ -325,9 +338,9 @@ function AddDomainModal({
             cursor: isDisabled ? 'default' : 'pointer',
             transition: 'all 0.3s',
           }}>
-          {loading   ? 'Processing...'
-           : checking ? 'Checking availability...'
-           : availability === 'taken' ? '❌ Domain Already Taken'
+          {loading    ? 'Processing...'
+           : checking  ? 'Checking availability...'
+           : availability === 'taken'      ? '❌ Domain Already Taken'
            : availability === 'available'
              ? `✅ Register ${slug}.pi for ${getRegistrationFee(slug)}π`
              : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}
@@ -529,7 +542,7 @@ function CancelConfirmModal({
           Cancel Listing?
         </div>
         <div style={{ fontSize: 13, color: '#4a4a5a', textAlign: 'center', marginBottom: 24 }}>
-          {listing.title} · {listing.price}π
+          {listing.title} {listing.price ? `· ${listing.price}π` : ''}
         </div>
         <button
           onClick={onConfirm}
@@ -821,6 +834,21 @@ function AssetsPageInner() {
     }
   }, [cancellingListing, fetchListings, fetchData]);
 
+  const handleCancelFromAssets = useCallback((listingId: string) => {
+    setCancellingListing({
+      id:          listingId,
+      asset_id:    '',
+      seller_id:   '',
+      price:       0,
+      currency:    'PI',
+      status:      'ACTIVE',
+      title:       'this listing',
+      description: '',
+      category:    '',
+      created_at:  '',
+    });
+  }, []);
+
   useEffect(() => { fetchData(); },     [fetchData]);
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
@@ -853,9 +881,7 @@ function AssetsPageInner() {
 
       {/* ── Modals ── */}
       {addingDomain && (
-        <AddDomainModal
-          onClose={() => setAddingDomain(false)}
-        />
+        <AddDomainModal onClose={() => setAddingDomain(false)} />
       )}
 
       {(listingAsset || editingListing) && (
@@ -985,8 +1011,6 @@ function AssetsPageInner() {
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
             </button>
           ))}
-
-          {/* ✅ Add Domain */}
           <button onClick={() => setAddingDomain(true)}
             style={{
               marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
@@ -1045,6 +1069,7 @@ function AssetsPageInner() {
                 asset={asset}
                 showValues={settings.showValues}
                 onListForSale={setListingAsset}
+                onCancelListing={handleCancelFromAssets}
               />
             ))
           )
@@ -1138,4 +1163,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-      }
+                          }
