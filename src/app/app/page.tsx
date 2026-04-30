@@ -119,6 +119,142 @@ function AssetCard({
   );
 }
 
+// ── Add Domain Modal ──────────────────────────────────────
+function AddDomainModal({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  const [slug,    setSlug]    = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+
+  const REGISTRATION_FEE = 1;
+
+  const handlePay = () => {
+    const domain = slug.toLowerCase().trim();
+    if (!domain) { setError('Enter a domain name'); return; }
+
+    setLoading(true);
+    setError('');
+
+    const fullDomain = domain.endsWith('.pi') ? domain : `${domain}.pi`;
+
+    const params = new URLSearchParams({
+      asset_type: 'domain',
+      name:       fullDomain,
+      price:      REGISTRATION_FEE.toString(),
+      listing_id: `domain-reg-${Date.now()}`,
+      asset_id:   `domain-${Date.now()}`,
+      return_url: `https://tec-assets-app.vercel.app/app`,
+    });
+
+    window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(0,0,0,0.7)', zIndex: 300,
+        backdropFilter: 'blur(4px)',
+      }} />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
+        background: '#0d0d14', borderTop: '1px solid #7eb8f720',
+        borderRadius: '24px 24px 0 0', padding: '24px 20px 40px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#ffffff20' }} />
+        </div>
+
+        <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>🌐</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: 4 }}>
+          Add Your Domain
+        </div>
+        <div style={{ fontSize: 12, color: '#4a4a5a', textAlign: 'center', marginBottom: 24 }}>
+          Register your Pi Network domain in TEC Assets
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
+            DOMAIN NAME
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            background: '#0a0a12', border: '1px solid #7eb8f740',
+            borderRadius: 14, padding: '12px 16px', gap: 8,
+          }}>
+            <span style={{ fontSize: 20 }}>🌐</span>
+            <input
+              type="text"
+              value={slug}
+              onChange={e => setSlug(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())}
+              placeholder="myname"
+              autoFocus
+              style={{
+                flex: 1, background: 'none', border: 'none', outline: 'none',
+                color: '#fff', fontSize: 16, fontWeight: 700,
+              }}
+            />
+            <span style={{ fontSize: 14, color: '#7eb8f7', fontWeight: 700 }}>.pi</span>
+          </div>
+          {slug && (
+            <div style={{ fontSize: 12, color: '#7eb8f7', marginTop: 8, textAlign: 'center' }}>
+              {slug}.pi
+            </div>
+          )}
+        </div>
+
+        <div style={{
+          padding: '12px 16px', background: '#ffffff05',
+          borderRadius: 12, border: '1px solid #ffffff08',
+          marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: '#6b6b7a' }}>Registration Fee</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#d4af37' }}>
+              {REGISTRATION_FEE}π
+            </span>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12, textAlign: 'center' }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handlePay}
+          disabled={loading || !slug}
+          style={{
+            width: '100%', padding: '16px',
+            background: slug ? 'linear-gradient(135deg,#1a3a5c,#0a2040)' : '#ffffff10',
+            border: slug ? '1px solid #7eb8f740' : 'none',
+            borderRadius: 16,
+            color: slug ? '#7eb8f7' : '#4a4a5a',
+            fontSize: 15, fontWeight: 800,
+            cursor: slug ? 'pointer' : 'default',
+          }}>
+          {loading
+            ? 'Processing...'
+            : `Register ${slug ? slug + '.pi' : ''} for ${REGISTRATION_FEE}π`}
+        </button>
+
+        <button onClick={onClose} style={{
+          width: '100%', padding: '14px', marginTop: 10,
+          background: 'none', border: '1px solid #ffffff10',
+          borderRadius: 16, color: '#4a4a5a',
+          fontSize: 14, cursor: 'pointer',
+        }}>
+          Cancel
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── List for Sale / Update Price Modal ────────────────────
 function ListForSaleModal({
   asset,
@@ -521,16 +657,17 @@ function AssetsPageInner() {
   const { settings, loaded }                 = useSettings();
   const router                               = useRouter();
 
-  const [wallet,           setWallet]           = useState<WalletData | null>(null);
-  const [assets,           setAssets]           = useState<Asset[]>([]);
-  const [listings,         setListings]         = useState<Listing[]>([]);
-  const [activeTab,        setActiveTab]        = useState<MainTab>('assets');
-  const [assetFilter,      setAssetFilter]      = useState<'all' | 'domains' | 'nfts'>('all');
-  const [dataLoading,      setDataLoading]      = useState(true);
-  const [listingAsset,     setListingAsset]     = useState<Asset | null>(null);
-  const [editingListing,   setEditingListing]   = useState<Listing | null>(null);
+  const [wallet,            setWallet]            = useState<WalletData | null>(null);
+  const [assets,            setAssets]            = useState<Asset[]>([]);
+  const [listings,          setListings]          = useState<Listing[]>([]);
+  const [activeTab,         setActiveTab]         = useState<MainTab>('assets');
+  const [assetFilter,       setAssetFilter]       = useState<'all' | 'domains' | 'nfts'>('all');
+  const [dataLoading,       setDataLoading]       = useState(true);
+  const [listingAsset,      setListingAsset]      = useState<Asset | null>(null);
+  const [editingListing,    setEditingListing]    = useState<Listing | null>(null);
   const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
-  const [cancelLoading,    setCancelLoading]    = useState(false);
+  const [cancelLoading,     setCancelLoading]     = useState(false);
+  const [addingDomain,      setAddingDomain]      = useState(false);
 
   useEffect(() => {
     if (!loaded) return;
@@ -599,10 +736,9 @@ function AssetsPageInner() {
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered   = assetFilter === 'all'
+  const filtered       = assetFilter === 'all'
     ? assets
     : assets.filter(a => a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
-
   const totalValue     = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
   const displayBalance = settings.hideBalance ? '****' : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
   const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
@@ -625,6 +761,12 @@ function AssetsPageInner() {
       `}</style>
 
       {/* ── Modals ── */}
+      {addingDomain && (
+        <AddDomainModal
+          onClose={() => setAddingDomain(false)}
+        />
+      )}
+
       {(listingAsset || editingListing) && (
         <ListForSaleModal
           asset={listingAsset ?? undefined}
@@ -735,9 +877,9 @@ function AssetsPageInner() {
         ))}
       </div>
 
-      {/* ── Asset Filter ── */}
+      {/* ── Asset Filter + Add Domain ── */}
       {activeTab === 'assets' && (
-        <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8 }}>
+        <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8, alignItems: 'center' }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
             <button key={tab} onClick={() => setAssetFilter(tab)}
               style={{
@@ -752,6 +894,17 @@ function AssetsPageInner() {
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
             </button>
           ))}
+
+          {/* ✅ Add Domain */}
+          <button onClick={() => setAddingDomain(true)}
+            style={{
+              marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
+              background: '#7eb8f715', border: '1px solid #7eb8f740',
+              color: '#7eb8f7', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}>
+            + Domain
+          </button>
         </div>
       )}
 
@@ -771,17 +924,28 @@ function AssetsPageInner() {
               <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
               <div style={{ fontSize: 15, color: '#4a4a5a' }}>No assets yet</div>
               <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
-                Browse the Marketplace to find assets
+                Add your Pi domain or browse the Marketplace
               </div>
-              <button onClick={() => setActiveTab('marketplace')}
-                style={{
-                  marginTop: 20, padding: '12px 24px',
-                  background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-                  border: 'none', borderRadius: 14,
-                  color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                }}>
-                🛒 Browse Marketplace
-              </button>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
+                <button onClick={() => setAddingDomain(true)}
+                  style={{
+                    padding: '12px 20px',
+                    background: 'linear-gradient(135deg,#1a3a5c,#0a2040)',
+                    border: '1px solid #7eb8f740', borderRadius: 14,
+                    color: '#7eb8f7', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  }}>
+                  🌐 Add Domain
+                </button>
+                <button onClick={() => setActiveTab('marketplace')}
+                  style={{
+                    padding: '12px 20px',
+                    background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                    border: 'none', borderRadius: 14,
+                    color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  }}>
+                  🛒 Marketplace
+                </button>
+              </div>
             </div>
           ) : (
             filtered.map(asset => (
@@ -883,4 +1047,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-          }
+      }
