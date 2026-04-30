@@ -248,8 +248,8 @@ const params = new URLSearchParams({
           }}>
           {loading
             ? 'Processing...'
-            : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`
-        </button>
+            : 
+        </: `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}>
 
         <button onClick={onClose} style={{
           width: '100%', padding: '14px', marginTop: 10,
