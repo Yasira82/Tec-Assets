@@ -12,15 +12,25 @@ export const GET = createHandler({
 
     const fullSlug = slug.endsWith('.pi') ? slug : `${slug}.pi`;
 
-    const res = await fetch(
-      `${GATEWAY_URL}/api/assets/${encodeURIComponent(fullSlug)}`,
-      { cache: 'no-store' },
-    );
+    try {
+      const res = await fetch(
+        `${GATEWAY_URL}/api/assets/${encodeURIComponent(fullSlug)}`,
+        { cache: 'no-store' },
+      );
 
-    // ✅ لو 404 = متاح — لو 200 = مش متاح
-    return Response.json({
-      slug:      fullSlug,
-      available: res.status === 404,
-    });
+      const data = await res.json();
+
+      // ✅ لو data.data موجود = asset موجود = taken
+      // ✅ لو 404 أو مفيش data = available
+      const exists = res.ok && data?.data != null;
+
+      return Response.json({
+        slug:      fullSlug,
+        available: !exists,
+      });
+    } catch {
+      // ✅ لو error = افترض available
+      return Response.json({ slug: fullSlug, available: true });
+    }
   },
 });
