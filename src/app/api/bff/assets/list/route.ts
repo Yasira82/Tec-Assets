@@ -61,6 +61,7 @@ export const GET = createHandler({
         created_at:    a.createdAt,
         listing_id:    activeListing?.id    ?? null,
         listing_price: activeListing?.price ?? null,
+        metadata:      a.metadata ?? {}, 
       };
     });
 
