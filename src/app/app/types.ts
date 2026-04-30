@@ -8,6 +8,7 @@ export interface Asset {
   created_at:    string;
   listing_id:    string | null;
   listing_price: number | null;
+  metadata?:     Record<string, unknown>; 
 }
 
 export interface Listing {
