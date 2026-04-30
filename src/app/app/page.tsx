@@ -129,7 +129,15 @@ function AddDomainModal({
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
 
-  const REGISTRATION_FEE = 1;
+  const getRegistrationFee = (name: string): number => {
+  const len = name.replace('.pi', '').length;
+  if (len <= 3) return 5;
+  if (len <= 5) return 3;
+  if (len <= 9) return 2;
+  return 1;
+};
+
+const REGISTRATION_FEE = getRegistrationFee(slug);
 
   const handlePay = () => {
     const domain = slug.toLowerCase().trim();
@@ -140,14 +148,15 @@ function AddDomainModal({
 
     const fullDomain = domain.endsWith('.pi') ? domain : `${domain}.pi`;
 
-    const params = new URLSearchParams({
-      asset_type: 'domain',
-      name:       fullDomain,
-      price:      REGISTRATION_FEE.toString(),
-      listing_id: `domain-reg-${Date.now()}`,
-      asset_id:   `domain-${Date.now()}`,
-      return_url: `https://tec-assets-app.vercel.app/app`,
-    });
+    const fee = getRegistrationFee(fullDomain);
+const params = new URLSearchParams({
+  asset_type: 'domain',
+  name:       fullDomain,
+  price:      fee.toString(),
+  listing_id: `domain-reg-${Date.now()}`,
+  asset_id:   `domain-${Date.now()}`,
+  return_url: `https://tec-assets-app.vercel.app/app`,
+});
 
     window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
   };
@@ -214,8 +223,8 @@ function AddDomainModal({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: '#6b6b7a' }}>Registration Fee</span>
             <span style={{ fontSize: 15, fontWeight: 700, color: '#d4af37' }}>
-              {REGISTRATION_FEE}π
-            </span>
+  {getRegistrationFee(slug || '')}π
+</span>
           </div>
         </div>
 
@@ -239,7 +248,7 @@ function AddDomainModal({
           }}>
           {loading
             ? 'Processing...'
-            : `Register ${slug ? slug + '.pi' : ''} for ${REGISTRATION_FEE}π`}
+            : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`
         </button>
 
         <button onClick={onClose} style={{
