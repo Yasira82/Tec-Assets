@@ -140,9 +140,11 @@ function AddDomainModal({
 }: {
   onClose: () => void;
 }) {
-  const [slug,    setSlug]    = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [slug,         setSlug]         = useState('');
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState('');
+  const [checking,     setChecking]     = useState(false);
+  const [availability, setAvailability] = useState<'unknown' | 'available' | 'taken'>('unknown');
 
   const getRegistrationFee = (name: string): number => {
     const len = name.replace('.pi', '').length;
@@ -152,9 +154,32 @@ function AddDomainModal({
     return 1;
   };
 
+  useEffect(() => {
+    if (!slug || slug.length < 2) {
+      setAvailability('unknown');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setChecking(true);
+      try {
+        const res  = await fetch(`/api/bff/domains/check?slug=${encodeURIComponent(slug)}`);
+        const data = await res.json();
+        setAvailability(data.available ? 'available' : 'taken');
+      } catch {
+        setAvailability('unknown');
+      } finally {
+        setChecking(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [slug]);
+
   const handlePay = () => {
     const domain = slug.toLowerCase().trim();
-    if (!domain) { setError('Enter a domain name'); return; }
+    if (!domain)                   { setError('Enter a domain name'); return; }
+    if (availability === 'taken')  { setError('Domain already taken'); return; }
 
     setLoading(true);
     setError('');
@@ -173,6 +198,20 @@ function AddDomainModal({
 
     window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
   };
+
+  const isDisabled = loading || !slug || availability === 'taken' || checking;
+
+  const availabilityColor =
+    checking              ? '#6b6b7a'
+    : availability === 'available' ? '#7ee7c0'
+    : availability === 'taken'     ? '#e74c3c'
+    : '#7eb8f7';
+
+  const availabilityText =
+    checking              ? `⏳ Checking ${slug}.pi...`
+    : availability === 'available' ? `✅ ${slug}.pi is available!`
+    : availability === 'taken'     ? `❌ ${slug}.pi is already taken`
+    : slug ? `${slug}.pi` : '';
 
   return (
     <>
@@ -204,8 +243,14 @@ function AddDomainModal({
           </div>
           <div style={{
             display: 'flex', alignItems: 'center',
-            background: '#0a0a12', border: '1px solid #7eb8f740',
+            background: '#0a0a12',
+            border: `1px solid ${
+              availability === 'available' ? '#7ee7c040'
+              : availability === 'taken'   ? '#e74c3c40'
+              : '#7eb8f740'
+            }`,
             borderRadius: 14, padding: '12px 16px', gap: 8,
+            transition: 'border-color 0.3s',
           }}>
             <span style={{ fontSize: 20 }}>🌐</span>
             <input
@@ -221,9 +266,13 @@ function AddDomainModal({
             />
             <span style={{ fontSize: 14, color: '#7eb8f7', fontWeight: 700 }}>.pi</span>
           </div>
+
           {slug && (
-            <div style={{ fontSize: 12, color: '#7eb8f7', marginTop: 8, textAlign: 'center' }}>
-              {slug}.pi
+            <div style={{
+              fontSize: 12, marginTop: 8, textAlign: 'center',
+              color: availabilityColor, transition: 'color 0.3s',
+            }}>
+              {availabilityText}
             </div>
           )}
         </div>
@@ -255,19 +304,33 @@ function AddDomainModal({
 
         <button
           onClick={handlePay}
-          disabled={loading || !slug}
+          disabled={isDisabled}
           style={{
             width: '100%', padding: '16px',
-            background: slug ? 'linear-gradient(135deg,#1a3a5c,#0a2040)' : '#ffffff10',
-            border: slug ? '1px solid #7eb8f740' : 'none',
+            background: isDisabled
+              ? '#ffffff10'
+              : availability === 'available'
+                ? 'linear-gradient(135deg,#0d3320,#0a2218)'
+                : 'linear-gradient(135deg,#1a3a5c,#0a2040)',
+            border: isDisabled
+              ? 'none'
+              : availability === 'available'
+                ? '1px solid #7ee7c040'
+                : '1px solid #7eb8f740',
             borderRadius: 16,
-            color: slug ? '#7eb8f7' : '#4a4a5a',
+            color: isDisabled
+              ? '#4a4a5a'
+              : availability === 'available' ? '#7ee7c0' : '#7eb8f7',
             fontSize: 15, fontWeight: 800,
-            cursor: slug ? 'pointer' : 'default',
+            cursor: isDisabled ? 'default' : 'pointer',
+            transition: 'all 0.3s',
           }}>
-          {loading
-            ? 'Processing...'
-            : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}
+          {loading   ? 'Processing...'
+           : checking ? 'Checking availability...'
+           : availability === 'taken' ? '❌ Domain Already Taken'
+           : availability === 'available'
+             ? `✅ Register ${slug}.pi for ${getRegistrationFee(slug)}π`
+             : `Register ${slug ? slug + '.pi' : ''} for ${getRegistrationFee(slug || '')}π`}
         </button>
 
         <button onClick={onClose} style={{
