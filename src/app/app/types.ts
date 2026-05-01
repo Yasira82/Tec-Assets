@@ -46,4 +46,4 @@ export interface WalletData {
   walletId: string | null;
 }
 
-export type MainTab = 'assets' | 'portfolio' | 'marketplace';
+export type MainTab = 'assets' | 'portfolio' | 'marketplace' | 'purchases';
