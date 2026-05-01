@@ -28,7 +28,6 @@ export const GET = createHandler({
       'x-internal-key': internalKey,
     };
 
-    // ✅ جيب الـ assets والـ listings مع بعض
     const [assetsRes, listingsRes] = await Promise.all([
       fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`, {
         headers, cache: 'no-store',
@@ -43,7 +42,11 @@ export const GET = createHandler({
       return { data: [], total: 0 };
     }
 
-    const raw          = await assetsRes.json();
+    const raw = await assetsRes.json();
+
+    // ✅ debug log
+    console.log('[BFF] raw assets:', JSON.stringify(raw?.data?.slice(0, 2)));
+
     const listingsData = listingsRes.ok ? await listingsRes.json() : {};
     const userListings: RawListing[] = listingsData?.data?.listings ?? [];
 
@@ -61,7 +64,7 @@ export const GET = createHandler({
         created_at:    a.createdAt,
         listing_id:    activeListing?.id    ?? null,
         listing_price: activeListing?.price ?? null,
-        metadata:      a.metadata ?? {}, 
+        metadata:      a.metadata ?? {},
       };
     });
 
