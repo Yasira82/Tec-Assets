@@ -51,17 +51,18 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
     }
 
     const data = await res.json();
-console.log('[NFT] upload response:', JSON.stringify(data));
 
-const uploadUrl = data?.uploadUrl;
-const publicUrl = data?.publicUrl;
-const key       = data?.key;
+    const uploadUrl = data?.uploadUrl;
+    const key       = data?.key;
 
-if (!uploadUrl) {
-  setError('No upload URL received');
-  console.error('[NFT] No uploadUrl in response:', data);
-  return;
-}
+    // ✅ publicUrl من الـ key مباشرة
+    const publicUrl = data?.publicUrl
+      ?? (key ? `https://pub-fe60d4ae820b4c5cb91064081595e666.r2.dev/${key}` : null);
+
+    if (!uploadUrl) {
+      setError('No upload URL received');
+      return;
+    }
 
     const uploadRes = await fetch(uploadUrl, {
       method:  'PUT',
@@ -69,12 +70,9 @@ if (!uploadUrl) {
       headers: { 'Content-Type': file.type },
     });
 
-    console.log('[NFT] R2 status:', uploadRes.status); // ✅ أضف
-
     if (!uploadRes.ok) {
       const errText = await uploadRes.text();
-      console.error('[NFT] R2 error:', errText);
-      setError(`Failed to upload: ${uploadRes.status}`);
+      setError(`Failed to upload: ${uploadRes.status} — ${errText.slice(0, 100)}`);
       return;
     }
 
@@ -83,7 +81,6 @@ if (!uploadUrl) {
     setStep('details');
 
   } catch (err) {
-    console.error('[NFT] catch error:', err);
     setError('Something went wrong');
   } finally {
     setLoading(false);
