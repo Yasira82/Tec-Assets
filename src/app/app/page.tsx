@@ -7,7 +7,7 @@ import { ErrorBoundary }                    from '@/components/ErrorBoundary';
 import { goToTEC }                          from '@/lib/tec-navigation';
 import { useSettings }                      from '@/lib/hooks/useSettings';
 import { GlobalNav }                        from '@yasser172/tec-ui';
-import { Asset, Listing, WalletData, MainTab } from './types';
+import { Asset, Listing, WalletData, MainTab, Purchase } from './types';
 import { AssetCard }          from './components/AssetCard';
 import { MarketplaceCard }    from './components/MarketplaceCard';
 import { ListForSaleModal }   from './components/ListForSaleModal';
@@ -33,6 +33,7 @@ function AssetsPageInner() {
   const [wallet,            setWallet]            = useState<WalletData | null>(null);
   const [assets,            setAssets]            = useState<Asset[]>([]);
   const [listings,          setListings]          = useState<Listing[]>([]);
+  const [purchases,         setPurchases]         = useState<Purchase[]>([]);
   const [activeTab,         setActiveTab]         = useState<MainTab>('assets');
   const [assetFilter,       setAssetFilter]       = useState<'all' | 'domains' | 'nfts'>('all');
   const [dataLoading,       setDataLoading]       = useState(true);
@@ -61,25 +62,35 @@ function AssetsPageInner() {
     } catch { /* silent */ }
   }, []);
 
+  const fetchPurchases = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bff/marketplace/purchases', {
+        credentials: 'include', cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPurchases(data?.purchases ?? []);
+      }
+    } catch { /* silent */ }
+  }, []);
+
   const fetchData = useCallback(async () => {
-  const token = getTokenFromCookie();
-  if (!token) return;
-  setDataLoading(true);
-  try {
-    const [walletRes, assetsRes] = await Promise.all([
-      fetch('/api/bff/wallet/balance', { credentials: 'include', cache: 'no-store' }),
-      fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
-    ]);
-    if (walletRes.ok) setWallet(await walletRes.json());
-    if (assetsRes.ok) {
-      const data = await assetsRes.json();
-      // ✅ debug
-      console.log('[Assets] data:', JSON.stringify(data?.data?.slice(0, 1)));
-      setAssets(data?.data ?? []);
-    }
-  } catch { /* silent */ }
-  finally { setDataLoading(false); }
-}, []);
+    const token = getTokenFromCookie();
+    if (!token) return;
+    setDataLoading(true);
+    try {
+      const [walletRes, assetsRes] = await Promise.all([
+        fetch('/api/bff/wallet/balance', { credentials: 'include', cache: 'no-store' }),
+        fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
+      ]);
+      if (walletRes.ok) setWallet(await walletRes.json());
+      if (assetsRes.ok) {
+        const data = await assetsRes.json();
+        setAssets(data?.data ?? []);
+      }
+    } catch { /* silent */ }
+    finally { setDataLoading(false); }
+  }, []);
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
@@ -103,8 +114,9 @@ function AssetsPageInner() {
     });
   }, []);
 
-  useEffect(() => { fetchData(); },     [fetchData]);
-  useEffect(() => { fetchListings(); }, [fetchListings]);
+  useEffect(() => { fetchData(); },      [fetchData]);
+  useEffect(() => { fetchListings(); },  [fetchListings]);
+  useEffect(() => { fetchPurchases(); }, [fetchPurchases]);
 
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
@@ -209,9 +221,9 @@ function AssetsPageInner() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {[
-                { label: 'Balance', value: displayBalance },
-                { label: 'Assets',  value: assets.length.toString() },
-                { label: 'Domains', value: assets.filter(a => a.asset_type === 'domain').length.toString() },
+                { label: 'Balance',   value: displayBalance },
+                { label: 'Assets',    value: assets.length.toString() },
+                { label: 'Purchases', value: purchases.length.toString() },
               ].map(s => (
                 <div key={s.label} style={{ background: '#ffffff05', borderRadius: 12, padding: '10px 12px' }}>
                   <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
@@ -228,6 +240,7 @@ function AssetsPageInner() {
         {([
           { key: 'assets',      label: '💎 My Assets'  },
           { key: 'marketplace', label: '🛒 Marketplace' },
+          { key: 'purchases',   label: '🧾 Purchases'   },
           { key: 'portfolio',   label: '📊 Portfolio'   },
         ] as const).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
@@ -259,8 +272,6 @@ function AssetsPageInner() {
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
             </button>
           ))}
-
-          {/* ✅ NFT Mint */}
           <button onClick={() => setMintingNFT(true)} style={{
             marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
             background: '#7b6bc815', border: '1px solid #7b6bc840',
@@ -352,6 +363,67 @@ function AssetsPageInner() {
           )
         )}
 
+        {/* ── Purchases Tab ── */}
+        {activeTab === 'purchases' && (
+          purchases.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🧾</div>
+              <div style={{ fontSize: 15, color: '#4a4a5a' }}>No purchases yet</div>
+              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
+                Browse the Marketplace to find assets
+              </div>
+              <button onClick={() => setActiveTab('marketplace')} style={{
+                marginTop: 20, padding: '12px 24px',
+                background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                border: 'none', borderRadius: 14,
+                color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}>
+                🛒 Marketplace
+              </button>
+            </div>
+          ) : (
+            purchases.map(p => (
+              <div key={p.id} style={{
+                background: '#0d0d14', border: '1px solid #7ee7c020',
+                borderRadius: 18, padding: '16px 20px',
+                display: 'flex', alignItems: 'center', gap: 14,
+              }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
+                  border: '1px solid #7ee7c030',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, flexShrink: 0, overflow: 'hidden',
+                }}>
+                  {p.asset.category.toLowerCase() === 'nft' && p.asset.metadata?.imageUrl ? (
+                    <img
+                      src={p.asset.metadata.imageUrl as string}
+                      alt={p.asset.slug}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    p.asset.category.toLowerCase() === 'nft' ? '🎨' : '🌐'
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {(p.asset.metadata?.name as string) ?? p.asset.slug}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#4a4a5a', letterSpacing: 1 }}>
+                    {p.soldAt ? new Date(p.soldAt).toLocaleDateString() : '—'}
+                  </div>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#7ee7c0' }}>
+                  {p.price}π
+                </div>
+              </div>
+            ))
+          )
+        )}
+
         {activeTab === 'portfolio' && (
           <PortfolioTab
             assets={assets}
@@ -369,8 +441,8 @@ function AssetsPageInner() {
         items={[
           { icon: '💎', label: 'Assets',    app: 'assets',   action: () => { setActiveTab('assets'); setAssetFilter('all'); } },
           { icon: '🛒', label: 'Market',    app: null,       action: () => setActiveTab('marketplace') },
+          { icon: '🧾', label: 'Purchases', app: null,       action: () => setActiveTab('purchases') },
           { icon: '📊', label: 'Portfolio', app: null,       action: () => setActiveTab('portfolio') },
-          { icon: '⚙️', label: 'Settings',  app: 'settings', action: () => router.push('/app/settings') },
           { icon: '🔷', label: 'TEC Hub',   app: null,       action: () => goToTEC('HUB') },
         ]}
       />
@@ -384,4 +456,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-                  }
+          }
