@@ -24,6 +24,22 @@ export interface Listing {
   created_at:  string;
 }
 
+export interface Purchase {
+  id:        string;
+  assetId:   string;
+  sellerId:  string;
+  buyerId:   string;
+  price:     number;
+  currency:  string;
+  status:    string;
+  soldAt:    string;
+  asset: {
+    slug:     string;
+    category: string;
+    metadata: Record<string, unknown>;
+  };
+}
+
 export interface WalletData {
   balance:  number;
   currency: string;
