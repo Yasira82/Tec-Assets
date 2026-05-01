@@ -51,15 +51,17 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
     }
 
     const data = await res.json();
-    console.log('[NFT] upload response:', JSON.stringify(data)); // ✅ أضف
+console.log('[NFT] upload response:', JSON.stringify(data));
 
-    const { uploadUrl, publicUrl, key } = data;
+const uploadUrl = data?.uploadUrl;
+const publicUrl = data?.publicUrl;
+const key       = data?.key;
 
-    if (!uploadUrl) {
-      setError('No upload URL received');
-      console.error('[NFT] No uploadUrl in response:', data);
-      return;
-    }
+if (!uploadUrl) {
+  setError('No upload URL received');
+  console.error('[NFT] No uploadUrl in response:', data);
+  return;
+}
 
     const uploadRes = await fetch(uploadUrl, {
       method:  'PUT',
