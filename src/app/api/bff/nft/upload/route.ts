@@ -45,8 +45,6 @@ export const POST = createHandler({
     }
 
     const data = await res.json();
-
-    // ✅ log الـ response
     console.log('[NFT BFF] storage response:', JSON.stringify(data));
 
     if (!data.data?.uploadUrl) {
@@ -54,10 +52,16 @@ export const POST = createHandler({
       return Response.json({ error: 'No upload URL from storage service' }, { status: 500 });
     }
 
+    // ✅ احسب publicUrl من الـ key
+    const key       = data.data.key;
+    const publicUrl = key
+      ? `${process.env.R2_PUBLIC_URL ?? ''}/${key}`
+      : null;
+
     return Response.json({
       uploadUrl: data.data.uploadUrl,
-      publicUrl: data.data.publicUrl,
-      key:       data.data.key,
+      publicUrl,
+      key,
     });
   },
 });
