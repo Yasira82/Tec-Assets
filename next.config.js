@@ -12,6 +12,7 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.vercel.app'  },
       { protocol: 'https', hostname: '**.railway.app' },
       { protocol: 'https', hostname: 'api.minepi.com' },
+      { protocol: 'https', hostname: '**.r2.dev'      }, // ✅ أضف
     ],
   },
 
@@ -40,7 +41,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' sdk.minepi.com *.minepi.com",
               "connect-src 'self' https: wss:",
-              "img-src 'self' data: blob: *.railway.app *.vercel.app",
+              "img-src 'self' data: blob: *.railway.app *.vercel.app *.r2.dev", // ✅ أضف
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self' data:",
               "frame-src 'self' sdk.minepi.com *.minepi.com",
@@ -55,7 +56,6 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'no-store, max-age=0' }],
       },
       {
-        // ✅ Pi Network domain validation
         source: '/validation-key.txt',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
