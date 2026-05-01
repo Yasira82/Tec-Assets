@@ -62,19 +62,24 @@ function AssetsPageInner() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    const token = getTokenFromCookie();
-    if (!token) return;
-    setDataLoading(true);
-    try {
-      const [walletRes, assetsRes] = await Promise.all([
-        fetch('/api/bff/wallet/balance', { credentials: 'include', cache: 'no-store' }),
-        fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
-      ]);
-      if (walletRes.ok) setWallet(await walletRes.json());
-      if (assetsRes.ok) { const data = await assetsRes.json(); setAssets(data?.data ?? []); }
-    } catch { /* silent */ }
-    finally { setDataLoading(false); }
-  }, []);
+  const token = getTokenFromCookie();
+  if (!token) return;
+  setDataLoading(true);
+  try {
+    const [walletRes, assetsRes] = await Promise.all([
+      fetch('/api/bff/wallet/balance', { credentials: 'include', cache: 'no-store' }),
+      fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
+    ]);
+    if (walletRes.ok) setWallet(await walletRes.json());
+    if (assetsRes.ok) {
+      const data = await assetsRes.json();
+      // ✅ debug
+      console.log('[Assets] data:', JSON.stringify(data?.data?.slice(0, 1)));
+      setAssets(data?.data ?? []);
+    }
+  } catch { /* silent */ }
+  finally { setDataLoading(false); }
+}, []);
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
