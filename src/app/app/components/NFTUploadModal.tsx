@@ -29,46 +29,64 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/bff/nft/upload', {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: file.name,
-          mimeType: file.type,
-          size:     file.size,
-        }),
-      });
+  if (!file) return;
+  setLoading(true);
+  setError('');
+  try {
+    const res = await fetch('/api/bff/nft/upload', {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.name,
+        mimeType: file.type,
+        size:     file.size,
+      }),
+    });
 
-      if (!res.ok) {
-        const err = await res.json();
-        setError(err.error ?? 'Upload failed');
-        return;
-      }
-
-      const { uploadUrl, publicUrl, key } = await res.json();
-
-      const uploadRes = await fetch(uploadUrl, {
-        method:  'PUT',
-        body:    file,
-        headers: { 'Content-Type': file.type },
-      });
-
-      if (!uploadRes.ok) { setError('Failed to upload image'); return; }
-
-      setUploadedUrl(publicUrl);
-      setUploadedKey(key);
-      setStep('details');
-    } catch {
-      setError('Something went wrong');
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      const err = await res.json();
+      setError(err.error ?? 'Upload failed');
+      return;
     }
-  };
+
+    const data = await res.json();
+    console.log('[NFT] upload response:', JSON.stringify(data)); // ✅ أضف
+
+    const { uploadUrl, publicUrl, key } = data;
+
+    if (!uploadUrl) {
+      setError('No upload URL received');
+      console.error('[NFT] No uploadUrl in response:', data);
+      return;
+    }
+
+    const uploadRes = await fetch(uploadUrl, {
+      method:  'PUT',
+      body:    file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    console.log('[NFT] R2 status:', uploadRes.status); // ✅ أضف
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      console.error('[NFT] R2 error:', errText);
+      setError(`Failed to upload: ${uploadRes.status}`);
+      return;
+    }
+
+    setUploadedUrl(publicUrl);
+    setUploadedKey(key);
+    setStep('details');
+
+  } catch (err) {
+    console.error('[NFT] catch error:', err);
+    setError('Something went wrong');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleMint = () => {
   if (!name || !uploadedUrl) return;
