@@ -11,18 +11,15 @@ export const POST = createHandler({
       return Response.json({ error: 'filename, mimeType, size required' }, { status: 400 });
     }
 
-    // ✅ تحقق من نوع الملف
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(body.mimeType)) {
       return Response.json({ error: 'Only images allowed (jpeg, png, gif, webp)' }, { status: 400 });
     }
 
-    // ✅ حد أقصى 10MB
     if (body.size > 10 * 1024 * 1024) {
       return Response.json({ error: 'File too large (max 10MB)' }, { status: 400 });
     }
 
-    // ✅ جيب presigned URL من storage service
     const res = await fetch(`${GATEWAY_URL}/api/storage/upload-url`, {
       method:  'POST',
       headers: {
@@ -38,16 +35,29 @@ export const POST = createHandler({
       }),
     });
 
+    // ✅ log الـ status
+    console.log('[NFT BFF] storage status:', res.status);
+
     if (!res.ok) {
-      const err = await res.json();
-      return Response.json({ error: err?.message ?? 'Upload failed' }, { status: res.status });
+      const errText = await res.text();
+      console.error('[NFT BFF] storage error:', errText);
+      return Response.json({ error: errText ?? 'Upload failed' }, { status: res.status });
     }
 
     const data = await res.json();
+
+    // ✅ log الـ response
+    console.log('[NFT BFF] storage response:', JSON.stringify(data));
+
+    if (!data.data?.uploadUrl) {
+      console.error('[NFT BFF] no uploadUrl in response:', JSON.stringify(data));
+      return Response.json({ error: 'No upload URL from storage service' }, { status: 500 });
+    }
+
     return Response.json({
-      uploadUrl: data.data?.uploadUrl,
-      publicUrl: data.data?.publicUrl,
-      key:       data.data?.key,
+      uploadUrl: data.data.uploadUrl,
+      publicUrl: data.data.publicUrl,
+      key:       data.data.key,
     });
   },
 });
