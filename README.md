@@ -1,4 +1,4 @@
-## Tec-Domain-Template
+# Tec-Domain-Template
 
 Template لبناء أي TEC Domain App على Pi Network.
 
