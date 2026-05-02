@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { Asset }    from '../types';
+import { AssetImageViewer }  from './AssetImageViewer';
+import { AssetPreviewModal } from './AssetPreviewModal';
 
 const typeEmoji: Record<string, string> = {
-  domain:        '🌐',
-  nft:           '🎨',
-  token:         '🪙',
-  badge:         '🏆',
-  digital_asset: '💎',
-  default:       '💎',
+  domain: '🌐', nft: '🎨', token: '🪙', badge: '🏆',
+  digital_asset: '💎', default: '💎',
 };
 
 const assetColors: Record<string, { border: string; bg: string; status: string }> = {
@@ -22,10 +20,7 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset,
-  showValues,
-  onListForSale,
-  onCancelListing,
+  asset, showValues, onListForSale, onCancelListing,
 }: {
   asset:           Asset;
   showValues:      boolean;
@@ -47,219 +42,74 @@ export function AssetCard({
 
   return (
     <>
-      {/* ── Fullscreen Image Viewer ── */}
+      {/* ── Fullscreen Viewer ── */}
       {viewerOpen && nftImageUrl && (
-        <div
-          onClick={() => setViewerOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 600,
-            background: 'rgba(0,0,0,0.98)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backdropFilter: 'blur(12px)',
-          }}
-        >
-          <img
-            src={nftImageUrl}
-            alt={assetName}
-            style={{
-              maxWidth: '90vw', maxHeight: '90vh',
-              objectFit: 'contain', borderRadius: 16,
-              border: '1px solid #ffffff20',
-            }}
-          />
-          <button
-            onClick={() => setViewerOpen(false)}
-            style={{
-              position: 'absolute', top: 20, right: 20,
-              background: '#ffffff15', border: '1px solid #ffffff20',
-              borderRadius: '50%', width: 40, height: 40,
-              color: '#fff', fontSize: 18, cursor: 'pointer',
-            }}
-          >
-            ✕
-          </button>
-          <div style={{ position: 'absolute', bottom: 30, fontSize: 12, color: '#ffffff60' }}>
-            Tap anywhere to close
-          </div>
-        </div>
+        <AssetImageViewer
+          imageUrl={nftImageUrl}
+          altText={assetName}
+          onClose={() => setViewerOpen(false)}
+        />
       )}
 
       {/* ── Quick Preview Modal ── */}
       {previewOpen && (
-        <div
-          onClick={() => setPreviewOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 500,
-            background: 'rgba(0,0,0,0.85)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              width: '100%', maxWidth: 480,
-              background: '#0d0d14',
-              border: `1px solid ${colors.border}`,
-              borderRadius: '24px 24px 0 0',
-              padding: '24px 20px 40px',
-              animation: 'slideUp 0.3s ease',
-            }}
-          >
-            {/* ── Handle ── */}
-            <div style={{
-              width: 40, height: 4, borderRadius: 2,
-              background: '#ffffff20', margin: '0 auto 20px',
-            }} />
-
-            {/* ── Image ── */}
-            {nftImageUrl && (
-              <div
-                onClick={() => { setPreviewOpen(false); setViewerOpen(true); }}
-                style={{
-                  width: '100%', height: 220, borderRadius: 16,
-                  overflow: 'hidden', marginBottom: 20, cursor: 'zoom-in',
-                  border: `1px solid ${colors.border}`,
-                  position: 'relative',
-                }}
-              >
-                <img
-                  src={nftImageUrl}
-                  alt={assetName}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <div style={{
-                  position: 'absolute', bottom: 8, right: 8,
-                  background: '#00000080', borderRadius: 8,
-                  padding: '4px 8px', fontSize: 11, color: '#fff',
-                }}>
-                  🔍 Tap to expand
-                </div>
-              </div>
-            )}
-
-            {/* ── Name + Badge ── */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
-                {assetName}
-              </div>
-              <div style={{
-                display: 'inline-block',
-                fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-                color: colors.status, background: colors.border,
-                borderRadius: 6, padding: '3px 8px',
-                textTransform: 'uppercase',
-              }}>
-                {asset.asset_type}
-              </div>
-            </div>
-
-            {/* ── Info Grid ── */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr',
-              gap: 10, marginBottom: 20,
-            }}>
-              {[
-                { label: 'Status',  value: asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase() },
-                { label: 'Value',   value: showValues ? `${asset.value}π` : '****' },
-                { label: 'Created', value: new Date(asset.created_at).toLocaleDateString() },
-                { label: 'Price',   value: asset.listing_price ? `${asset.listing_price}π` : '—' },
-              ].map(info => (
-                <div key={info.label} style={{
-                  background: '#ffffff05', borderRadius: 12, padding: '10px 14px',
-                }}>
-                  <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{info.label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{info.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* ── Actions ── */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              {asset.status === 'active' && (
-                <button
-                  onClick={() => { setPreviewOpen(false); onListForSale(asset); }}
-                  style={{
-                    flex: 1, padding: '14px',
-                    background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-                    border: 'none', borderRadius: 14,
-                    color: '#0a0800', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-                  }}
-                >
-                  🏷️ List for Sale
-                </button>
-              )}
-
-              {asset.status === 'on_sale' && asset.listing_id && (
-                <button
-                  onClick={() => { setPreviewOpen(false); onCancelListing(asset.listing_id!); }}
-                  style={{
-                    flex: 1, padding: '14px',
-                    background: '#e74c3c15', border: '1px solid #e74c3c40',
-                    borderRadius: 14, color: '#e74c3c',
-                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                  }}
-                >
-                  Cancel Listing
-                </button>
-              )}
-
-              <button
-                onClick={() => setPreviewOpen(false)}
-                style={{
-                  padding: '14px 20px',
-                  background: '#ffffff08', border: '1px solid #ffffff10',
-                  borderRadius: 14, color: '#6b6b7a',
-                  fontSize: 14, cursor: 'pointer',
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <AssetPreviewModal
+          asset={asset}
+          assetName={assetName}
+          nftImageUrl={nftImageUrl}
+          showValues={showValues}
+          onClose={() => setPreviewOpen(false)}
+          onListForSale={onListForSale}
+          onCancelListing={onCancelListing}
+          onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
+        />
       )}
 
-      {/* ── Asset Card ── */}
+      {/* ── Card ── */}
       <div
         onClick={() => setPreviewOpen(true)}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'perspective(1000px) rotateY(2deg) translateY(-2px)';
+          e.currentTarget.style.boxShadow = `0 8px 30px ${colors.border}`;
+          e.currentTarget.style.borderColor = colors.status;
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform  = 'none';
+          e.currentTarget.style.boxShadow  = 'none';
+          e.currentTarget.style.borderColor = colors.border;
+        }}
         style={{
           background: '#0d0d14',
           border: `1px solid ${colors.border}`,
           borderRadius: 18, padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: 14,
-          cursor: 'pointer', transition: 'border-color 0.2s',
+          cursor: 'pointer',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
         }}
       >
-        {/* ── Asset Image/Icon ── */}
+        {/* ── Image/Icon ── */}
         <div style={{
           width: 52, height: 52, borderRadius: 14,
-          background: colors.bg,
-          border: `1px solid ${colors.border}`,
+          background: colors.bg, border: `1px solid ${colors.border}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 24, flexShrink: 0, overflow: 'hidden',
-          position: 'relative',
+          fontSize: 24, flexShrink: 0, overflow: 'hidden', position: 'relative',
         }}>
           {nftImageUrl ? (
             <>
-              <img
-                src={nftImageUrl}
-                alt={assetName}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+              <img src={nftImageUrl} alt={assetName}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{
                 position: 'absolute', bottom: 2, right: 2,
                 fontSize: 8, background: '#00000060',
                 borderRadius: 4, padding: '1px 3px', color: '#fff',
-              }}>
-                🔍
-              </div>
+              }}>🔍</div>
             </>
           ) : (
             typeEmoji[asset.asset_type] ?? typeEmoji.default
           )}
         </div>
 
+        {/* ── Info ── */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
@@ -268,22 +118,19 @@ export function AssetCard({
             {assetName}
           </div>
           <div style={{
-            display: 'inline-block',
-            fontSize: 9, fontWeight: 700, letterSpacing: 1.5,
-            color: colors.status, background: colors.border,
-            borderRadius: 6, padding: '2px 6px',
-            textTransform: 'uppercase',
+            display: 'inline-block', fontSize: 9, fontWeight: 700,
+            letterSpacing: 1.5, color: colors.status, background: colors.border,
+            borderRadius: 6, padding: '2px 6px', textTransform: 'uppercase',
           }}>
             {asset.asset_type}
           </div>
         </div>
 
+        {/* ── Status ── */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{
             fontSize: 10, fontWeight: 600, letterSpacing: 1,
-            color: asset.status === 'active'  ? '#7ee7c0'
-                 : asset.status === 'on_sale' ? '#d4af37'
-                 : '#6b6b7a',
+            color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#d4af37' : '#6b6b7a',
           }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
           </div>
@@ -292,11 +139,9 @@ export function AssetCard({
               {asset.listing_price}π
             </div>
           )}
-          <div style={{ fontSize: 10, color: '#4a4a5a' }}>
-            Tap to preview
-          </div>
+          <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>
         </div>
       </div>
     </>
   );
-                    }
+}
