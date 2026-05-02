@@ -74,6 +74,7 @@ export function AssetsTab({
           showValues={showValues}
           onListForSale={onListForSale}
           onCancelListing={onCancelListing}
+          allAssets={assets}
         />
       ))}
     </>
