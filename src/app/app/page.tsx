@@ -241,18 +241,21 @@ function AssetsPageInner() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
-            className="btn"
-            onClick={() => goToTEC('HUB')}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 12, padding: '8px 12px',
-              color: '#d4af37', fontSize: 16, cursor: 'pointer',
-            }}
-          >
-            🔷
-          </button>
+  className="btn"
+  onClick={() => goToTEC('HUB')}
+  style={{
+    background: 'rgba(255,255,255,0.05)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 12, padding: '6px 10px',
+    color: '#d4af37', cursor: 'pointer',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: 2,
+  }}
+>
+  <span style={{ fontSize: 16 }}>🔷</span>
+  <span style={{ fontSize: 8, color: '#4a4a5a', letterSpacing: 1 }}>HUB</span>
+</button>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
             <div style={{ fontSize: 9, color: '#3a3a4a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
