@@ -377,15 +377,16 @@ function AssetsPageInner() {
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {activeTab === 'assets' && (
           <AssetsTab
-            assets={assets}
-            filtered={filtered}
-            dataLoading={dataLoading}
-            showValues={settings.showValues}
-            onListForSale={setListingAsset}
-            onCancelListing={handleCancelFromAssets}
-            onMintNFT={() => setMintingNFT(true)}
-            onGoMarketplace={() => setActiveTab('marketplace')}
-          />
+  assets={assets}
+  filtered={filtered}
+  dataLoading={dataLoading}
+  showValues={settings.showValues}
+  onListForSale={setListingAsset}
+  onCancelListing={handleCancelFromAssets}
+  onMintNFT={() => setMintingNFT(true)}
+  onGoMarketplace={() => setActiveTab('marketplace')}
+  onRefresh={fetchData}  // ✅ أضف
+/>
         )}
         {activeTab === 'marketplace' && (
           <MarketplaceTab
