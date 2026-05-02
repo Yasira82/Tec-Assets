@@ -25,6 +25,79 @@ const getTokenFromCookie = (): string | null => {
   return match ? match.split('=')[1] : null;
 };
 
+// ── Skeleton Card ─────────────────────────────────────────
+const SkeletonCard = () => (
+  <div style={{
+    background: '#0d0d14', borderRadius: 18,
+    border: '1px solid #ffffff08',
+    animation: 'shimmer 1.4s ease infinite',
+    display: 'flex', alignItems: 'center', gap: 14,
+    padding: '16px 20px',
+  }}>
+    <div style={{ width: 52, height: 52, borderRadius: 14, background: '#ffffff08', flexShrink: 0 }} />
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ width: '55%', height: 14, borderRadius: 6, background: '#ffffff08' }} />
+      <div style={{ width: '30%', height: 10, borderRadius: 4, background: '#ffffff06' }} />
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+      <div style={{ width: 50, height: 12, borderRadius: 4, background: '#ffffff08' }} />
+      <div style={{ width: 70, height: 28, borderRadius: 10, background: '#ffffff06' }} />
+    </div>
+  </div>
+);
+
+// ── Purchase Card ─────────────────────────────────────────
+const PurchaseCard = ({ p }: { p: Purchase }) => (
+  <div style={{
+    background: '#0d0d14', border: '1px solid #7ee7c020',
+    borderRadius: 18, padding: '16px 20px',
+    display: 'flex', alignItems: 'center', gap: 14,
+    transition: 'transform 0.2s, border-color 0.2s',
+  }}>
+    <div style={{
+      width: 52, height: 52, borderRadius: 14,
+      background: 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
+      border: '1px solid #7ee7c030',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 24, flexShrink: 0, overflow: 'hidden',
+    }}>
+      {p.asset.category.toLowerCase() === 'nft' && p.asset.metadata?.imageUrl ? (
+        <img
+          src={p.asset.metadata.imageUrl as string}
+          alt={p.asset.slug}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        p.asset.category.toLowerCase() === 'nft' ? '🎨' : '🌐'
+      )}
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{
+        fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4,
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}>
+        {(p.asset.metadata?.name as string) ?? p.asset.slug}
+      </div>
+      <div style={{
+        display: 'inline-block', fontSize: 9, fontWeight: 700,
+        letterSpacing: 1.5, color: '#7ee7c0',
+        background: '#7ee7c010', borderRadius: 6, padding: '2px 6px',
+        textTransform: 'uppercase',
+      }}>
+        {p.asset.category}
+      </div>
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+      <div style={{ fontSize: 18, fontWeight: 900, color: '#7ee7c0' }}>
+        {p.price}π
+      </div>
+      <div style={{ fontSize: 10, color: '#4a4a5a' }}>
+        {p.soldAt ? new Date(p.soldAt).toLocaleDateString() : '—'}
+      </div>
+    </div>
+  </div>
+);
+
 function AssetsPageInner() {
   const { user, isAuthenticated, isLoading } = usePiAuth();
   const { settings, loaded }                 = useSettings();
@@ -134,9 +207,9 @@ function AssetsPageInner() {
     }}>
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-        @keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} }
+        @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
         @keyframes spin    { to{transform:rotate(360deg)} }
-        .fade-in { animation: slideUp 0.4s ease; }
+        .fade-in  { animation: slideUp 0.4s ease; }
         .btn:active { transform: scale(0.97); }
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
@@ -144,9 +217,7 @@ function AssetsPageInner() {
       `}</style>
 
       {/* ── Modals ── */}
-      {mintingNFT && (
-        <NFTUploadModal onClose={() => setMintingNFT(false)} />
-      )}
+      {mintingNFT && <NFTUploadModal onClose={() => setMintingNFT(false)} />}
 
       {(listingAsset || editingListing) && (
         <ListForSaleModal
@@ -286,14 +357,10 @@ function AssetsPageInner() {
       {/* ── Content ── */}
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
+        {/* ── My Assets ── */}
         {activeTab === 'assets' && (
           dataLoading ? (
-            [1,2,3].map(i => (
-              <div key={i} style={{
-                height: 76, background: '#0d0d14', borderRadius: 18,
-                animation: 'shimmer 1.4s ease infinite',
-              }} />
-            ))
+            [1,2,3].map(i => <SkeletonCard key={i} />)
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
@@ -333,6 +400,7 @@ function AssetsPageInner() {
           )
         )}
 
+        {/* ── Marketplace ── */}
         {activeTab === 'marketplace' && (
           listings.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -363,7 +431,7 @@ function AssetsPageInner() {
           )
         )}
 
-        {/* ── Purchases Tab ── */}
+        {/* ── Purchases ── */}
         {activeTab === 'purchases' && (
           purchases.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -382,48 +450,11 @@ function AssetsPageInner() {
               </button>
             </div>
           ) : (
-            purchases.map(p => (
-              <div key={p.id} style={{
-                background: '#0d0d14', border: '1px solid #7ee7c020',
-                borderRadius: 18, padding: '16px 20px',
-                display: 'flex', alignItems: 'center', gap: 14,
-              }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: 14,
-                  background: 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
-                  border: '1px solid #7ee7c030',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, flexShrink: 0, overflow: 'hidden',
-                }}>
-                  {p.asset.category.toLowerCase() === 'nft' && p.asset.metadata?.imageUrl ? (
-                    <img
-                      src={p.asset.metadata.imageUrl as string}
-                      alt={p.asset.slug}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    p.asset.category.toLowerCase() === 'nft' ? '🎨' : '🌐'
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>
-                    {(p.asset.metadata?.name as string) ?? p.asset.slug}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#4a4a5a', letterSpacing: 1 }}>
-                    {p.soldAt ? new Date(p.soldAt).toLocaleDateString() : '—'}
-                  </div>
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#7ee7c0' }}>
-                  {p.price}π
-                </div>
-              </div>
-            ))
+            purchases.map(p => <PurchaseCard key={p.id} p={p} />)
           )
         )}
 
+        {/* ── Portfolio ── */}
         {activeTab === 'portfolio' && (
           <PortfolioTab
             assets={assets}
@@ -456,4 +487,4 @@ export default function AssetsPage() {
       <AssetsPageInner />
     </ErrorBoundary>
   );
-          }
+                }
