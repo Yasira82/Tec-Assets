@@ -18,3 +18,7 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: 'react-dom'
         update-types: ['version-update:semver-major']
+      - dependency-name: '@yasser172/tec-sdk'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@yasser172/tec-shared'
+        update-types: ['version-update:semver-major']
