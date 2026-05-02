@@ -17,25 +17,39 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           html, body { height: 100%; width: 100%; background: #020205; }
           body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
         `}</style>
-        <script src="https://sdk.minepi.com/pi-sdk.js" async />
+
+        {/* ✅ Pi SDK — بدون async عشان يتحمل قبل الـ init */}
+        <script src="https://sdk.minepi.com/pi-sdk.js" />
+
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              window.addEventListener('load', function() {
-                if (typeof window.Pi !== 'undefined') {
-                  try {
-                    window.Pi.init({
-                      version: '2.0',
-                      sandbox: ${process.env.NEXT_PUBLIC_PI_SANDBOX === 'true'},
-                    });
-                    window.__TEC_PI_READY = true;
-                    window.dispatchEvent(new Event('tec-pi-ready'));
-                  } catch(e) {
-                    window.__TEC_PI_ERROR = true;
-                    window.dispatchEvent(new Event('tec-pi-error'));
+              (function() {
+                function initPi() {
+                  if (typeof window.Pi !== 'undefined') {
+                    try {
+                      window.Pi.init({
+                        version: '2.0',
+                        sandbox: ${process.env.NEXT_PUBLIC_PI_SANDBOX === 'true'},
+                      });
+                      window.__TEC_PI_READY = true;
+                      window.dispatchEvent(new Event('tec-pi-ready'));
+                    } catch(e) {
+                      var msg = String(e);
+                      if (msg.includes('already') || msg.includes('initialized')) {
+                        window.__TEC_PI_READY = true;
+                        window.dispatchEvent(new Event('tec-pi-ready'));
+                      } else {
+                        window.__TEC_PI_ERROR = true;
+                        window.dispatchEvent(new Event('tec-pi-error'));
+                      }
+                    }
+                  } else {
+                    setTimeout(initPi, 100);
                   }
                 }
-              });
+                initPi();
+              })();
             `,
           }}
         />
