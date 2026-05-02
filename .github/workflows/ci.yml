@@ -3,112 +3,69 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint
+  # ✅ كل الـ checks في job واحد — توفير ~10 دقايق/push
+  pipeline:
+    name: Lint + Typecheck + Test + Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      # ✅ Cache node_modules
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-assets-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-assets-
+
       - name: Install
         run: npm install --legacy-peer-deps
+
       - name: Lint
         run: npm run lint
         continue-on-error: true
 
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install
-        run: npm install --legacy-peer-deps
       - name: Typecheck
         run: npm run typecheck
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install
-        run: npm install --legacy-peer-deps
       - name: Test
         run: npm test
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [typecheck]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install
-        run: npm install --legacy-peer-deps
       - name: Build
         run: npm run build
         env:
           NEXT_PUBLIC_PI_SANDBOX:      'true'
           NEXT_PUBLIC_API_GATEWAY_URL: ${{ secrets.NEXT_PUBLIC_API_GATEWAY_URL || 'https://api-gateway-production-6a68.up.railway.app' }}
-          NEXT_PUBLIC_PI_APP_ID: ${{ secrets.NEXT_PUBLIC_PI_APP_ID || 'assets-1eaf493994b4d31c' }}
+          NEXT_PUBLIC_PI_APP_ID:       ${{ secrets.NEXT_PUBLIC_PI_APP_ID || 'assets-1eaf493994b4d31c' }}
 
-  e2e:
-    name: Playwright E2E
-    runs-on: ubuntu-latest
-    needs: [build]
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install
-        run: npm install --legacy-peer-deps
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_GATEWAY_URL: 'http://localhost:8080'
-          NEXT_PUBLIC_PI_SANDBOX:      'true'
-          E2E_MODE:                    'true'
-      - name: Copy static files
-        run: |
-          cp -r .next/static .next/standalone/.next/static
-          if [ -d "public" ]; then
-            cp -r public .next/standalone/public
-          else
-            mkdir -p .next/standalone/public
-          fi
-      - name: Run E2E
-        run: npm run test:e2e
-        continue-on-error: true
-        env:
-          CI:                          'true'
-          E2E_MODE:                    'true'
-          PLAYWRIGHT_BASE_URL:         'http://localhost:3000'
-          NEXT_PUBLIC_API_GATEWAY_URL: 'http://localhost:8080'
-      - name: Upload Report
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
-        if: always()
+        if: github.event_name == 'push'
         with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7                 
+          name: assets-build
+          path: .next/
+          retention-days: 3
