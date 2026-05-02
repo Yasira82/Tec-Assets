@@ -16,6 +16,25 @@ interface RawListing {
   price:   number;
 }
 
+// ✅ Estimated value
+const estimateValue = (a: RawAsset, activeListing?: RawListing): number => {
+  if (activeListing?.price) return activeListing.price;
+
+  const category = a.category?.toLowerCase();
+
+  if (category === 'domain') {
+    const name = a.slug.replace('.pi', '');
+    if (name.length <= 3) return 5;
+    if (name.length <= 5) return 3;
+    if (name.length <= 9) return 2;
+    return 1;
+  }
+
+  if (category === 'nft') return 2;
+
+  return 0;
+};
+
 export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
@@ -42,11 +61,7 @@ export const GET = createHandler({
       return { data: [], total: 0 };
     }
 
-    const raw = await assetsRes.json();
-
-    // ✅ debug log
-    console.log('[BFF] raw assets:', JSON.stringify(raw?.data?.slice(0, 2)));
-
+    const raw          = await assetsRes.json();
     const listingsData = listingsRes.ok ? await listingsRes.json() : {};
     const userListings: RawListing[] = listingsData?.data?.listings ?? [];
 
@@ -58,7 +73,7 @@ export const GET = createHandler({
         id:            a.id,
         name:          a.slug,
         asset_type:    a.category?.toLowerCase() ?? 'domain',
-        value:         0,
+        value:         estimateValue(a, activeListing),
         currency:      'PI',
         status:        a.status?.toLowerCase() ?? 'active',
         created_at:    a.createdAt,
