@@ -20,14 +20,15 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset, showValues, onListForSale, onCancelListing, allAssets = [],
+  asset, showValues, onListForSale, onCancelListing, allAssets = [], onRefresh,
 }: {
   asset:           Asset;
   showValues:      boolean;
   onListForSale:   (asset: Asset) => void;
   onCancelListing: (listingId: string) => void;
   allAssets?:      Asset[];
-}) {
+  onRefresh?:      () => void;
+})
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewerOpen,  setViewerOpen]  = useState(false);
 
