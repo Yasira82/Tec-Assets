@@ -171,7 +171,7 @@ const MintAsNftButton = ({ asset, onClose, onSuccess }: {
                   body: JSON.stringify({
                     assetId:       asset.id,
                     transactionId: txid,
-                    userId:        asset.owner_id,
+                    userId: asset.owner_id ?? '',
                   }),
                 });
                 if (!res.ok) throw new Error('Mint failed');
