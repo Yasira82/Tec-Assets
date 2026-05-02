@@ -8,13 +8,14 @@ import { goToTEC }                          from '@/lib/tec-navigation';
 import { useSettings }                      from '@/lib/hooks/useSettings';
 import { GlobalNav }                        from '@yasser172/tec-ui';
 import { Asset, Listing, WalletData, MainTab, Purchase } from './types';
-import { AssetCard }          from './components/AssetCard';
-import { MarketplaceCard }    from './components/MarketplaceCard';
 import { ListForSaleModal }   from './components/ListForSaleModal';
 import { CancelConfirmModal } from './components/CancelConfirmModal';
 import { PortfolioTab }       from './components/PortfolioTab';
 import { Skeleton }           from './components/Skeleton';
 import { NFTUploadModal }     from './components/NFTUploadModal';
+import { AssetsTab }          from './components/AssetsTab';
+import { MarketplaceTab }     from './components/MarketplaceTab';
+import { PurchasesTab }       from './components/PurchasesTab';
 
 const SSO_URL = 'https://tec-app-frontend.vercel.app/api/auth/sso?target=' +
   encodeURIComponent('https://tec-assets-app.vercel.app');
@@ -24,79 +25,6 @@ const getTokenFromCookie = (): string | null => {
   const match = document.cookie.split('; ').find(row => row.startsWith('tec_access_token='));
   return match ? match.split('=')[1] : null;
 };
-
-// ── Skeleton Card ─────────────────────────────────────────
-const SkeletonCard = () => (
-  <div style={{
-    background: '#0d0d14', borderRadius: 18,
-    border: '1px solid #ffffff08',
-    animation: 'shimmer 1.4s ease infinite',
-    display: 'flex', alignItems: 'center', gap: 14,
-    padding: '16px 20px',
-  }}>
-    <div style={{ width: 52, height: 52, borderRadius: 14, background: '#ffffff08', flexShrink: 0 }} />
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ width: '55%', height: 14, borderRadius: 6, background: '#ffffff08' }} />
-      <div style={{ width: '30%', height: 10, borderRadius: 4, background: '#ffffff06' }} />
-    </div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-      <div style={{ width: 50, height: 12, borderRadius: 4, background: '#ffffff08' }} />
-      <div style={{ width: 70, height: 28, borderRadius: 10, background: '#ffffff06' }} />
-    </div>
-  </div>
-);
-
-// ── Purchase Card ─────────────────────────────────────────
-const PurchaseCard = ({ p }: { p: Purchase }) => (
-  <div style={{
-    background: '#0d0d14', border: '1px solid #7ee7c020',
-    borderRadius: 18, padding: '16px 20px',
-    display: 'flex', alignItems: 'center', gap: 14,
-    transition: 'transform 0.2s, border-color 0.2s',
-  }}>
-    <div style={{
-      width: 52, height: 52, borderRadius: 14,
-      background: 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
-      border: '1px solid #7ee7c030',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 24, flexShrink: 0, overflow: 'hidden',
-    }}>
-      {p.asset.category.toLowerCase() === 'nft' && p.asset.metadata?.imageUrl ? (
-        <img
-          src={p.asset.metadata.imageUrl as string}
-          alt={p.asset.slug}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-      ) : (
-        p.asset.category.toLowerCase() === 'nft' ? '🎨' : '🌐'
-      )}
-    </div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{
-        fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4,
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>
-        {(p.asset.metadata?.name as string) ?? p.asset.slug}
-      </div>
-      <div style={{
-        display: 'inline-block', fontSize: 9, fontWeight: 700,
-        letterSpacing: 1.5, color: '#7ee7c0',
-        background: '#7ee7c010', borderRadius: 6, padding: '2px 6px',
-        textTransform: 'uppercase',
-      }}>
-        {p.asset.category}
-      </div>
-    </div>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-      <div style={{ fontSize: 18, fontWeight: 900, color: '#7ee7c0' }}>
-        {p.price}π
-      </div>
-      <div style={{ fontSize: 10, color: '#4a4a5a' }}>
-        {p.soldAt ? new Date(p.soldAt).toLocaleDateString() : '—'}
-      </div>
-    </div>
-  </div>
-);
 
 function AssetsPageInner() {
   const { user, isAuthenticated, isLoading } = usePiAuth();
@@ -137,13 +65,8 @@ function AssetsPageInner() {
 
   const fetchPurchases = useCallback(async () => {
     try {
-      const res = await fetch('/api/bff/marketplace/purchases', {
-        credentials: 'include', cache: 'no-store',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPurchases(data?.purchases ?? []);
-      }
+      const res = await fetch('/api/bff/marketplace/purchases', { credentials: 'include', cache: 'no-store' });
+      if (res.ok) { const data = await res.json(); setPurchases(data?.purchases ?? []); }
     } catch { /* silent */ }
   }, []);
 
@@ -157,10 +80,7 @@ function AssetsPageInner() {
         fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
       ]);
       if (walletRes.ok) setWallet(await walletRes.json());
-      if (assetsRes.ok) {
-        const data = await assetsRes.json();
-        setAssets(data?.data ?? []);
-      }
+      if (assetsRes.ok) { const data = await assetsRes.json(); setAssets(data?.data ?? []); }
     } catch { /* silent */ }
     finally { setDataLoading(false); }
   }, []);
@@ -194,8 +114,9 @@ function AssetsPageInner() {
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered       = assetFilter === 'all' ? assets : assets.filter(a => a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
-  const totalValue     = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const filtered     = assetFilter === 'all' ? assets : assets.filter(a =>
+    a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
+  const totalValue   = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
   const displayBalance = settings.hideBalance ? '****' : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
   const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
@@ -208,8 +129,7 @@ function AssetsPageInner() {
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
-        @keyframes spin    { to{transform:rotate(360deg)} }
-        .fade-in  { animation: slideUp 0.4s ease; }
+        .fade-in { animation: slideUp 0.4s ease; }
         .btn:active { transform: scale(0.97); }
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
@@ -249,9 +169,7 @@ function AssetsPageInner() {
             background: '#ffffff08', border: '1px solid #ffffff10',
             borderRadius: 10, padding: '6px 10px',
             color: '#d4af37', fontSize: 16, cursor: 'pointer',
-          }}>
-            🔷
-          </button>
+          }}>🔷</button>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
             <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
@@ -265,9 +183,7 @@ function AssetsPageInner() {
             background: '#ffffff08', border: '1px solid #ffffff10',
             borderRadius: 10, padding: '6px 10px',
             color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
-          }}>
-            ⚙️
-          </button>
+          }}>⚙️</button>
         </div>
       </header>
 
@@ -327,7 +243,7 @@ function AssetsPageInner() {
         ))}
       </div>
 
-      {/* ── Asset Filter + NFT ── */}
+      {/* ── Asset Filter ── */}
       {activeTab === 'assets' && (
         <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8, alignItems: 'center' }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
@@ -356,105 +272,36 @@ function AssetsPageInner() {
 
       {/* ── Content ── */}
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-        {/* ── My Assets ── */}
         {activeTab === 'assets' && (
-          dataLoading ? (
-            [1,2,3].map(i => <SkeletonCard key={i} />)
-          ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
-              <div style={{ fontSize: 15, color: '#4a4a5a' }}>No assets yet</div>
-              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
-                Mint an NFT or browse the Marketplace
-              </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
-                <button onClick={() => setMintingNFT(true)} style={{
-                  padding: '12px 20px',
-                  background: 'linear-gradient(135deg,#2d1b69,#1a0f3d)',
-                  border: '1px solid #7b6bc840', borderRadius: 14,
-                  color: '#b39ddb', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                }}>
-                  🎨 Mint NFT
-                </button>
-                <button onClick={() => setActiveTab('marketplace')} style={{
-                  padding: '12px 20px',
-                  background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-                  border: 'none', borderRadius: 14,
-                  color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                }}>
-                  🛒 Marketplace
-                </button>
-              </div>
-            </div>
-          ) : (
-            filtered.map(asset => (
-              <AssetCard
-                key={asset.id}
-                asset={asset}
-                showValues={settings.showValues}
-                onListForSale={setListingAsset}
-                onCancelListing={handleCancelFromAssets}
-              />
-            ))
-          )
+          <AssetsTab
+            assets={assets}
+            filtered={filtered}
+            dataLoading={dataLoading}
+            showValues={settings.showValues}
+            onListForSale={setListingAsset}
+            onCancelListing={handleCancelFromAssets}
+            onMintNFT={() => setMintingNFT(true)}
+            onGoMarketplace={() => setActiveTab('marketplace')}
+          />
         )}
 
-        {/* ── Marketplace ── */}
         {activeTab === 'marketplace' && (
-          listings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
-              <div style={{ fontSize: 15, color: '#4a4a5a' }}>No listings yet</div>
-              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
-                Be the first to list an asset for sale
-              </div>
-              <button onClick={() => setActiveTab('assets')} style={{
-                marginTop: 20, padding: '12px 24px',
-                background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-                border: 'none', borderRadius: 14,
-                color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              }}>
-                💎 My Assets
-              </button>
-            </div>
-          ) : (
-            listings.map(listing => (
-              <MarketplaceCard
-                key={listing.id}
-                listing={listing}
-                currentUserId={user?.id ?? ''}
-                onEditPrice={setEditingListing}
-                onCancel={setCancellingListing}
-              />
-            ))
-          )
+          <MarketplaceTab
+            listings={listings}
+            currentUserId={user?.id ?? ''}
+            onEditPrice={setEditingListing}
+            onCancel={setCancellingListing}
+            onGoAssets={() => setActiveTab('assets')}
+          />
         )}
 
-        {/* ── Purchases ── */}
         {activeTab === 'purchases' && (
-          purchases.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🧾</div>
-              <div style={{ fontSize: 15, color: '#4a4a5a' }}>No purchases yet</div>
-              <div style={{ fontSize: 12, color: '#2a2a3a', marginTop: 6 }}>
-                Browse the Marketplace to find assets
-              </div>
-              <button onClick={() => setActiveTab('marketplace')} style={{
-                marginTop: 20, padding: '12px 24px',
-                background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-                border: 'none', borderRadius: 14,
-                color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              }}>
-                🛒 Marketplace
-              </button>
-            </div>
-          ) : (
-            purchases.map(p => <PurchaseCard key={p.id} p={p} />)
-          )
+          <PurchasesTab
+            purchases={purchases}
+            onGoMarketplace={() => setActiveTab('marketplace')}
+          />
         )}
 
-        {/* ── Portfolio ── */}
         {activeTab === 'portfolio' && (
           <PortfolioTab
             assets={assets}
@@ -463,18 +310,17 @@ function AssetsPageInner() {
             hideBalance={settings.hideBalance}
           />
         )}
-
       </div>
 
       {/* ── Bottom Nav ── */}
       <GlobalNav
         currentApp="assets"
         items={[
-          { icon: '💎', label: 'Assets',    app: 'assets',   action: () => { setActiveTab('assets'); setAssetFilter('all'); } },
-          { icon: '🛒', label: 'Market',    app: null,       action: () => setActiveTab('marketplace') },
-          { icon: '🧾', label: 'Purchases', app: null,       action: () => setActiveTab('purchases') },
-          { icon: '📊', label: 'Portfolio', app: null,       action: () => setActiveTab('portfolio') },
-          { icon: '🔷', label: 'TEC Hub',   app: null,       action: () => goToTEC('HUB') },
+          { icon: '💎', label: 'Assets',    app: 'assets', action: () => { setActiveTab('assets'); setAssetFilter('all'); } },
+          { icon: '🛒', label: 'Market',    app: null,     action: () => setActiveTab('marketplace') },
+          { icon: '🧾', label: 'Purchases', app: null,     action: () => setActiveTab('purchases') },
+          { icon: '📊', label: 'Portfolio', app: null,     action: () => setActiveTab('portfolio') },
+          { icon: '🔷', label: 'TEC Hub',   app: null,     action: () => goToTEC('HUB') },
         ]}
       />
     </div>
@@ -482,9 +328,5 @@ function AssetsPageInner() {
 }
 
 export default function AssetsPage() {
-  return (
-    <ErrorBoundary>
-      <AssetsPageInner />
-    </ErrorBoundary>
-  );
-                }
+  return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
+                         }
