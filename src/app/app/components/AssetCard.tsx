@@ -69,13 +69,23 @@ export function AssetCard({
       <div
         onClick={() => setPreviewOpen(true)}
         onMouseEnter={e => {
-          e.currentTarget.style.transform = 'perspective(1000px) rotateY(2deg) translateY(-2px)';
-          e.currentTarget.style.boxShadow = `0 8px 30px ${colors.border}`;
+          e.currentTarget.style.transform   = 'perspective(1000px) rotateY(2deg) translateY(-2px)';
+          e.currentTarget.style.boxShadow   = `0 8px 30px ${colors.border}`;
           e.currentTarget.style.borderColor = colors.status;
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.transform  = 'none';
-          e.currentTarget.style.boxShadow  = 'none';
+          e.currentTarget.style.transform   = 'none';
+          e.currentTarget.style.boxShadow   = 'none';
+          e.currentTarget.style.borderColor = colors.border;
+        }}
+        onTouchStart={e => {
+          e.currentTarget.style.transform   = 'scale(0.97)';
+          e.currentTarget.style.boxShadow   = `0 4px 20px ${colors.border}`;
+          e.currentTarget.style.borderColor = colors.status;
+        }}
+        onTouchEnd={e => {
+          e.currentTarget.style.transform   = 'none';
+          e.currentTarget.style.boxShadow   = 'none';
           e.currentTarget.style.borderColor = colors.border;
         }}
         style={{
@@ -84,7 +94,7 @@ export function AssetCard({
           borderRadius: 18, padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: 14,
           cursor: 'pointer',
-          transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
         }}
       >
         {/* ── Image/Icon ── */}
@@ -130,7 +140,9 @@ export function AssetCard({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{
             fontSize: 10, fontWeight: 600, letterSpacing: 1,
-            color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#d4af37' : '#6b6b7a',
+            color: asset.status === 'active'  ? '#7ee7c0'
+                 : asset.status === 'on_sale' ? '#d4af37'
+                 : '#6b6b7a',
           }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
           </div>
