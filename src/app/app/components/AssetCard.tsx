@@ -12,7 +12,6 @@ const typeEmoji: Record<string, string> = {
   default:       '💎',
 };
 
-// ── NFT color system
 const assetColors: Record<string, { border: string; bg: string; status: string }> = {
   nft:           { border: '#7b6bc840', bg: 'linear-gradient(135deg,#1a0f3d,#0d0d14)', status: '#b39ddb' },
   domain:        { border: '#7eb8f740', bg: 'linear-gradient(135deg,#0a2040,#0d0d14)', status: '#7eb8f7' },
@@ -33,30 +32,35 @@ export function AssetCard({
   onListForSale:   (asset: Asset) => void;
   onCancelListing: (listingId: string) => void;
 }) {
-  const [viewerOpen, setViewerOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [viewerOpen,  setViewerOpen]  = useState(false);
 
   const nftImageUrl = asset.asset_type === 'nft'
     ? (asset.metadata?.imageUrl as string | undefined)
     : undefined;
 
+  const assetName = asset.asset_type === 'nft' && asset.metadata?.name
+    ? asset.metadata.name as string
+    : asset.name;
+
   const colors = assetColors[asset.asset_type] ?? assetColors.default;
 
   return (
     <>
-      {/* ── Image Viewer ── */}
+      {/* ── Fullscreen Image Viewer ── */}
       {viewerOpen && nftImageUrl && (
         <div
           onClick={() => setViewerOpen(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 500,
-            background: 'rgba(0,0,0,0.95)',
+            position: 'fixed', inset: 0, zIndex: 600,
+            background: 'rgba(0,0,0,0.98)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(12px)',
           }}
         >
           <img
             src={nftImageUrl}
-            alt={asset.name}
+            alt={assetName}
             style={{
               maxWidth: '90vw', maxHeight: '90vh',
               objectFit: 'contain', borderRadius: 16,
@@ -74,42 +78,175 @@ export function AssetCard({
           >
             ✕
           </button>
-          <div style={{
-            position: 'absolute', bottom: 30,
-            fontSize: 12, color: '#ffffff60',
-          }}>
+          <div style={{ position: 'absolute', bottom: 30, fontSize: 12, color: '#ffffff60' }}>
             Tap anywhere to close
           </div>
         </div>
       )}
 
-      <div style={{
-        background: '#0d0d14',
-        border: `1px solid ${colors.border}`,
-        borderRadius: 18, padding: '16px 20px',
-        display: 'flex', alignItems: 'center', gap: 14,
-      }}>
-        {/* ── Asset Image/Icon ── */}
+      {/* ── Quick Preview Modal ── */}
+      {previewOpen && (
         <div
-          onClick={() => nftImageUrl && setViewerOpen(true)}
+          onClick={() => setPreviewOpen(false)}
           style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: colors.bg,
-            border: `1px solid ${colors.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, flexShrink: 0, overflow: 'hidden',
-            cursor: nftImageUrl ? 'zoom-in' : 'default',
-            position: 'relative',
+            position: 'fixed', inset: 0, zIndex: 500,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
           }}
         >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 480,
+              background: '#0d0d14',
+              border: `1px solid ${colors.border}`,
+              borderRadius: '24px 24px 0 0',
+              padding: '24px 20px 40px',
+              animation: 'slideUp 0.3s ease',
+            }}
+          >
+            {/* ── Handle ── */}
+            <div style={{
+              width: 40, height: 4, borderRadius: 2,
+              background: '#ffffff20', margin: '0 auto 20px',
+            }} />
+
+            {/* ── Image ── */}
+            {nftImageUrl && (
+              <div
+                onClick={() => { setPreviewOpen(false); setViewerOpen(true); }}
+                style={{
+                  width: '100%', height: 220, borderRadius: 16,
+                  overflow: 'hidden', marginBottom: 20, cursor: 'zoom-in',
+                  border: `1px solid ${colors.border}`,
+                  position: 'relative',
+                }}
+              >
+                <img
+                  src={nftImageUrl}
+                  alt={assetName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{
+                  position: 'absolute', bottom: 8, right: 8,
+                  background: '#00000080', borderRadius: 8,
+                  padding: '4px 8px', fontSize: 11, color: '#fff',
+                }}>
+                  🔍 Tap to expand
+                </div>
+              </div>
+            )}
+
+            {/* ── Name + Badge ── */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
+                {assetName}
+              </div>
+              <div style={{
+                display: 'inline-block',
+                fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                color: colors.status, background: colors.border,
+                borderRadius: 6, padding: '3px 8px',
+                textTransform: 'uppercase',
+              }}>
+                {asset.asset_type}
+              </div>
+            </div>
+
+            {/* ── Info Grid ── */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr',
+              gap: 10, marginBottom: 20,
+            }}>
+              {[
+                { label: 'Status',  value: asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase() },
+                { label: 'Value',   value: showValues ? `${asset.value}π` : '****' },
+                { label: 'Created', value: new Date(asset.created_at).toLocaleDateString() },
+                { label: 'Price',   value: asset.listing_price ? `${asset.listing_price}π` : '—' },
+              ].map(info => (
+                <div key={info.label} style={{
+                  background: '#ffffff05', borderRadius: 12, padding: '10px 14px',
+                }}>
+                  <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{info.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{info.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Actions ── */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              {asset.status === 'active' && (
+                <button
+                  onClick={() => { setPreviewOpen(false); onListForSale(asset); }}
+                  style={{
+                    flex: 1, padding: '14px',
+                    background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                    border: 'none', borderRadius: 14,
+                    color: '#0a0800', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                  }}
+                >
+                  🏷️ List for Sale
+                </button>
+              )}
+
+              {asset.status === 'on_sale' && asset.listing_id && (
+                <button
+                  onClick={() => { setPreviewOpen(false); onCancelListing(asset.listing_id!); }}
+                  style={{
+                    flex: 1, padding: '14px',
+                    background: '#e74c3c15', border: '1px solid #e74c3c40',
+                    borderRadius: 14, color: '#e74c3c',
+                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  Cancel Listing
+                </button>
+              )}
+
+              <button
+                onClick={() => setPreviewOpen(false)}
+                style={{
+                  padding: '14px 20px',
+                  background: '#ffffff08', border: '1px solid #ffffff10',
+                  borderRadius: 14, color: '#6b6b7a',
+                  fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Asset Card ── */}
+      <div
+        onClick={() => setPreviewOpen(true)}
+        style={{
+          background: '#0d0d14',
+          border: `1px solid ${colors.border}`,
+          borderRadius: 18, padding: '16px 20px',
+          display: 'flex', alignItems: 'center', gap: 14,
+          cursor: 'pointer', transition: 'border-color 0.2s',
+        }}
+      >
+        {/* ── Asset Image/Icon ── */}
+        <div style={{
+          width: 52, height: 52, borderRadius: 14,
+          background: colors.bg,
+          border: `1px solid ${colors.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 24, flexShrink: 0, overflow: 'hidden',
+          position: 'relative',
+        }}>
           {nftImageUrl ? (
             <>
               <img
                 src={nftImageUrl}
-                alt={asset.name}
+                alt={assetName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
-              {/* ✅ Zoom hint */}
               <div style={{
                 position: 'absolute', bottom: 2, right: 2,
                 fontSize: 8, background: '#00000060',
@@ -128,16 +265,12 @@ export function AssetCard({
             fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
-            {asset.asset_type === 'nft' && asset.metadata?.name
-              ? asset.metadata.name as string
-              : asset.name}
+            {assetName}
           </div>
-          {/* ✅ Asset type badge */}
           <div style={{
             display: 'inline-block',
             fontSize: 9, fontWeight: 700, letterSpacing: 1.5,
-            color: colors.status,
-            background: `${colors.border}`,
+            color: colors.status, background: colors.border,
             borderRadius: 6, padding: '2px 6px',
             textTransform: 'uppercase',
           }}>
@@ -145,7 +278,7 @@ export function AssetCard({
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{
             fontSize: 10, fontWeight: 600, letterSpacing: 1,
             color: asset.status === 'active'  ? '#7ee7c0'
@@ -154,39 +287,16 @@ export function AssetCard({
           }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
           </div>
-
-          {asset.status === 'active' && (
-            <button onClick={() => onListForSale(asset)} style={{
-              padding: '5px 12px', borderRadius: 10,
-              background: '#d4af3715', border: '1px solid #d4af3740',
-              color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-            }}>
-              List for Sale
-            </button>
-          )}
-
-          {asset.status === 'on_sale' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-              <div style={{
-                padding: '4px 10px', borderRadius: 10,
-                background: '#d4af3720', border: '1px solid #d4af3740',
-                color: '#d4af37', fontSize: 10, fontWeight: 700,
-              }}>
-                🏷️ {asset.listing_price}π
-              </div>
-              {asset.listing_id && (
-                <button onClick={() => onCancelListing(asset.listing_id!)} style={{
-                  padding: '4px 10px', borderRadius: 10,
-                  background: '#e74c3c15', border: '1px solid #e74c3c40',
-                  color: '#e74c3c', fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                }}>
-                  Cancel
-                </button>
-              )}
+          {asset.listing_price && (
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#d4af37' }}>
+              {asset.listing_price}π
             </div>
           )}
+          <div style={{ fontSize: 10, color: '#4a4a5a' }}>
+            Tap to preview
+          </div>
         </div>
       </div>
     </>
   );
-}
+                    }
