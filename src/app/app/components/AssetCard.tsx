@@ -20,12 +20,13 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset, showValues, onListForSale, onCancelListing,
+  asset, showValues, onListForSale, onCancelListing, allAssets = [],
 }: {
   asset:           Asset;
   showValues:      boolean;
   onListForSale:   (asset: Asset) => void;
   onCancelListing: (listingId: string) => void;
+  allAssets?:      Asset[];
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewerOpen,  setViewerOpen]  = useState(false);
@@ -42,7 +43,6 @@ export function AssetCard({
 
   return (
     <>
-      {/* ── Fullscreen Viewer ── */}
       {viewerOpen && nftImageUrl && (
         <AssetImageViewer
           imageUrl={nftImageUrl}
@@ -51,7 +51,6 @@ export function AssetCard({
         />
       )}
 
-      {/* ── Quick Preview Modal ── */}
       {previewOpen && (
         <AssetPreviewModal
           asset={asset}
@@ -62,10 +61,10 @@ export function AssetCard({
           onListForSale={onListForSale}
           onCancelListing={onCancelListing}
           onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
+          allAssets={allAssets}
         />
       )}
 
-      {/* ── Card ── */}
       <div
         onClick={() => setPreviewOpen(true)}
         onMouseEnter={e => {
@@ -97,7 +96,6 @@ export function AssetCard({
           transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
         }}
       >
-        {/* ── Image/Icon ── */}
         <div style={{
           width: 52, height: 52, borderRadius: 14,
           background: colors.bg, border: `1px solid ${colors.border}`,
@@ -119,7 +117,6 @@ export function AssetCard({
           )}
         </div>
 
-        {/* ── Info ── */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
@@ -136,7 +133,6 @@ export function AssetCard({
           </div>
         </div>
 
-        {/* ── Status ── */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{
             fontSize: 10, fontWeight: 600, letterSpacing: 1,
