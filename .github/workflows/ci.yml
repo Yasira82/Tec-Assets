@@ -7,6 +7,8 @@ on:
       - 'src/**'
       - 'public/**'
       - 'package*.json'
+      - 'tsconfig.json'
+      - 'next.config.js'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
@@ -14,6 +16,8 @@ on:
       - 'src/**'
       - 'public/**'
       - 'package*.json'
+      - 'tsconfig.json'
+      - 'next.config.js'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
@@ -21,7 +25,6 @@ permissions:
   contents: read
 
 jobs:
-  # ✅ كل الـ checks في job واحد — توفير ~10 دقايق/push
   pipeline:
     name: Lint + Typecheck + Test + Build
     runs-on: ubuntu-latest
@@ -34,7 +37,6 @@ jobs:
         with:
           node-version: '20'
 
-      # ✅ Cache node_modules
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
@@ -48,6 +50,10 @@ jobs:
       - name: Lint
         run: npm run lint
         continue-on-error: true
+
+      # ✅ شيل الـ TS cache قبل typecheck
+      - name: Clear TS cache
+        run: rm -f tsconfig.tsbuildinfo
 
       - name: Typecheck
         run: npm run typecheck
