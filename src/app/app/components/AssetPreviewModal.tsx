@@ -113,10 +113,153 @@ const SimilarAssets = ({ asset, allAssets, colors }: {
   );
 };
 
+// ── Mint as NFT ───────────────────────────────────────────
+const MintAsNftButton = ({ asset, onClose, onSuccess }: {
+  asset:     Asset;
+  onClose:   () => void;
+  onSuccess: () => void;
+}) => {
+  const [minting,  setMinting]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+
+  const domainName = asset.name.replace('.pi', '').replace(/\./g, '');
+  const tier = domainName.length <= 2 ? 'Legendary'
+             : domainName.length <= 3 ? 'Ultra Rare'
+             : domainName.length <= 5 ? 'Rare'
+             : domainName.length <= 9 ? 'Uncommon'
+             : 'Common';
+
+  const tierColor = tier === 'Legendary'  ? '#ffd700'
+                  : tier === 'Ultra Rare' ? '#b39ddb'
+                  : tier === 'Rare'       ? '#7eb8f7'
+                  : tier === 'Uncommon'   ? '#7ee7c0'
+                  : '#d4af37';
+
+  const handleMint = async () => {
+    if (!window.Pi) { setError('Open in Pi Browser'); return; }
+    setMinting(true);
+    setError(null);
+    navigator.vibrate?.(10);
+
+    try {
+      // 1. Pi Payment
+      await new Promise<void>((resolve, reject) => {
+        window.Pi.createPayment(
+          {
+            amount:  0.1,
+            memo:    `Mint ${asset.name} as NFT`,
+            metadata: { assetId: asset.id, type: 'domain_mint' },
+          },
+          {
+            onReadyForServerApproval: async (paymentId: string) => {
+              try {
+                await fetch('/api/payment/approve', {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({ paymentId }),
+                });
+              } catch { reject(new Error('Approval failed')); }
+            },
+            onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+              try {
+                // 2. Mint NFT
+                const res = await fetch('/api/bff/assets/mint-as-nft', {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    assetId:       asset.id,
+                    transactionId: txid,
+                    userId:        asset.owner_id,
+                  }),
+                });
+                if (!res.ok) throw new Error('Mint failed');
+                resolve();
+              } catch (e) { reject(e); }
+            },
+            onCancel: () => reject(new Error('Cancelled')),
+            onError:  (e: unknown) => reject(e),
+          }
+        );
+      });
+
+      onSuccess();
+      onClose();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Mint failed';
+      if (msg !== 'Cancelled') setError(msg);
+    } finally {
+      setMinting(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+      {/* ── Tier Badge ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 6, padding: '6px 12px',
+        background: `${tierColor}10`,
+        border: `1px solid ${tierColor}30`,
+        borderRadius: 10,
+      }}>
+        <span style={{ fontSize: 10, color: tierColor, fontWeight: 700, letterSpacing: 1 }}>
+          ✦ {tier.toUpperCase()} DOMAIN
+        </span>
+      </div>
+
+      {/* ── Mint Button ── */}
+      <button
+        onClick={handleMint}
+        disabled={minting}
+        style={{
+          flex: 1, padding: '16px',
+          background: minting
+            ? 'rgba(255,255,255,0.05)'
+            : 'linear-gradient(135deg,#1a0f3d,#0a2040)',
+          border: `1px solid ${minting ? 'rgba(255,255,255,0.1)' : '#7b6bc850'}`,
+          borderRadius: 16,
+          color: minting ? '#4a4a5a' : '#b39ddb',
+          fontSize: 15, fontWeight: 800, cursor: minting ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          transition: 'all 0.2s',
+        }}
+      >
+        {minting ? (
+          <>
+            <span style={{
+              width: 14, height: 14, borderRadius: '50%',
+              border: '2px solid #4a4a5a',
+              borderTopColor: '#b39ddb',
+              animation: 'spin 0.8s linear infinite',
+              display: 'inline-block',
+            }} />
+            Minting...
+          </>
+        ) : (
+          '🎨 Mint as NFT — 0.1π'
+        )}
+      </button>
+
+      {/* ── Error ── */}
+      {error && (
+        <div style={{
+          fontSize: 11, color: '#e74c3c', textAlign: 'center',
+          padding: '6px', background: 'rgba(231,76,60,0.08)',
+          borderRadius: 8,
+        }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function AssetPreviewModal({
   asset, assetName, nftImageUrl, showValues,
   onClose, onListForSale, onCancelListing, onExpandImage,
-  allAssets = [],
+  allAssets = [], onRefresh,
 }: {
   asset:           Asset;
   assetName:       string;
@@ -127,25 +270,25 @@ export function AssetPreviewModal({
   onCancelListing: (listingId: string) => void;
   onExpandImage:   () => void;
   allAssets?:      Asset[];
+  onRefresh?:      () => void;
 }) {
   const colors    = assetColors[asset.asset_type] ?? assetColors.default;
   const metadata  = (asset.metadata ?? {}) as Record<string, unknown>;
   const hasTraits = Object.keys(metadata).some(k => !['imageUrl', 'piPaymentId', 'name'].includes(k));
+  const isDomain  = asset.asset_type === 'domain';
 
   // ── Drag to dismiss ───────────────────────────────────
-  const startY      = useRef<number | null>(null);
+  const startY        = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    startY.current = e.touches[0].clientY;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
+  const onTouchStart = (e: React.TouchEvent) => { startY.current = e.touches[0].clientY; };
+  const onTouchMove  = (e: React.TouchEvent) => {
     if (startY.current === null) return;
     const dy = e.touches[0].clientY - startY.current;
     if (dy > 0) setDragY(dy);
   };
   const onTouchEnd = () => {
-    if (dragY > 120) { onClose(); }
+    if (dragY > 120) onClose();
     setDragY(0);
     startY.current = null;
   };
@@ -179,7 +322,7 @@ export function AssetPreviewModal({
           animation: dragY === 0 ? 'slideUp 0.3s ease' : 'none',
         }}
       >
-        {/* ── Handle — drag zone ── */}
+        {/* ── Handle ── */}
         <div style={{ padding: '16px 20px 0', flexShrink: 0 }}>
           <div style={{
             width: 40, height: 4, borderRadius: 2,
@@ -232,8 +375,7 @@ export function AssetPreviewModal({
             <button
               onClick={() => handleShare(assetName, asset.listing_price)}
               style={{
-                background: 'rgba(255,255,255,0.06)',
-                backdropFilter: 'blur(10px)',
+                background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 12, padding: '10px 14px',
                 color: '#6b6b7a', fontSize: 16, cursor: 'pointer', flexShrink: 0,
@@ -252,8 +394,7 @@ export function AssetPreviewModal({
               { label: 'Price',   value: asset.listing_price ? `${asset.listing_price}π` : '—' },
             ].map(info => (
               <div key={info.label} style={{
-                background: 'rgba(255,255,255,0.04)',
-                backdropFilter: 'blur(10px)',
+                background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)',
                 borderRadius: 12, padding: '10px 14px',
               }}>
                 <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{info.label}</div>
@@ -279,13 +420,19 @@ export function AssetPreviewModal({
           backdropFilter: 'blur(20px)',
           display: 'flex', gap: 10,
         }}>
-          {asset.status === 'active' && (
+          {/* ── Domain — Mint as NFT ── */}
+          {isDomain && asset.status === 'active' && (
+            <MintAsNftButton
+              asset={asset}
+              onClose={onClose}
+              onSuccess={() => onRefresh?.()}
+            />
+          )}
+
+          {/* ── NFT / non-domain — List for Sale ── */}
+          {!isDomain && asset.status === 'active' && (
             <button
-              onClick={() => {
-                navigator.vibrate?.(10);
-                onClose();
-                onListForSale(asset);
-              }}
+              onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
               style={{
                 flex: 1, padding: '16px',
                 background: 'linear-gradient(135deg,#d4af37,#b8882a)',
@@ -297,13 +444,25 @@ export function AssetPreviewModal({
             </button>
           )}
 
-          {asset.status === 'on_sale' && asset.listing_id && (
+          {/* ── Domain on sale — show both ── */}
+          {isDomain && asset.status === 'on_sale' && asset.listing_id && (
             <button
-              onClick={() => {
-                navigator.vibrate?.(10);
-                onClose();
-                onCancelListing(asset.listing_id!);
+              onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
+              style={{
+                flex: 1, padding: '16px',
+                background: 'rgba(231,76,60,0.08)',
+                border: '1px solid rgba(231,76,60,0.3)',
+                borderRadius: 16, color: '#e74c3c',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer',
               }}
+            >
+              Cancel Listing
+            </button>
+          )}
+
+          {!isDomain && asset.status === 'on_sale' && asset.listing_id && (
+            <button
+              onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
               style={{
                 flex: 1, padding: '16px',
                 background: 'rgba(231,76,60,0.08)',
@@ -332,4 +491,4 @@ export function AssetPreviewModal({
       </div>
     </div>
   );
-}
+              }
