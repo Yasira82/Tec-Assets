@@ -40,3 +40,4 @@ describe('getStoredUser', () => {
     expect(getStoredUser()).toBeNull();
   });
 });
+
