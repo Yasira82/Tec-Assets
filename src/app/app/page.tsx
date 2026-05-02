@@ -6,7 +6,6 @@ import { usePiAuth }                        from '@/lib-client/hooks/usePiAuth';
 import { ErrorBoundary }                    from '@/components/ErrorBoundary';
 import { goToTEC }                          from '@/lib/tec-navigation';
 import { useSettings }                      from '@/lib/hooks/useSettings';
-import { GlobalNav }                        from '@yasser172/tec-ui';
 import { Asset, Listing, WalletData, MainTab, Purchase } from './types';
 import { ListForSaleModal }   from './components/ListForSaleModal';
 import { CancelConfirmModal } from './components/CancelConfirmModal';
@@ -24,6 +23,77 @@ const getTokenFromCookie = (): string | null => {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.split('; ').find(row => row.startsWith('tec_access_token='));
   return match ? match.split('=')[1] : null;
+};
+
+// ── Bottom Nav ────────────────────────────────────────────
+const BottomNav = ({
+  activeTab, setActiveTab, setAssetFilter,
+}: {
+  activeTab:      MainTab;
+  setActiveTab:   (tab: MainTab) => void;
+  setAssetFilter: (f: 'all' | 'domains' | 'nfts') => void;
+}) => {
+  const items = [
+    { key: 'assets',      icon: '💎', label: 'Assets'    },
+    { key: 'marketplace', icon: '🛒', label: 'Market'    },
+    { key: 'purchases',   icon: '🧾', label: 'History'   },
+    { key: 'portfolio',   icon: '📊', label: 'Portfolio' },
+  ] as const;
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+      background: 'rgba(2,2,5,0.92)',
+      backdropFilter: 'blur(20px)',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+      display: 'flex',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+    }}>
+      {items.map(item => {
+        const isActive = activeTab === item.key;
+        return (
+          <button
+            key={item.key}
+            onClick={() => {
+              navigator.vibrate?.(8);
+              if (item.key === 'assets') setAssetFilter('all');
+              setActiveTab(item.key);
+            }}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 4, padding: '10px 0 12px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <div style={{
+              fontSize: 20,
+              filter: isActive ? 'none' : 'grayscale(1) opacity(0.4)',
+              transition: 'filter 0.2s, transform 0.2s',
+              transform: isActive ? 'scale(1.15)' : 'scale(1)',
+            }}>
+              {item.icon}
+            </div>
+            <div style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
+              color: isActive ? '#d4af37' : '#3a3a4a',
+              transition: 'color 0.2s',
+            }}>
+              {item.label}
+            </div>
+            {isActive && (
+              <div style={{
+                position: 'absolute', bottom: 0,
+                width: 20, height: 2, borderRadius: 1,
+                background: '#d4af37',
+              }} />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
 };
 
 function AssetsPageInner() {
@@ -124,16 +194,18 @@ function AssetsPageInner() {
     <div style={{
       minHeight: '100vh', background: '#020205', color: '#fff',
       fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-      paddingBottom: 90,
+      paddingBottom: 80,
     }}>
       <style>{`
-        @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
+        @keyframes spin    { to{transform:rotate(360deg)} }
         .fade-in { animation: slideUp 0.4s ease; }
         .btn:active { transform: scale(0.97); }
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
         input[type=number] { -moz-appearance: textfield; }
+        ::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* ── Modals ── */}
@@ -159,31 +231,50 @@ function AssetsPageInner() {
 
       {/* ── Header ── */}
       <header style={{
-        padding: '14px 20px', borderBottom: '1px solid #ffffff08',
+        padding: '14px 20px',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, background: 'rgba(2,2,5,0.95)',
-        backdropFilter: 'blur(20px)', zIndex: 100,
+        position: 'sticky', top: 0,
+        background: 'rgba(2,2,5,0.92)',
+        backdropFilter: 'blur(20px)',
+        zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn" onClick={() => goToTEC('HUB')} style={{
-            background: '#ffffff08', border: '1px solid #ffffff10',
-            borderRadius: 10, padding: '6px 10px',
-            color: '#d4af37', fontSize: 16, cursor: 'pointer',
-          }}>🔷</button>
+          <button
+            className="btn"
+            onClick={() => goToTEC('HUB')}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12, padding: '8px 12px',
+              color: '#d4af37', fontSize: 16, cursor: 'pointer',
+            }}
+          >
+            🔷
+          </button>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
-            <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
+            <div style={{ fontSize: 9, color: '#3a3a4a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 12, color: '#d4af37' }}>
             {user?.piUsername ? `@${user.piUsername}` : ''}
           </div>
-          <button className="btn" onClick={() => router.push('/app/settings')} style={{
-            background: '#ffffff08', border: '1px solid #ffffff10',
-            borderRadius: 10, padding: '6px 10px',
-            color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
-          }}>⚙️</button>
+          <button
+            className="btn"
+            onClick={() => router.push('/app/settings')}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12, padding: '8px 12px',
+              color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+            }}
+          >
+            ⚙️
+          </button>
         </div>
       </header>
 
@@ -192,17 +283,18 @@ function AssetsPageInner() {
         <div style={{ padding: '16px 16px 0' }} className="fade-in">
           <div style={{
             borderRadius: 24, padding: '22px 24px',
-            background: 'linear-gradient(135deg,#1a1208 0%,#0f0f1a 60%,#0a0f1f 100%)',
-            border: '1px solid #d4af3725',
+            background: 'linear-gradient(135deg,rgba(26,18,8,0.9) 0%,rgba(15,15,26,0.9) 60%,rgba(10,15,31,0.9) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(212,175,55,0.15)',
           }}>
-            <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
               PORTFOLIO VALUE
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
                 {dataLoading ? '—' : displayTotal}
               </span>
-              <span style={{ fontSize: 20, color: '#d4af3780' }}>
+              <span style={{ fontSize: 20, color: 'rgba(212,175,55,0.5)' }}>
                 {settings.hideBalance ? '' : 'π'}
               </span>
             </div>
@@ -212,7 +304,11 @@ function AssetsPageInner() {
                 { label: 'Assets',    value: assets.length.toString() },
                 { label: 'Purchases', value: purchases.length.toString() },
               ].map(s => (
-                <div key={s.label} style={{ background: '#ffffff05', borderRadius: 12, padding: '10px 12px' }}>
+                <div key={s.label} style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 12, padding: '10px 12px',
+                }}>
                   <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{s.value}</div>
                 </div>
@@ -223,19 +319,22 @@ function AssetsPageInner() {
       )}
 
       {/* ── Tabs ── */}
-      <div style={{ padding: '16px 16px 0', display: 'flex', gap: 8, overflowX: 'auto' }}>
+      <div style={{ padding: '14px 16px 0', display: 'flex', gap: 8, overflowX: 'auto' }}>
         {([
           { key: 'assets',      label: '💎 My Assets'  },
           { key: 'marketplace', label: '🛒 Marketplace' },
-          { key: 'purchases',   label: '🧾 Purchases'   },
+          { key: 'purchases',   label: '🧾 History'     },
           { key: 'portfolio',   label: '📊 Portfolio'   },
         ] as const).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
             padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
             fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-            background: activeTab === tab.key ? '#d4af3720' : '#ffffff08',
-            color:      activeTab === tab.key ? '#d4af37'   : '#6b6b7a',
-            border:     activeTab === tab.key ? '1px solid #d4af3740' : '1px solid transparent',
+            background: activeTab === tab.key
+              ? 'rgba(212,175,55,0.12)'
+              : 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(10px)',
+            color:  activeTab === tab.key ? '#d4af37' : '#4a4a5a',
+            border: activeTab === tab.key ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
             transition: 'all 0.2s',
           }}>
             {tab.label}
@@ -251,9 +350,9 @@ function AssetsPageInner() {
               padding: '6px 14px', borderRadius: 20, cursor: 'pointer',
               fontSize: 11, fontWeight: 600, letterSpacing: 1,
               textTransform: 'uppercase' as const,
-              background: assetFilter === tab ? '#ffffff12' : 'none',
-              color:      assetFilter === tab ? '#fff'      : '#4a4a5a',
-              border:     assetFilter === tab ? '1px solid #ffffff20' : '1px solid transparent',
+              background: assetFilter === tab ? 'rgba(255,255,255,0.08)' : 'none',
+              color:      assetFilter === tab ? '#fff' : '#3a3a4a',
+              border:     assetFilter === tab ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
               transition: 'all 0.2s',
             }}>
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
@@ -261,7 +360,8 @@ function AssetsPageInner() {
           ))}
           <button onClick={() => setMintingNFT(true)} style={{
             marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
-            background: '#7b6bc815', border: '1px solid #7b6bc840',
+            background: 'rgba(123,107,200,0.08)',
+            border: '1px solid rgba(123,107,200,0.25)',
             color: '#b39ddb', fontSize: 11, fontWeight: 700,
             cursor: 'pointer', whiteSpace: 'nowrap',
           }}>
@@ -284,7 +384,6 @@ function AssetsPageInner() {
             onGoMarketplace={() => setActiveTab('marketplace')}
           />
         )}
-
         {activeTab === 'marketplace' && (
           <MarketplaceTab
             listings={listings}
@@ -294,14 +393,12 @@ function AssetsPageInner() {
             onGoAssets={() => setActiveTab('assets')}
           />
         )}
-
         {activeTab === 'purchases' && (
           <PurchasesTab
             purchases={purchases}
             onGoMarketplace={() => setActiveTab('marketplace')}
           />
         )}
-
         {activeTab === 'portfolio' && (
           <PortfolioTab
             assets={assets}
@@ -313,15 +410,10 @@ function AssetsPageInner() {
       </div>
 
       {/* ── Bottom Nav ── */}
-      <GlobalNav
-        currentApp="assets"
-        items={[
-          { icon: '💎', label: 'Assets',    app: 'assets', action: () => { setActiveTab('assets'); setAssetFilter('all'); } },
-          { icon: '🛒', label: 'Market',    app: null,     action: () => setActiveTab('marketplace') },
-          { icon: '🧾', label: 'Purchases', app: null,     action: () => setActiveTab('purchases') },
-          { icon: '📊', label: 'Portfolio', app: null,     action: () => setActiveTab('portfolio') },
-          { icon: '🔷', label: 'TEC Hub',   app: null,     action: () => goToTEC('HUB') },
-        ]}
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        setAssetFilter={setAssetFilter}
       />
     </div>
   );
@@ -329,4 +421,4 @@ function AssetsPageInner() {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-                         }
+}
