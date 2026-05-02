@@ -3,8 +3,13 @@ name: CodeQL
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+  # ✅ Weekly بدل كل push
   schedule:
     - cron: '0 6 * * 1'
 
