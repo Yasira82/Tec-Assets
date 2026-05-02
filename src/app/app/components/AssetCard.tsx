@@ -28,7 +28,7 @@ export function AssetCard({
   onCancelListing: (listingId: string) => void;
   allAssets?:      Asset[];
   onRefresh?:      () => void;
-})
+}) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewerOpen,  setViewerOpen]  = useState(false);
 
@@ -63,6 +63,7 @@ export function AssetCard({
           onCancelListing={onCancelListing}
           onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
           allAssets={allAssets}
+          onRefresh={onRefresh}
         />
       )}
 
