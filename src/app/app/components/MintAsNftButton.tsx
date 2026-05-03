@@ -41,13 +41,25 @@ export function MintAsNftButton({ asset, onClose, onSuccess }: {
                   : '#d4af37';
 
   const handleMint = async () => {
-    setMinting(true);
-    setError(null);
-    navigator.vibrate?.(10);
+  setMinting(true);
+  setError(null);
+  navigator.vibrate?.(10);
 
-    try {
-      // ✅ انتظر الـ SDK
-      await waitForPiSDK();
+  try {
+    // ✅ Force init لو مش ready
+    if (typeof window.Pi !== 'undefined' && !window.__TEC_PI_READY) {
+      try {
+        window.Pi.init({
+          version: '2.0',
+          sandbox: process.env.NEXT_PUBLIC_PI_SANDBOX === 'true',
+          appId:   process.env.NEXT_PUBLIC_PI_APP_ID ?? '',
+        });
+        window.__TEC_PI_READY = true;
+      } catch { /* already initialized */ }
+    }
+
+    await waitForPiSDK();
+    // ... باقي الكود
 
       if (!window.Pi) { setError('Open in Pi Browser'); return; }
 
