@@ -41,68 +41,72 @@ export function MintAsNftButton({ asset, onClose, onSuccess }: {
                   : '#d4af37';
 
   const handleMint = async () => {
-    setMinting(true);
-    setError(null);
-    navigator.vibrate?.(10);
+  setMinting(true);
+  setError(null);
+  navigator.vibrate?.(10);
 
+  try {
+    if (!window.Pi) { setError('Open in Pi Browser'); setMinting(false); return; }
+
+    // ✅ Init مباشرة قبل أي method
     try {
-      // ✅ انتظر الـ SDK
-      await waitForPiSDK();
-
-      if (!window.Pi) { setError('Open in Pi Browser'); return; }
-
-      // ✅ Authenticate قبل createPayment
-      await window.Pi.authenticate(['username', 'payments'], () => {});
-
-      await new Promise<void>((resolve, reject) => {
-        window.Pi.createPayment(
-          {
-            amount:   0.1,
-            memo:     `Mint ${asset.name} as NFT`,
-            metadata: { assetId: asset.id, type: 'domain_mint' },
-          },
-          {
-            onReadyForServerApproval: async (paymentId: string) => {
-              try {
-                await fetch('/api/payment/approve', {
-                  method:  'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({ paymentId }),
-                });
-              } catch { reject(new Error('Approval failed')); }
-            },
-            onReadyForServerCompletion: async (_paymentId: string, txid: string) => {
-              try {
-                const res = await fetch('/api/bff/assets/mint-as-nft', {
-                  method:  'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    assetId:       asset.id,
-                    transactionId: txid,
-                    userId:        asset.owner_id ?? '',
-                  }),
-                });
-                if (!res.ok) throw new Error('Mint failed');
-                resolve();
-              } catch (e) { reject(e); }
-            },
-            onCancel: () => reject(new Error('Cancelled')),
-            onError:  (e: unknown) => reject(e),
-          }
-        );
+      window.Pi.init({
+        version: '2.0',
+        sandbox: process.env.NEXT_PUBLIC_PI_SANDBOX === 'true',
+        appId:   process.env.NEXT_PUBLIC_PI_APP_ID ?? '',
       });
+    } catch { /* already initialized — ok */ }
 
-      onSuccess();
-      onClose();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Mint failed';
-      if (msg !== 'Cancelled') setError(msg);
-    } finally {
-      setMinting(false);
-    }
-  };
+    // ✅ Authenticate
+    await window.Pi.authenticate(['username', 'payments'], () => {});
+
+    await new Promise<void>((resolve, reject) => {
+      window.Pi.createPayment(
+        {
+          amount:   0.1,
+          memo:     `Mint ${asset.name} as NFT`,
+          metadata: { assetId: asset.id, type: 'domain_mint' },
+        },
+        {
+          onReadyForServerApproval: async (paymentId: string) => {
+            try {
+              await fetch('/api/payment/approve', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId }),
+              });
+            } catch { reject(new Error('Approval failed')); }
+          },
+          onReadyForServerCompletion: async (_paymentId: string, txid: string) => {
+            try {
+              const res = await fetch('/api/bff/assets/mint-as-nft', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  assetId:       asset.id,
+                  transactionId: txid,
+                  userId:        asset.owner_id ?? '',
+                }),
+              });
+              if (!res.ok) throw new Error('Mint failed');
+              resolve();
+            } catch (e) { reject(e); }
+          },
+          onCancel: () => reject(new Error('Cancelled')),
+          onError:  (e: unknown) => reject(e),
+        }
+      );
+    });
+
+    onSuccess();
+    onClose();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Mint failed';
+    if (msg !== 'Cancelled') setError(msg);
+  } finally {
+    setMinting(false);
+  }
+};
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
