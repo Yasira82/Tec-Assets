@@ -22,7 +22,6 @@ export const usePiAuth = () => {
   });
 
   useEffect(() => {
-    // ✅ قرا من الـ cookie بس — مش Pi SDK
     const stored = getStoredUser();
     setState({
       user:            stored,
@@ -31,6 +30,24 @@ export const usePiAuth = () => {
       isNewUser:       false,
       error:           null,
     });
+
+    // ✅ Silent Pi authenticate — required for createPayment
+    // Tec-Assets uses SSO cookies — Pi SDK doesn't know the user
+    // We must call authenticate() so Pi SDK can accept createPayment()
+    if (!stored) return;
+
+    const doSilentAuth = async () => {
+      try {
+        if (typeof window === 'undefined' || !window.Pi) return;
+        await window.Pi.authenticate(['username', 'payments'], () => {});
+      } catch { /* silent — user already authenticated via SSO */ }
+    };
+
+    if (window.__TEC_PI_READY) {
+      doSilentAuth();
+    } else {
+      window.addEventListener('tec-pi-ready', doSilentAuth, { once: true });
+    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -44,6 +61,5 @@ export const usePiAuth = () => {
     });
   }, []);
 
-  // ✅ Tec-Assets = SSO only — مفيش login مباشر
   return { ...state, logout };
 };
