@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify }                 from 'jose';
 
+const ALLOWED_AUDIENCES = [
+  'https://tec-assets-app.vercel.app',
+  'https://tec-assets.vercel.app',
+  'https://assets.tecosystem.app',
+];
+
 const usedJtis = new Map<string, number>();
 
 const isJtiUsed = (jti: string): boolean => {
@@ -22,61 +28,47 @@ export async function GET(req: NextRequest) {
   const secret = process.env.SSO_SECRET;
   if (!secret) return NextResponse.json({ error: 'sso_not_configured' }, { status: 503 });
 
-  try {
-    const encoded = new TextEncoder().encode(secret);
+  // ✅ جرب كل الـ audiences
+  let payload: Record<string, unknown> | null = null;
+  const encoded = new TextEncoder().encode(secret);
 
-    const { payload } = await jwtVerify(
-      decodeURIComponent(token),
-      encoded,
-      {
-        algorithms: ['HS256'],
-        issuer:     'tec.pi',
-        audience:   'https://tec-assets-app.vercel.app',
-      },
-    );
+  for (const audience of ALLOWED_AUDIENCES) {
+    try {
+      const result = await jwtVerify(
+        decodeURIComponent(token),
+        encoded,
+        { algorithms: ['HS256'], issuer: 'tec.pi', audience },
+      );
+      payload = result.payload as Record<string, unknown>;
+      break;
+    } catch { /* جرب التالي */ }
+  }
 
-    const jti = payload.jti;
-    if (!jti) return NextResponse.json({ error: 'missing_jti' }, { status: 401 });
-    if (isJtiUsed(jti)) return NextResponse.json({ error: 'replay_detected' }, { status: 401 });
-    markJtiUsed(jti);
-
-    const accessToken = payload.accessToken as string;
-    const user        = payload.user as Record<string, unknown>;
-
-    console.log('[SSO] userId:', payload.sub);
-    console.log('[SSO] piUsername:', user?.piUsername);
-
-    const res = NextResponse.redirect(new URL('/app', req.url));
-
-    res.cookies.set('tec_access_token', accessToken, {
-      httpOnly: false,
-      secure:   true,
-      sameSite: 'none',
-      path:     '/',
-      maxAge:   60 * 60 * 24,
-    });
-
-    // ✅ بدون encodeURIComponent — getStoredUser بيعمل decode
-    res.cookies.set('tec_user', JSON.stringify(user), {
-      httpOnly: false,
-      secure:   true,
-      sameSite: 'none',
-      path:     '/',
-      maxAge:   60 * 60 * 24,
-    });
-
-    res.cookies.set('tec_csrf', crypto.randomUUID(), {
-      httpOnly: false,
-      secure:   true,
-      sameSite: 'none',
-      path:     '/',
-      maxAge:   60 * 60 * 24,
-    });
-
-    return res;
-
-  } catch (err) {
-    console.error('[SSO] error:', (err as Error).message);
+  if (!payload) {
     return NextResponse.redirect(new URL('/', req.url));
   }
+
+  const jti = payload.jti as string;
+  if (!jti)           return NextResponse.json({ error: 'missing_jti' },    { status: 401 });
+  if (isJtiUsed(jti)) return NextResponse.json({ error: 'replay_detected' }, { status: 401 });
+  markJtiUsed(jti);
+
+  const accessToken = payload.accessToken as string;
+  const user        = payload.user as Record<string, unknown>;
+
+  const res = NextResponse.redirect(new URL('/app', req.url));
+
+  const cookieOpts = {
+    httpOnly: false,
+    secure:   true,
+    sameSite: 'none' as const,
+    path:     '/',
+    maxAge:   60 * 60 * 24,
+  };
+
+  res.cookies.set('tec_access_token', accessToken,          cookieOpts);
+  res.cookies.set('tec_user',         JSON.stringify(user), cookieOpts);
+  res.cookies.set('tec_csrf',         crypto.randomUUID(),  cookieOpts);
+
+  return res;
 }
