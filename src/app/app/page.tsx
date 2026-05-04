@@ -16,8 +16,8 @@ import { AssetsTab }          from './components/AssetsTab';
 import { MarketplaceTab }     from './components/MarketplaceTab';
 import { PurchasesTab }       from './components/PurchasesTab';
 
-const SSO_URL = 'https://tec-app-frontend.vercel.app/api/auth/sso?target=' +
-  encodeURIComponent('https://tec-assets-app.vercel.app');
+const SSO_URL = 'https://hub.tecosystem.app/api/auth/sso?target=' +
+  encodeURIComponent('https://assets.tecosystem.app');
 
 const getTokenFromCookie = (): string | null => {
   if (typeof document === 'undefined') return null;
