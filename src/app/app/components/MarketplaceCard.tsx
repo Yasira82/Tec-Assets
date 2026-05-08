@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { Listing }  from '../types';
 
-const TEC_PAY_URL = 'https://tec-app-frontend.vercel.app/pay';
-
 const typeEmoji: Record<string, string> = {
   domain: '🌐', nft: '🎨', token: '🪙', badge: '🏆',
   digital_asset: '💎', default: '💎',
@@ -20,41 +18,34 @@ const categoryColors: Record<string, { border: string; bg: string; accent: strin
 };
 
 export function MarketplaceCard({
-  listing, currentUserId, onEditPrice, onCancel,
+  listing, currentUserId, onBuy, onEditPrice, onCancel,
 }: {
   listing:       Listing;
   currentUserId: string;
+  onBuy:         (listing: Listing) => void;
   onEditPrice:   (listing: Listing) => void;
   onCancel:      (listing: Listing) => void;
 }) {
   const [buying, setBuying] = useState(false);
 
-  const isOwn   = listing.seller_id === currentUserId;
-  const colors  = categoryColors[listing.category] ?? categoryColors.default;
+  const isOwn    = listing.seller_id === currentUserId;
+  const colors   = categoryColors[listing.category] ?? categoryColors.default;
   const imageUrl = (listing as Listing & { metadata?: Record<string, unknown> }).metadata?.imageUrl as string | undefined;
 
   const handleBuy = () => {
     setBuying(true);
-    const params = new URLSearchParams({
-      asset_id:   listing.asset_id,
-      asset_type: listing.category,
-      name:       listing.title,
-      price:      listing.price.toString(),
-      listing_id: listing.id,
-      return_url: 'https://tec-assets-app.vercel.app/app',
-    });
-    window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
+    onBuy(listing); // ✅ رجع للـ parent — Hub Pay
   };
 
   return (
     <div
       onTouchStart={e => {
-        e.currentTarget.style.transform   = 'scale(0.98)';
-        e.currentTarget.style.boxShadow   = `0 4px 20px ${colors.border}`;
+        e.currentTarget.style.transform = 'scale(0.98)';
+        e.currentTarget.style.boxShadow = `0 4px 20px ${colors.border}`;
       }}
       onTouchEnd={e => {
-        e.currentTarget.style.transform   = 'none';
-        e.currentTarget.style.boxShadow   = 'none';
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.boxShadow = 'none';
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = colors.accent;
