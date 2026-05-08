@@ -16,8 +16,15 @@ import { AssetsTab }          from './components/AssetsTab';
 import { MarketplaceTab }     from './components/MarketplaceTab';
 import { PurchasesTab }       from './components/PurchasesTab';
 
-const SSO_URL = 'https://hub.tecosystem.app/api/auth/sso?target=' +
+const HUB_URL = 'https://hub.tecosystem.app'; // ✅ custom domain للـ cookies
+const SSO_URL = `${HUB_URL}/api/auth/sso?target=` +
   encodeURIComponent('https://assets.tecosystem.app');
+
+const getCsrfToken = (): string => {
+  if (typeof document === 'undefined') return '';
+  return document.cookie.split('; ')
+    .find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+};
 
 const getTokenFromCookie = (): string | null => {
   if (typeof document === 'undefined') return null;
@@ -113,6 +120,12 @@ function AssetsPageInner() {
   const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
   const [cancelLoading,     setCancelLoading]     = useState(false);
   const [mintingNFT,        setMintingNFT]        = useState(false);
+  const [toast,             setToast]             = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   useEffect(() => {
     if (!loaded) return;
@@ -123,8 +136,36 @@ function AssetsPageInner() {
   useEffect(() => {
     if (isLoading) return;
     const token = getTokenFromCookie();
-    if (!token && !isAuthenticated) window.location.href = SSO_URL;
-  }, [isLoading, isAuthenticated]);
+    if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
+
+    // ✅ اقرأ نتيجة الـ payment لو رجعنا من Hub
+    const params        = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment_status');
+
+    if (paymentStatus === 'success') {
+      const listingId = params.get('listing_id') ?? '';
+      const txid      = params.get('txid')        ?? '';
+      const paymentId = params.get('payment_id')  ?? '';
+
+      showToast('Purchase successful! 🎉');
+      setActiveTab('purchases');
+
+      // ✅ سجل الـ purchase في الـ backend
+      if (listingId && paymentId) {
+        fetch('/api/bff/marketplace/buy', {
+          method:      'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken(),
+          },
+          body: JSON.stringify({ listing_id: listingId, payment_id: paymentId, txid }),
+        }).then(() => { fetchPurchases(); fetchData(); }).catch(() => {});
+      }
+
+      window.history.replaceState({}, '', '/app');
+    }
+  }, [isLoading, isAuthenticated, showToast]);
 
   const fetchListings = useCallback(async () => {
     try {
@@ -155,6 +196,21 @@ function AssetsPageInner() {
     finally { setDataLoading(false); }
   }, []);
 
+  // ✅ handleBuy — روح Hub Pay
+  const handleBuy = useCallback((listing: Listing) => {
+    if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
+
+    const payParams = new URLSearchParams({
+      amount:     String(listing.price),
+      memo:       `Buy ${listing.title} — TEC Assets`,
+      listing_id: listing.id,
+      return_url: 'https://assets.tecosystem.app/app',
+      source:     'assets',
+    });
+
+    window.location.href = `${HUB_URL}/hub/pay?${payParams.toString()}`;
+  }, [showToast]);
+
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
     setCancelLoading(true);
@@ -184,9 +240,9 @@ function AssetsPageInner() {
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered     = assetFilter === 'all' ? assets : assets.filter(a =>
+  const filtered   = assetFilter === 'all' ? assets : assets.filter(a =>
     a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
-  const totalValue   = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const totalValue = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
   const displayBalance = settings.hideBalance ? '****' : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
   const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
@@ -200,6 +256,7 @@ function AssetsPageInner() {
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
         @keyframes spin    { to{transform:rotate(360deg)} }
+        @keyframes toastIn { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:none} }
         .fade-in { animation: slideUp 0.4s ease; }
         .btn:active { transform: scale(0.97); }
         input[type=number]::-webkit-inner-spin-button,
@@ -207,6 +264,24 @@ function AssetsPageInner() {
         input[type=number] { -moz-appearance: textfield; }
         ::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 70, left: 16, right: 16, zIndex: 999,
+          background: toast.type === 'success' ? '#051a0a' : '#1a0505',
+          border: `1px solid ${toast.type === 'success' ? '#7ee7c040' : '#e74c3c40'}`,
+          borderRadius: 14, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          animation: 'toastIn 0.3s ease', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}>
+          <span style={{ fontSize: 16 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+          <span style={{ fontSize: 13, fontWeight: 600,
+            color: toast.type === 'success' ? '#7ee7c0' : '#e74c3c' }}>
+            {toast.msg}
+          </span>
+        </div>
+      )}
 
       {/* ── Modals ── */}
       {mintingNFT && <NFTUploadModal onClose={() => setMintingNFT(false)} />}
@@ -240,22 +315,18 @@ function AssetsPageInner() {
         zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-  className="btn"
-  onClick={() => goToTEC('HUB')}
-  style={{
-    background: 'rgba(255,255,255,0.05)',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 12, padding: '6px 10px',
-    color: '#d4af37', cursor: 'pointer',
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: 2,
-  }}
->
-  <span style={{ fontSize: 16 }}>🔷</span>
-  <span style={{ fontSize: 8, color: '#4a4a5a', letterSpacing: 1 }}>HUB</span>
-</button>
+          <button className="btn" onClick={() => goToTEC('HUB')} style={{
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '6px 10px',
+            color: '#d4af37', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 2,
+          }}>
+            <span style={{ fontSize: 16 }}>🔷</span>
+            <span style={{ fontSize: 8, color: '#4a4a5a', letterSpacing: 1 }}>HUB</span>
+          </button>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
             <div style={{ fontSize: 9, color: '#3a3a4a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
@@ -265,17 +336,13 @@ function AssetsPageInner() {
           <div style={{ fontSize: 12, color: '#d4af37' }}>
             {user?.piUsername ? `@${user.piUsername}` : ''}
           </div>
-          <button
-            className="btn"
-            onClick={() => router.push('/app/settings')}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 12, padding: '8px 12px',
-              color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
-            }}
-          >
+          <button className="btn" onClick={() => router.push('/app/settings')} style={{
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '8px 12px',
+            color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+          }}>
             ⚙️
           </button>
         </div>
@@ -290,9 +357,8 @@ function AssetsPageInner() {
             backdropFilter: 'blur(20px)',
             border: '1px solid rgba(212,175,55,0.15)',
           }}>
-            <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
-              PORTFOLIO VALUE
-            </div>
+            <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3,
+              textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
                 {dataLoading ? '—' : displayTotal}
@@ -332,9 +398,7 @@ function AssetsPageInner() {
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
             padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
             fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-            background: activeTab === tab.key
-              ? 'rgba(212,175,55,0.12)'
-              : 'rgba(255,255,255,0.04)',
+            background: activeTab === tab.key ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.04)',
             backdropFilter: 'blur(10px)',
             color:  activeTab === tab.key ? '#d4af37' : '#4a4a5a',
             border: activeTab === tab.key ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
@@ -377,21 +441,22 @@ function AssetsPageInner() {
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {activeTab === 'assets' && (
           <AssetsTab
-  assets={assets}
-  filtered={filtered}
-  dataLoading={dataLoading}
-  showValues={settings.showValues}
-  onListForSale={setListingAsset}
-  onCancelListing={handleCancelFromAssets}
-  onMintNFT={() => setMintingNFT(true)}
-  onGoMarketplace={() => setActiveTab('marketplace')}
-  onRefresh={fetchData}  // ✅ أضف
-/>
+            assets={assets}
+            filtered={filtered}
+            dataLoading={dataLoading}
+            showValues={settings.showValues}
+            onListForSale={setListingAsset}
+            onCancelListing={handleCancelFromAssets}
+            onMintNFT={() => setMintingNFT(true)}
+            onGoMarketplace={() => setActiveTab('marketplace')}
+            onRefresh={fetchData}
+          />
         )}
         {activeTab === 'marketplace' && (
           <MarketplaceTab
             listings={listings}
             currentUserId={user?.id ?? ''}
+            onBuy={handleBuy}
             onEditPrice={setEditingListing}
             onCancel={setCancellingListing}
             onGoAssets={() => setActiveTab('assets')}
@@ -425,4 +490,4 @@ function AssetsPageInner() {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-}
+      }
