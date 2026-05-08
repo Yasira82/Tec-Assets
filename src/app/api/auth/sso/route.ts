@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT }                   from 'jose';
 
 const ALLOWED_TARGETS = [
-  'https://tec-app-frontend.vercel.app',
-  'https://hub.tecosystem.app',
+  'https://tec-app-frontend.vercel.app', // ✅ Hub
+  'https://hub.tecosystem.app',          // ✅ Hub custom domain
 ];
 
 export async function GET(req: NextRequest) {
