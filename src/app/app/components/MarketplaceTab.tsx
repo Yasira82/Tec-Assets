@@ -1,14 +1,14 @@
 'use client';
 
-import { Listing }        from '../types';
+import { Listing }         from '../types';
 import { MarketplaceCard } from './MarketplaceCard';
-import { ListForSaleModal } from './ListForSaleModal';
 
 export function MarketplaceTab({
-  listings, currentUserId, onEditPrice, onCancel, onGoAssets,
+  listings, currentUserId, onBuy, onEditPrice, onCancel, onGoAssets,
 }: {
   listings:      Listing[];
   currentUserId: string;
+  onBuy:         (listing: Listing) => void;
   onEditPrice:   (listing: Listing) => void;
   onCancel:      (listing: Listing) => void;
   onGoAssets:    () => void;
@@ -38,6 +38,7 @@ export function MarketplaceTab({
           key={listing.id}
           listing={listing}
           currentUserId={currentUserId}
+          onBuy={onBuy}
           onEditPrice={onEditPrice}
           onCancel={onCancel}
         />
