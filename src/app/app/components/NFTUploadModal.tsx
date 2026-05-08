@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 
-const TEC_PAY_URL = 'https://tec-app-frontend.vercel.app/pay';
+const HUB_URL  = 'https://hub.tecosystem.app';
+const MINT_FEE = 2;
 
 export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   const [step,        setStep]        = useState<'upload' | 'details'>('upload');
@@ -11,11 +12,8 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   const [name,        setName]        = useState('');
   const [description, setDescription] = useState('');
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
-  const [uploadedKey, setUploadedKey] = useState<string | null>(null);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState('');
-
-  const MINT_FEE = 2;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -29,77 +27,67 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleUpload = async () => {
-  if (!file) return;
-  setLoading(true);
-  setError('');
-  try {
-    const res = await fetch('/api/bff/nft/upload', {
-      method:      'POST',
-      credentials: 'include',
-      headers:     { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filename: file.name,
-        mimeType: file.type,
-        size:     file.size,
-      }),
-    });
+    if (!file) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/bff/nft/upload', {
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          mimeType: file.type,
+          size:     file.size,
+        }),
+      });
 
-    if (!res.ok) {
-      const err = await res.json();
-      setError(err.error ?? 'Upload failed');
-      return;
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error ?? 'Upload failed');
+        return;
+      }
+
+      const data      = await res.json();
+      const uploadUrl = data?.uploadUrl;
+      const key       = data?.key;
+      const publicUrl = data?.publicUrl
+        ?? (key ? `https://pub-fe60d4ae820b4c5cb91064081595e666.r2.dev/${key}` : null);
+
+      if (!uploadUrl) { setError('No upload URL received'); return; }
+
+      const uploadRes = await fetch(uploadUrl, {
+        method:  'PUT',
+        body:    file,
+        headers: { 'Content-Type': file.type },
+      });
+
+      if (!uploadRes.ok) {
+        setError(`Failed to upload: ${uploadRes.status}`);
+        return;
+      }
+
+      setUploadedUrl(publicUrl);
+      setStep('details');
+    } catch {
+      setError('Something went wrong');
+    } finally {
+      setLoading(false);
     }
-
-    const data = await res.json();
-
-    const uploadUrl = data?.uploadUrl;
-    const key       = data?.key;
-
-    // ✅ publicUrl من الـ key مباشرة
-    const publicUrl = data?.publicUrl
-      ?? (key ? `https://pub-fe60d4ae820b4c5cb91064081595e666.r2.dev/${key}` : null);
-
-    if (!uploadUrl) {
-      setError('No upload URL received');
-      return;
-    }
-
-    const uploadRes = await fetch(uploadUrl, {
-      method:  'PUT',
-      body:    file,
-      headers: { 'Content-Type': file.type },
-    });
-
-    if (!uploadRes.ok) {
-      const errText = await uploadRes.text();
-      setError(`Failed to upload: ${uploadRes.status} — ${errText.slice(0, 100)}`);
-      return;
-    }
-
-    setUploadedUrl(publicUrl);
-    setUploadedKey(key);
-    setStep('details');
-
-  } catch (err) {
-    setError('Something went wrong');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleMint = () => {
-  if (!name || !uploadedUrl) return;
-  const params = new URLSearchParams({
-    asset_type: 'nft',
-    name,
-    price:      MINT_FEE.toString(),
-    listing_id: `nft-mint-${Date.now()}`,
-    asset_id:   `nft-${Date.now()}`,
-    image_url:  uploadedUrl,  // ✅ أضف هنا
-    return_url: 'https://tec-assets-app.vercel.app/app',
-  });
-  window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
-};
+    if (!name || !uploadedUrl) return;
+    // ✅ روح Hub Pay عشان تدفع رسوم الـ mint
+    const params = new URLSearchParams({
+      amount:     MINT_FEE.toString(),
+      memo:       `Mint NFT: ${name}`,
+      product_id: `nft-mint-${Date.now()}`,
+      return_url: 'https://assets.tecosystem.app/app',
+      source:     'assets',
+    });
+    window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+  };
 
   return (
     <>
@@ -125,7 +113,6 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
           {step === 'upload' ? 'Choose an image for your NFT' : 'Add name and description'}
         </div>
 
-        {/* ── Step 1: Upload ── */}
         {step === 'upload' && (
           <>
             <label style={{
@@ -162,24 +149,20 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            <button
-              onClick={handleUpload}
-              disabled={!file || loading}
-              style={{
-                width: '100%', padding: '16px',
-                background: file ? 'linear-gradient(135deg,#2d1b69,#1a0f3d)' : '#ffffff10',
-                border: file ? '1px solid #7b6bc840' : 'none',
-                borderRadius: 16,
-                color: file ? '#b39ddb' : '#4a4a5a',
-                fontSize: 15, fontWeight: 800,
-                cursor: file ? 'pointer' : 'default',
-              }}>
+            <button onClick={handleUpload} disabled={!file || loading} style={{
+              width: '100%', padding: '16px',
+              background: file ? 'linear-gradient(135deg,#2d1b69,#1a0f3d)' : '#ffffff10',
+              border: file ? '1px solid #7b6bc840' : 'none',
+              borderRadius: 16,
+              color: file ? '#b39ddb' : '#4a4a5a',
+              fontSize: 15, fontWeight: 800,
+              cursor: file ? 'pointer' : 'default',
+            }}>
               {loading ? 'Uploading...' : 'Upload Image'}
             </button>
           </>
         )}
 
-        {/* ── Step 2: Details ── */}
         {step === 'details' && (
           <>
             {preview && (
@@ -244,18 +227,15 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            <button
-              onClick={handleMint}
-              disabled={!name}
-              style={{
-                width: '100%', padding: '16px',
-                background: name ? 'linear-gradient(135deg,#2d1b69,#1a0f3d)' : '#ffffff10',
-                border: name ? '1px solid #7b6bc840' : 'none',
-                borderRadius: 16,
-                color: name ? '#b39ddb' : '#4a4a5a',
-                fontSize: 15, fontWeight: 800,
-                cursor: name ? 'pointer' : 'default',
-              }}>
+            <button onClick={handleMint} disabled={!name} style={{
+              width: '100%', padding: '16px',
+              background: name ? 'linear-gradient(135deg,#2d1b69,#1a0f3d)' : '#ffffff10',
+              border: name ? '1px solid #7b6bc840' : 'none',
+              borderRadius: 16,
+              color: name ? '#b39ddb' : '#4a4a5a',
+              fontSize: 15, fontWeight: 800,
+              cursor: name ? 'pointer' : 'default',
+            }}>
               {`🎨 Mint NFT for ${MINT_FEE}π`}
             </button>
 
