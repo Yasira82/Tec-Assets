@@ -3,11 +3,11 @@
 import { useState }        from 'react';
 import { Asset, Listing }  from '../types';
 
+const getCsrf = (): string =>
+  document.cookie.split('; ').find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+
 export function ListForSaleModal({
-  asset,
-  listing,
-  onClose,
-  onSuccess,
+  asset, listing, onClose, onSuccess,
 }: {
   asset?:    Asset;
   listing?:  Listing;
@@ -30,7 +30,10 @@ export function ListForSaleModal({
         const res = await fetch('/api/bff/marketplace/update-price', {
           method:      'PATCH',
           credentials: 'include',
-          headers:     { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type':  'application/json',
+            'x-csrf-token':  getCsrf(), // ✅
+          },
           body: JSON.stringify({ listingId: listing.id, price: p }),
         });
         if (!res.ok) { setError('Failed to update price'); return; }
@@ -38,7 +41,10 @@ export function ListForSaleModal({
         const res = await fetch('/api/bff/marketplace/list', {
           method:      'POST',
           credentials: 'include',
-          headers:     { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type':  'application/json',
+            'x-csrf-token':  getCsrf(), // ✅
+          },
           body: JSON.stringify({
             assetId:     asset!.id,
             price:       p,
@@ -78,6 +84,7 @@ export function ListForSaleModal({
         <div style={{ fontSize: 12, color: '#4a4a5a', marginBottom: 20 }}>
           {isUpdate ? listing.title : `${asset?.name} · ${asset?.asset_type}`}
         </div>
+
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
             {isUpdate ? 'NEW PRICE (π)' : 'PRICE (π)'}
@@ -101,6 +108,7 @@ export function ListForSaleModal({
             />
           </div>
         </div>
+
         {!isUpdate && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
@@ -120,7 +128,9 @@ export function ListForSaleModal({
             />
           </div>
         )}
+
         {error && <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12 }}>{error}</div>}
+
         <button onClick={handleSubmit} disabled={loading || !price} style={{
           width: '100%', padding: '16px',
           background: price ? 'linear-gradient(135deg,#d4af37,#b8882a)' : '#ffffff10',
@@ -133,6 +143,7 @@ export function ListForSaleModal({
             ? (isUpdate ? 'Updating...' : 'Listing...')
             : isUpdate ? `Update to ${price || '0'}π` : `List for ${price || '0'}π`}
         </button>
+
         <button onClick={onClose} style={{
           width: '100%', padding: '14px', marginTop: 10,
           background: 'none', border: '1px solid #ffffff10',
