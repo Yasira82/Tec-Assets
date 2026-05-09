@@ -28,13 +28,16 @@ export function MarketplaceCard({
 }) {
   const [buying, setBuying] = useState(false);
 
-  const isOwn    = listing.seller_id === currentUserId;
+  // ⚠️ مؤقت للـ test — ارجعه بعد كده:
+  // const isOwn = listing.seller_id === currentUserId;
+  const isOwn   = false;
+
   const colors   = categoryColors[listing.category] ?? categoryColors.default;
   const imageUrl = (listing as Listing & { metadata?: Record<string, unknown> }).metadata?.imageUrl as string | undefined;
 
   const handleBuy = () => {
     setBuying(true);
-    onBuy(listing); // ✅ رجع للـ parent — Hub Pay
+    onBuy(listing);
   };
 
   return (
@@ -62,7 +65,6 @@ export function MarketplaceCard({
         transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
       }}
     >
-      {/* ── Image/Icon ── */}
       <div style={{
         width: 52, height: 52, borderRadius: 14,
         background: colors.bg, border: `1px solid ${colors.border}`,
@@ -77,7 +79,6 @@ export function MarketplaceCard({
         )}
       </div>
 
-      {/* ── Info ── */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4,
@@ -94,7 +95,6 @@ export function MarketplaceCard({
         </div>
       </div>
 
-      {/* ── Actions ── */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#d4af37' }}>
           {listing.price}π
@@ -123,9 +123,7 @@ export function MarketplaceCard({
             disabled={buying}
             style={{
               padding: '8px 16px', borderRadius: 12,
-              background: buying
-                ? '#ffffff10'
-                : 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
+              background: buying ? '#ffffff10' : 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
               border: '1px solid #7ee7c040',
               color: buying ? '#4a4a5a' : '#7ee7c0',
               fontSize: 12, fontWeight: 700,
