@@ -6,27 +6,26 @@ export const POST = createHandler({
     const token = req.cookies.get('tec_access_token')?.value ?? '';
 
     const body = await req.json();
-    const { listing_id, payment_id, txid } = body;
+    const { listing_id, payment_id } = body;
 
     if (!listing_id || !payment_id) {
       return Response.json({ error: 'Missing listing_id or payment_id' }, { status: 400 });
     }
 
+    // ✅ الـ endpoint الصح: /:id/buy
     const res = await fetch(
-      `${GATEWAY_URL}/api/assets/marketplace/buy`,
+      `${GATEWAY_URL}/api/assets/marketplace/${listing_id}/buy`,
       {
-        method:  'POST',
+        method: 'POST',
         headers: {
-          'Content-Type':  'application/json',
-          Authorization:   `Bearer ${token}`,
-          'x-request-id':  ctx.requestId,
+          'Content-Type':   'application/json',
+          Authorization:    `Bearer ${token}`,
+          'x-request-id':   ctx.requestId,
           'x-internal-key': process.env.INTERNAL_SECRET ?? '',
         },
         body: JSON.stringify({
-          listing_id,
-          payment_id,
-          txid,
-          buyer_id: ctx.userId,
+          buyerId:   ctx.userId,  // ✅ اسم الـ field الصح
+          paymentId: payment_id,  // ✅ اسم الـ field الصح
         }),
       },
     );
