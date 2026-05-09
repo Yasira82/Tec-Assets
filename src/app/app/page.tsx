@@ -16,7 +16,7 @@ import { AssetsTab }          from './components/AssetsTab';
 import { MarketplaceTab }     from './components/MarketplaceTab';
 import { PurchasesTab }       from './components/PurchasesTab';
 
-const HUB_URL = 'https://hub.tecosystem.app'; // ✅ custom domain للـ cookies
+const HUB_URL = 'https://hub.tecosystem.app';
 const SSO_URL = `${HUB_URL}/api/auth/sso?target=` +
   encodeURIComponent('https://assets.tecosystem.app');
 
@@ -133,40 +133,6 @@ function AssetsPageInner() {
     else if (settings.defaultTab === 'nfts') { setActiveTab('assets'); setAssetFilter('nfts'); }
   }, [loaded, settings.defaultTab]);
 
-  useEffect(() => {
-    if (isLoading) return;
-    const token = getTokenFromCookie();
-    if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
-
-    // ✅ اقرأ نتيجة الـ payment لو رجعنا من Hub
-    const params        = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment_status');
-
-    if (paymentStatus === 'success') {
-      const listingId = params.get('listing_id') ?? '';
-      const txid      = params.get('txid')        ?? '';
-      const paymentId = params.get('payment_id')  ?? '';
-
-      showToast('Purchase successful! 🎉');
-      setActiveTab('purchases');
-
-      // ✅ سجل الـ purchase في الـ backend
-      if (listingId && paymentId) {
-        fetch('/api/bff/marketplace/buy', {
-          method:      'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-csrf-token': getCsrfToken(),
-          },
-          body: JSON.stringify({ listing_id: listingId, payment_id: paymentId, txid }),
-        }).then(() => { fetchPurchases(); fetchData(); }).catch(() => {});
-      }
-
-      window.history.replaceState({}, '', '/app');
-    }
-  }, [isLoading, isAuthenticated, showToast]);
-
   const fetchListings = useCallback(async () => {
     try {
       const res = await fetch('/api/bff/marketplace', { credentials: 'include', cache: 'no-store' });
@@ -196,14 +162,48 @@ function AssetsPageInner() {
     finally { setDataLoading(false); }
   }, []);
 
-  // ✅ handleBuy — روح Hub Pay
+  useEffect(() => {
+    if (isLoading) return;
+    const token = getTokenFromCookie();
+    if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
+
+    // ✅ اقرأ نتيجة الـ payment لو رجعنا من Hub Pay
+    const params        = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment_status');
+
+    if (paymentStatus === 'success') {
+      // ✅ Hub Pay بيرجع product_id مش listing_id
+      const listingId = params.get('product_id') ?? '';
+      const txid      = params.get('txid')        ?? '';
+      const paymentId = params.get('payment_id')  ?? '';
+
+      showToast('Purchase successful! 🎉');
+      setActiveTab('purchases');
+
+      if (listingId && paymentId) {
+        fetch('/api/bff/marketplace/buy', {
+          method:      'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken(),
+          },
+          body: JSON.stringify({ listing_id: listingId, payment_id: paymentId, txid }),
+        }).then(() => { fetchPurchases(); fetchData(); }).catch(() => {});
+      }
+
+      window.history.replaceState({}, '', '/app');
+    }
+  }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
+
+  // ✅ handleBuy — بعت product_id عشان Hub Pay يرجعه في الـ success redirect
   const handleBuy = useCallback((listing: Listing) => {
     if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
 
     const payParams = new URLSearchParams({
       amount:     String(listing.price),
       memo:       `Buy ${listing.title} — TEC Assets`,
-      listing_id: listing.id,
+      product_id: listing.id, // ✅ product_id بدل listing_id
       return_url: 'https://assets.tecosystem.app/app',
       source:     'assets',
     });
@@ -217,7 +217,10 @@ function AssetsPageInner() {
     try {
       const res = await fetch('/api/bff/marketplace/cancel', {
         method: 'PATCH', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': getCsrfToken(), // ✅
+        },
         body: JSON.stringify({ listingId: cancellingListing.id }),
       });
       if (res.ok) { fetchListings(); fetchData(); }
@@ -265,7 +268,6 @@ function AssetsPageInner() {
         ::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed', top: 70, left: 16, right: 16, zIndex: 999,
@@ -283,7 +285,6 @@ function AssetsPageInner() {
         </div>
       )}
 
-      {/* ── Modals ── */}
       {mintingNFT && <NFTUploadModal onClose={() => setMintingNFT(false)} />}
 
       {(listingAsset || editingListing) && (
@@ -304,7 +305,6 @@ function AssetsPageInner() {
         />
       )}
 
-      {/* ── Header ── */}
       <header style={{
         padding: '14px 20px',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -348,7 +348,6 @@ function AssetsPageInner() {
         </div>
       </header>
 
-      {/* ── Portfolio Card ── */}
       {activeTab !== 'portfolio' && (
         <div style={{ padding: '16px 16px 0' }} className="fade-in">
           <div style={{
@@ -387,7 +386,6 @@ function AssetsPageInner() {
         </div>
       )}
 
-      {/* ── Tabs ── */}
       <div style={{ padding: '14px 16px 0', display: 'flex', gap: 8, overflowX: 'auto' }}>
         {([
           { key: 'assets',      label: '💎 My Assets'  },
@@ -409,7 +407,6 @@ function AssetsPageInner() {
         ))}
       </div>
 
-      {/* ── Asset Filter ── */}
       {activeTab === 'assets' && (
         <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8, alignItems: 'center' }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
@@ -437,7 +434,6 @@ function AssetsPageInner() {
         </div>
       )}
 
-      {/* ── Content ── */}
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {activeTab === 'assets' && (
           <AssetsTab
@@ -478,7 +474,6 @@ function AssetsPageInner() {
         )}
       </div>
 
-      {/* ── Bottom Nav ── */}
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -490,4 +485,4 @@ function AssetsPageInner() {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-      }
+          }
