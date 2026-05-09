@@ -2,6 +2,8 @@
 
 import { Asset } from '../types';
 
+const MINT_FEE = 1;
+
 export function MintAsNftButton({ asset }: {
   asset:     Asset;
   onClose:   () => void;
@@ -29,7 +31,6 @@ export function MintAsNftButton({ asset }: {
       tier,
       return_url: 'https://assets.tecosystem.app/app',
     });
-    // ✅ hub.tecosystem.app عشان الـ cookies وPi SDK يشتغلوا صح
     window.location.href = `https://hub.tecosystem.app/mint?${params.toString()}`;
   };
 
@@ -60,7 +61,7 @@ export function MintAsNftButton({ asset }: {
           transition: 'all 0.2s',
         }}
       >
-        🎨 Mint as NFT — 0.1π
+        🎨 Mint as NFT — {MINT_FEE}π
       </button>
     </div>
   );
