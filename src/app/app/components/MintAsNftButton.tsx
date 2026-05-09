@@ -27,9 +27,10 @@ export function MintAsNftButton({ asset }: {
       asset_id:   asset.id,
       name:       asset.name,
       tier,
-      return_url: 'https://tec-assets-app.vercel.app/app',
+      return_url: 'https://assets.tecosystem.app/app',
     });
-    window.location.href = `https://tec-app-frontend.vercel.app/mint?${params.toString()}`;
+    // ✅ hub.tecosystem.app عشان الـ cookies وPi SDK يشتغلوا صح
+    window.location.href = `https://hub.tecosystem.app/mint?${params.toString()}`;
   };
 
   return (
