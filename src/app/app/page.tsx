@@ -164,18 +164,51 @@ function AssetsPageInner() {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
-    const token = getTokenFromCookie();
-    if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
+  if (isLoading) return;
+  const token = getTokenFromCookie();
+  if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
 
-    const params        = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment_status');
+  const params        = new URLSearchParams(window.location.search);
+  const paymentStatus = params.get('payment_status');
 
-    if (paymentStatus === 'success') {
+  if (paymentStatus === 'success') {
+    const txid      = params.get('txid')       ?? '';
+    const paymentId = params.get('payment_id') ?? '';
+    const nftUrl    = params.get('nft_url')    ?? '';
+
+    if (nftUrl) {
+      // ✅ NFT Mint — سجل الـ asset
+      const nftName = decodeURIComponent(params.get('nft_name') ?? '');
+      const nftDesc = decodeURIComponent(params.get('nft_desc') ?? '');
+      const nftKey  = decodeURIComponent(params.get('nft_key')  ?? '');
+      const nftMime = decodeURIComponent(params.get('nft_mime') ?? 'image/jpeg');
+
+      showToast('NFT Minted! 🎨');
+      setActiveTab('assets');
+
+      fetch('/api/bff/nft/register', {
+        method:      'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          name:        nftName,
+          description: nftDesc,
+          imageUrl:    decodeURIComponent(nftUrl),
+          key:         nftKey,
+          mimeType:    nftMime,
+          paymentId,
+          txid,
+        }),
+      })
+        .then(() => fetchData())
+        .catch(() => {});
+
+    } else {
+      // ✅ Marketplace Purchase
       const listingId = params.get('product_id') ?? '';
-      const txid      = params.get('txid')        ?? '';
-      const paymentId = params.get('payment_id')  ?? '';
-
       showToast('Purchase successful! 🎉');
       setActiveTab('purchases');
 
@@ -188,12 +221,15 @@ function AssetsPageInner() {
             'x-csrf-token': getCsrfToken(),
           },
           body: JSON.stringify({ listing_id: listingId, payment_id: paymentId, txid }),
-        }).then(() => { fetchPurchases(); fetchData(); }).catch(() => {});
+        })
+          .then(() => { fetchPurchases(); fetchData(); })
+          .catch(() => {});
       }
-
-      window.history.replaceState({}, '', '/app');
     }
-  }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
+
+    window.history.replaceState({}, '', '/app');
+  }
+}, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
   const handleBuy = useCallback((listing: Listing) => {
     if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
