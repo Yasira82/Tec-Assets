@@ -16,9 +16,10 @@ import { AssetsTab }          from './components/AssetsTab';
 import { MarketplaceTab }     from './components/MarketplaceTab';
 import { PurchasesTab }       from './components/PurchasesTab';
 
-const HUB_URL = 'https://hub.tecosystem.app';
-const SSO_URL = `${HUB_URL}/api/auth/sso?target=` +
-  encodeURIComponent('https://assets.tecosystem.app');
+// ✅ ISS-003: env vars بدل hardcoded URLs
+const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
+const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
+const SSO_URL    = `${HUB_URL}/api/auth/sso?target=${encodeURIComponent(ASSETS_URL)}`;
 
 const getCsrfToken = (): string => {
   if (typeof document === 'undefined') return '';
@@ -167,12 +168,10 @@ function AssetsPageInner() {
     const token = getTokenFromCookie();
     if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
 
-    // ✅ اقرأ نتيجة الـ payment لو رجعنا من Hub Pay
     const params        = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment_status');
 
     if (paymentStatus === 'success') {
-      // ✅ Hub Pay بيرجع product_id مش listing_id
       const listingId = params.get('product_id') ?? '';
       const txid      = params.get('txid')        ?? '';
       const paymentId = params.get('payment_id')  ?? '';
@@ -196,19 +195,16 @@ function AssetsPageInner() {
     }
   }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
-  // ✅ handleBuy — بعت product_id عشان Hub Pay يرجعه في الـ success redirect
   const handleBuy = useCallback((listing: Listing) => {
     if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
 
-    const payParams = new URLSearchParams({
-      amount:     String(listing.price),
-      memo:       `Buy ${listing.title} — TEC Assets`,
-      product_id: listing.id, // ✅ product_id بدل listing_id
-      return_url: 'https://assets.tecosystem.app/app',
-      source:     'assets',
-    });
-
-    window.location.href = `${HUB_URL}/hub/pay?${payParams.toString()}`;
+    // ✅ ISS-003: ASSETS_URL بدل hardcoded + /hub?pay=1 (Hub Modal pattern)
+    window.location.href = `${HUB_URL}/hub?pay=1`
+      + `&amount=${listing.price}`
+      + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
+      + `&product_id=${listing.id}`
+      + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
+      + `&source=assets`;
   }, [showToast]);
 
   const handleCancelConfirm = useCallback(async () => {
@@ -219,7 +215,7 @@ function AssetsPageInner() {
         method: 'PATCH', credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'x-csrf-token': getCsrfToken(), // ✅
+          'x-csrf-token': getCsrfToken(),
         },
         body: JSON.stringify({ listingId: cancellingListing.id }),
       });
@@ -485,4 +481,4 @@ function AssetsPageInner() {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-          }
+}
