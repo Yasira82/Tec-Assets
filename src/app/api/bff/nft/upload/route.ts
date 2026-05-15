@@ -12,7 +12,6 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 export async function POST(req: NextRequest) {
-  // ── Auth ──────────────────────────────────────────────
   const token = req.cookies.get('tec_access_token')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -26,51 +25,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
-  // ── Read FormData (file + metadata) ───────────────────
-  let formData: FormData;
+  let body: { filename?: string; mimeType?: string; data?: string; size?: number };
   try {
-    formData = await req.formData();
+    body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const file = formData.get('file') as File | null;
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+  const { filename, mimeType, data, size } = body;
 
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return NextResponse.json(
-      { error: 'Only images allowed (jpeg, png, gif, webp)' },
-      { status: 400 },
-    );
+  if (!filename || !mimeType || !data) {
+    return NextResponse.json({ error: 'filename, mimeType, data required' }, { status: 400 });
   }
 
-  const MAX_SIZE = 4 * 1024 * 1024; // 4MB (Vercel serverless limit)
-  if (file.size > MAX_SIZE) {
+  if (!ALLOWED_TYPES.has(mimeType)) {
+    return NextResponse.json({ error: 'Only images allowed (jpeg, png, gif, webp)' }, { status: 400 });
+  }
+
+  if (size && size > 4 * 1024 * 1024) {
     return NextResponse.json({ error: 'File too large (max 4MB)' }, { status: 400 });
   }
 
-  // ── Step 1: Get presigned URL from storage service ────
+  // ✅ تحويل base64 → binary
+  const base64 = data.replace(/^data:[^;]+;base64,/, '');
+  const buffer = Buffer.from(base64, 'base64');
+
+  // Step 1: Get presigned URL
   const urlRes = await fetch(`${GATEWAY_URL}/api/storage/upload-url`, {
     method:  'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization:  `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      filename: file.name,
-      mimeType: file.type,
-      size:     file.size,
-      folder:   'nfts',
-    }),
+    body: JSON.stringify({ filename, mimeType, size: buffer.length, folder: 'nfts' }),
   });
 
   if (!urlRes.ok) {
-    const errText = await urlRes.text();
-    console.error('[NFT] storage url error:', errText);
+    const err = await urlRes.text();
+    console.error('[NFT] storage error:', err);
     return NextResponse.json({ error: 'Storage service error' }, { status: 500 });
   }
 
-  const urlData  = await urlRes.json();
+  const urlData   = await urlRes.json();
   const uploadUrl = urlData.data?.uploadUrl;
   const key       = urlData.data?.key;
 
@@ -79,26 +75,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No upload URL from storage' }, { status: 500 });
   }
 
-  // ── Step 2: Upload to R2 server-side (no CORS issues) ─
-  const fileBuffer = await file.arrayBuffer();
-
+  // Step 2: Upload to R2 server-side
   const r2Res = await fetch(uploadUrl, {
     method:  'PUT',
-    body:    fileBuffer,
-    headers: { 'Content-Type': file.type },
+    body:    buffer,
+    headers: { 'Content-Type': mimeType },
   });
 
   if (!r2Res.ok) {
-    const r2Err = await r2Res.text();
-    console.error('[NFT] R2 upload error:', r2Res.status, r2Err);
-    return NextResponse.json(
-      { error: `R2 upload failed: ${r2Res.status}` },
-      { status: 500 },
-    );
+    console.error('[NFT] R2 error:', r2Res.status, await r2Res.text());
+    return NextResponse.json({ error: `Upload failed: ${r2Res.status}` }, { status: 500 });
   }
 
   const publicUrl = `${R2_PUBLIC_URL}/${key}`;
-  console.log('[NFT] upload success:', publicUrl);
-
   return NextResponse.json({ publicUrl, key });
 }
