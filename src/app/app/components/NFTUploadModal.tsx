@@ -2,8 +2,16 @@
 
 import { useState } from 'react';
 
-const HUB_URL  = 'https://hub.tecosystem.app';
+const HUB_URL  = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
+const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
 const MINT_FEE = 2;
+
+// ✅ getCsrfToken — نفس pattern باقي الـ apps
+const getCsrfToken = (): string => {
+  if (typeof document === 'undefined') return '';
+  return document.cookie.split('; ')
+    .find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+};
 
 export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   const [step,        setStep]        = useState<'upload' | 'details'>('upload');
@@ -12,6 +20,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   const [name,        setName]        = useState('');
   const [description, setDescription] = useState('');
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [uploadedKey, setUploadedKey] = useState<string | null>(null);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState('');
 
@@ -31,10 +40,14 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError('');
     try {
+      // ✅ أضفنا x-csrf-token
       const res = await fetch('/api/bff/nft/upload', {
         method:      'POST',
         credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': getCsrfToken(),
+        },
         body: JSON.stringify({
           filename: file.name,
           mimeType: file.type,
@@ -43,7 +56,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
       });
 
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({})) as { error?: string };
         setError(err.error ?? 'Upload failed');
         return;
       }
@@ -68,6 +81,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
       }
 
       setUploadedUrl(publicUrl);
+      setUploadedKey(key ?? null);
       setStep('details');
     } catch {
       setError('Something went wrong');
@@ -78,15 +92,22 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
 
   const handleMint = () => {
     if (!name || !uploadedUrl) return;
-    // ✅ روح Hub Pay عشان تدفع رسوم الـ mint
+    // ✅ ISS-003: ASSETS_URL بدل hardcoded
     const params = new URLSearchParams({
+      pay:        '1',
       amount:     MINT_FEE.toString(),
       memo:       `Mint NFT: ${name}`,
-      product_id: `nft-mint-${Date.now()}`,
-      return_url: 'https://assets.tecosystem.app/app',
+      product_id: uploadedKey ?? `nft-mint-${Date.now()}`,
+      return_url: `${ASSETS_URL}/app`,
       source:     'assets',
+      // ✅ نعدي البيانات عشان بعد الـ payment نسجل الـ NFT
+      nft_name:   encodeURIComponent(name),
+      nft_desc:   encodeURIComponent(description),
+      nft_url:    encodeURIComponent(uploadedUrl),
+      nft_key:    encodeURIComponent(uploadedKey ?? ''),
+      nft_mime:   encodeURIComponent(file?.type ?? 'image/jpeg'),
     });
-    window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+    window.location.href = `${HUB_URL}/hub?${params.toString()}`;
   };
 
   return (
