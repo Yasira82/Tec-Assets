@@ -2,16 +2,23 @@
 
 import { useState } from 'react';
 
-const HUB_URL  = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
+const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
-const MINT_FEE = 2;
+const MINT_FEE   = 2;
 
-// ✅ getCsrfToken — نفس pattern باقي الـ apps
 const getCsrfToken = (): string => {
   if (typeof document === 'undefined') return '';
   return document.cookie.split('; ')
     .find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
 };
+
+const toBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
 export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   const [step,        setStep]        = useState<'upload' | 'details'>('upload');
@@ -27,7 +34,11 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { setError('File too large (max 10MB)'); return; }
+    if (f.size > 4 * 1024 * 1024) { setError('File too large (max 4MB)'); return; }
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(f.type)) {
+      setError('Only JPEG, PNG, GIF, WEBP allowed');
+      return;
+    }
     setFile(f);
     setError('');
     const reader = new FileReader();
@@ -40,7 +51,9 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError('');
     try {
-      // ✅ أضفنا x-csrf-token
+      // ✅ base64 JSON بدل FormData
+      const base64 = await toBase64(file);
+
       const res = await fetch('/api/bff/nft/upload', {
         method:      'POST',
         credentials: 'include',
@@ -52,6 +65,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
           filename: file.name,
           mimeType: file.type,
           size:     file.size,
+          data:     base64,
         }),
       });
 
@@ -61,30 +75,15 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
         return;
       }
 
-      const data      = await res.json();
-      const uploadUrl = data?.uploadUrl;
-      const key       = data?.key;
-      const publicUrl = data?.publicUrl
-        ?? (key ? `https://pub-fe60d4ae820b4c5cb91064081595e666.r2.dev/${key}` : null);
+      const data = await res.json();
+      if (!data.publicUrl) { setError('No URL returned'); return; }
 
-      if (!uploadUrl) { setError('No upload URL received'); return; }
-
-      const uploadRes = await fetch(uploadUrl, {
-        method:  'PUT',
-        body:    file,
-        headers: { 'Content-Type': file.type },
-      });
-
-      if (!uploadRes.ok) {
-        setError(`Failed to upload: ${uploadRes.status}`);
-        return;
-      }
-
-      setUploadedUrl(publicUrl);
-      setUploadedKey(key ?? null);
+      setUploadedUrl(data.publicUrl);
+      setUploadedKey(data.key ?? null);
       setStep('details');
-    } catch {
-      setError('Something went wrong');
+    } catch (e) {
+      console.error('[NFT] upload error:', e);
+      setError('Upload failed — please try again');
     } finally {
       setLoading(false);
     }
@@ -92,7 +91,6 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
 
   const handleMint = () => {
     if (!name || !uploadedUrl) return;
-    // ✅ ISS-003: ASSETS_URL بدل hardcoded
     const params = new URLSearchParams({
       pay:        '1',
       amount:     MINT_FEE.toString(),
@@ -100,7 +98,6 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
       product_id: uploadedKey ?? `nft-mint-${Date.now()}`,
       return_url: `${ASSETS_URL}/app`,
       source:     'assets',
-      // ✅ نعدي البيانات عشان بعد الـ payment نسجل الـ NFT
       nft_name:   encodeURIComponent(name),
       nft_desc:   encodeURIComponent(description),
       nft_url:    encodeURIComponent(uploadedUrl),
@@ -131,7 +128,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
           {step === 'upload' ? 'Upload NFT Image' : 'NFT Details'}
         </div>
         <div style={{ fontSize: 12, color: '#4a4a5a', textAlign: 'center', marginBottom: 24 }}>
-          {step === 'upload' ? 'Choose an image for your NFT' : 'Add name and description'}
+          {step === 'upload' ? 'Max 4MB — JPEG, PNG, GIF, WEBP' : 'Add name and description'}
         </div>
 
         {step === 'upload' && (
@@ -157,9 +154,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
                 <>
                   <div style={{ fontSize: 40, marginBottom: 8 }}>📸</div>
                   <div style={{ fontSize: 13, color: '#6b6b7a' }}>Tap to choose image</div>
-                  <div style={{ fontSize: 11, color: '#4a4a5a', marginTop: 4 }}>
-                    JPEG, PNG, GIF, WEBP — max 10MB
-                  </div>
+                  <div style={{ fontSize: 11, color: '#4a4a5a', marginTop: 4 }}>Max 4MB</div>
                 </>
               )}
             </label>
@@ -196,9 +191,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
             )}
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
-                NFT NAME *
-              </div>
+              <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>NFT NAME *</div>
               <input
                 type="text"
                 value={name}
@@ -215,9 +208,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>
-                DESCRIPTION (optional)
-              </div>
+              <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>DESCRIPTION</div>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
@@ -280,4 +271,4 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
       </div>
     </>
   );
-}
+                  }
