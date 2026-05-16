@@ -16,12 +16,9 @@ interface RawListing {
   price:   number;
 }
 
-// ✅ Estimated value
 const estimateValue = (a: RawAsset, activeListing?: RawListing): number => {
   if (activeListing?.price) return activeListing.price;
-
   const category = a.category?.toLowerCase();
-
   if (category === 'domain') {
     const name = a.slug.replace('.pi', '');
     if (name.length <= 3) return 5;
@@ -29,9 +26,7 @@ const estimateValue = (a: RawAsset, activeListing?: RawListing): number => {
     if (name.length <= 9) return 2;
     return 1;
   }
-
   if (category === 'nft') return 2;
-
   return 0;
 };
 
@@ -71,7 +66,7 @@ export const GET = createHandler({
       );
       return {
         id:            a.id,
-        name:          a.slug,
+        name:          (a.metadata?.name as string) ?? a.slug, // ✅ الاسم الحقيقي
         asset_type:    a.category?.toLowerCase() ?? 'domain',
         value:         estimateValue(a, activeListing),
         currency:      'PI',
