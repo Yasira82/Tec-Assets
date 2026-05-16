@@ -8,9 +8,10 @@ const CSRF_PROTECTED    = [
   '/api/bff/',
 ];
 
-// ✅ routes عندها auth خاص بيها — CSRF redundant هنا
+// ✅ JWT-validated مباشرة — CSRF redundant
 const CSRF_EXCLUDED = new Set([
-  '/api/bff/nft/upload',   // JWT-validated directly via jwtVerify
+  '/api/bff/nft/upload',
+  '/api/bff/nft/register',
 ]);
 
 export function middleware(req: NextRequest) {
@@ -29,7 +30,6 @@ export function middleware(req: NextRequest) {
 
   if (!CSRF_SAFE_METHODS.has(method)) {
     const isCsrfProtected = CSRF_PROTECTED.some(r => pathname.startsWith(r));
-    // ✅ استثناء الـ routes اللي عندها JWT auth خاص بيها
     if (isCsrfProtected && !CSRF_EXCLUDED.has(pathname)) {
       const csrfCookie = req.cookies.get('tec_csrf')?.value;
       const csrfHeader = req.headers.get('x-csrf-token');
