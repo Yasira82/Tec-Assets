@@ -2,36 +2,30 @@
 
 import { Purchase } from '../types';
 
-const PurchaseCard = ({ p }: { p: Purchase }) => (
+const PurchaseCard = ({ p }: { p: Purchase & { isMint?: boolean } }) => (
   <div style={{
-    background: '#0d0d14', border: '1px solid #7ee7c020',
+    background: '#0d0d14',
+    border: `1px solid ${p.isMint ? '#7b6bc840' : '#7ee7c020'}`,
     borderRadius: 18, padding: '16px 20px',
     display: 'flex', alignItems: 'center', gap: 14,
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-  }}
-    onMouseEnter={e => {
-      e.currentTarget.style.transform = 'translateY(-2px)';
-      e.currentTarget.style.boxShadow = '0 8px 20px #7ee7c020';
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.transform = 'none';
-      e.currentTarget.style.boxShadow = 'none';
-    }}
-  >
+  }}>
     <div style={{
       width: 52, height: 52, borderRadius: 14,
-      background: 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
-      border: '1px solid #7ee7c030',
+      background: p.isMint
+        ? 'linear-gradient(135deg,#2d1b69,#1a0f3d)'
+        : 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
+      border: `1px solid ${p.isMint ? '#7b6bc830' : '#7ee7c030'}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 24, flexShrink: 0, overflow: 'hidden',
     }}>
-      {p.asset.category.toLowerCase() === 'nft' && p.asset.metadata?.imageUrl ? (
-        <img src={p.asset.metadata.imageUrl as string} alt={p.asset.slug}
+      {p.asset.metadata?.imageUrl ? (
+        <img src={p.asset.metadata.imageUrl as string} alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         p.asset.category.toLowerCase() === 'nft' ? '🎨' : '🌐'
       )}
     </div>
+
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{
         fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4,
@@ -41,14 +35,22 @@ const PurchaseCard = ({ p }: { p: Purchase }) => (
       </div>
       <div style={{
         display: 'inline-block', fontSize: 9, fontWeight: 700,
-        letterSpacing: 1.5, color: '#7ee7c0', background: '#7ee7c010',
-        borderRadius: 6, padding: '2px 6px', textTransform: 'uppercase',
+        letterSpacing: 1.5,
+        color:      p.isMint ? '#b39ddb' : '#7ee7c0',
+        background: p.isMint ? '#b39ddb10' : '#7ee7c010',
+        borderRadius: 6, padding: '2px 8px', textTransform: 'uppercase',
       }}>
-        {p.asset.category}
+        {p.isMint ? '🎨 Minted' : '🛒 Purchased'}
       </div>
     </div>
+
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-      <div style={{ fontSize: 18, fontWeight: 900, color: '#7ee7c0' }}>{p.price}π</div>
+      <div style={{
+        fontSize: 18, fontWeight: 900,
+        color: p.isMint ? '#b39ddb' : '#7ee7c0',
+      }}>
+        {p.price}π
+      </div>
       <div style={{ fontSize: 10, color: '#4a4a5a' }}>
         {p.soldAt ? new Date(p.soldAt).toLocaleDateString() : '—'}
       </div>
