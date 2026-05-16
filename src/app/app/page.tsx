@@ -177,7 +177,6 @@ function AssetsPageInner() {
     const productId = params.get('product_id') ?? '';
 
     if (productId.startsWith('nft:')) {
-      // ✅ NFT Mint — استرجع البيانات من product_id
       try {
         const nftMeta = JSON.parse(atob(productId.slice(4)));
         showToast('NFT Minted! 🎨');
@@ -200,14 +199,23 @@ function AssetsPageInner() {
             txid,
           }),
         })
-          .then(() => fetchData())
-          .catch(() => {});
+          .then(async (res) => {
+            const data = await res.json().catch(() => ({})) as { error?: string };
+            if (res.ok) {
+              fetchData();
+            } else {
+              console.error('[NFT register] failed:', res.status, data);
+              showToast(`Register failed: ${data.error ?? res.status}`, 'error');
+            }
+          })
+          .catch((err: unknown) => {
+            console.error('[NFT register] network error:', err);
+            showToast('Register failed — check console', 'error');
+          });
       } catch {
-        showToast('NFT registered!');
-        fetchData();
+        showToast('NFT data error', 'error');
       }
     } else {
-      // ✅ Marketplace Purchase
       showToast('Purchase successful! 🎉');
       setActiveTab('purchases');
 
@@ -230,8 +238,8 @@ function AssetsPageInner() {
   }
 }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
-  const handleBuy = useCallback((listing: Listing) => {
-    if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
+const handleBuy = useCallback((listing: Listing) => {
+  if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
 
     // ✅ ISS-003: ASSETS_URL بدل hardcoded + /hub?pay=1 (Hub Modal pattern)
     window.location.href = `${HUB_URL}/hub?pay=1`
