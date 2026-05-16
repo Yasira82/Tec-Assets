@@ -90,22 +90,27 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleMint = () => {
-    if (!name || !uploadedUrl) return;
-    const params = new URLSearchParams({
-      pay:        '1',
-      amount:     MINT_FEE.toString(),
-      memo:       `Mint NFT: ${name}`,
-      product_id: uploadedKey ?? `nft-mint-${Date.now()}`,
-      return_url: `${ASSETS_URL}/app`,
-      source:     'assets',
-      nft_name:   encodeURIComponent(name),
-      nft_desc:   encodeURIComponent(description),
-      nft_url:    encodeURIComponent(uploadedUrl),
-      nft_key:    encodeURIComponent(uploadedKey ?? ''),
-      nft_mime:   encodeURIComponent(file?.type ?? 'image/jpeg'),
-    });
-    window.location.href = `${HUB_URL}/hub?${params.toString()}`;
-  };
+  if (!name || !uploadedUrl) return;
+
+  // ✅ encode NFT data في product_id عشان Hub يرجعه
+  const nftMeta = btoa(JSON.stringify({
+    n: name,
+    d: description,
+    u: uploadedUrl,
+    k: uploadedKey ?? '',
+    m: file?.type ?? 'image/jpeg',
+  }));
+
+  const params = new URLSearchParams({
+    pay:        '1',
+    amount:     MINT_FEE.toString(),
+    memo:       `Mint NFT: ${name}`,
+    product_id: `nft:${nftMeta}`,
+    return_url: `${ASSETS_URL}/app`,
+    source:     'assets',
+  });
+  window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+};
 
   return (
     <>
