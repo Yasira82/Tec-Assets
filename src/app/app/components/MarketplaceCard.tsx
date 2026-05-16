@@ -28,14 +28,13 @@ export function MarketplaceCard({
 }) {
   const [buying, setBuying] = useState(false);
 
-  // ⚠️ مؤقت للـ test — ارجعه بعد كده:
-  // const isOwn = listing.seller_id === currentUserId;
-  const isOwn   = false;
-
-  const colors   = categoryColors[listing.category] ?? categoryColors.default;
-  const imageUrl = (listing as Listing & { metadata?: Record<string, unknown> }).metadata?.imageUrl as string | undefined;
+  const isOwn   = listing.seller_id === currentUserId; // ✅ fix
+  const colors  = categoryColors[listing.category] ?? categoryColors.default;
+  const imageUrl = (listing.metadata as Record<string, unknown> | undefined)
+    ?.imageUrl as string | undefined;
 
   const handleBuy = () => {
+    if (buying) return;
     setBuying(true);
     onBuy(listing);
   };
@@ -59,12 +58,17 @@ export function MarketplaceCard({
         e.currentTarget.style.boxShadow   = 'none';
       }}
       style={{
-        background: '#0d0d14', border: `1px solid ${colors.border}`,
-        borderRadius: 18, padding: '16px 20px',
-        display: 'flex', alignItems: 'center', gap: 14,
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        background:  '#0d0d14',
+        border:      `1px solid ${colors.border}`,
+        borderRadius: 18,
+        padding:     '16px 20px',
+        display:     'flex',
+        alignItems:  'center',
+        gap:          14,
+        transition:  'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
       }}
     >
+      {/* Image / Icon */}
       <div style={{
         width: 52, height: 52, borderRadius: 14,
         background: colors.bg, border: `1px solid ${colors.border}`,
@@ -79,6 +83,7 @@ export function MarketplaceCard({
         )}
       </div>
 
+      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4,
@@ -88,33 +93,43 @@ export function MarketplaceCard({
         </div>
         <div style={{
           display: 'inline-block', fontSize: 9, fontWeight: 700,
-          letterSpacing: 1.5, color: colors.accent, background: colors.border,
+          letterSpacing: 1.5, color: colors.accent,
+          background: `${colors.accent}15`,
           borderRadius: 6, padding: '2px 6px', textTransform: 'uppercase',
         }}>
           {listing.category}
         </div>
+        {listing.description && (
+          <div style={{
+            fontSize: 11, color: '#4a4a5a', marginTop: 4,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {listing.description}
+          </div>
+        )}
       </div>
 
+      {/* Price + Action */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#d4af37' }}>
           {listing.price}π
         </div>
 
         {isOwn ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <button onClick={() => onEditPrice(listing)} style={{
               padding: '5px 12px', borderRadius: 10,
               background: '#d4af3715', border: '1px solid #d4af3740',
               color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
             }}>
-              Edit Price
+              ✏️ Edit
             </button>
             <button onClick={() => onCancel(listing)} style={{
               padding: '5px 12px', borderRadius: 10,
               background: '#e74c3c15', border: '1px solid #e74c3c40',
               color: '#e74c3c', fontSize: 11, fontWeight: 700, cursor: 'pointer',
             }}>
-              Cancel
+              ✕ Cancel
             </button>
           </div>
         ) : (
@@ -123,29 +138,29 @@ export function MarketplaceCard({
             disabled={buying}
             style={{
               padding: '8px 16px', borderRadius: 12,
-              background: buying ? '#ffffff10' : 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
-              border: '1px solid #7ee7c040',
-              color: buying ? '#4a4a5a' : '#7ee7c0',
-              fontSize: 12, fontWeight: 700,
-              cursor: buying ? 'not-allowed' : 'pointer',
+              background: buying
+                ? '#ffffff10'
+                : 'linear-gradient(135deg,#0d2e14,#0a1f0f)',
+              border:     '1px solid #7ee7c040',
+              color:      buying ? '#4a4a5a' : '#7ee7c0',
+              fontSize:   12, fontWeight: 700,
+              cursor:     buying ? 'not-allowed' : 'pointer',
+              display:    'flex', alignItems: 'center', gap: 6,
               transition: 'all 0.2s',
-              display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
             {buying ? (
               <>
                 <span style={{
                   width: 10, height: 10, borderRadius: '50%',
-                  border: '2px solid #4a4a5a',
+                  border: '2px solid #4a4a5a30',
                   borderTopColor: '#7ee7c0',
                   animation: 'spin 0.8s linear infinite',
                   display: 'inline-block',
                 }} />
                 Processing...
               </>
-            ) : (
-              '🛒 Buy'
-            )}
+            ) : '🛒 Buy'}
           </button>
         )}
       </div>
