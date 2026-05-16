@@ -174,45 +174,44 @@ function AssetsPageInner() {
   if (paymentStatus === 'success') {
     const txid      = params.get('txid')       ?? '';
     const paymentId = params.get('payment_id') ?? '';
-    const nftUrl    = params.get('nft_url')    ?? '';
+    const productId = params.get('product_id') ?? '';
 
-    if (nftUrl) {
-      // ✅ NFT Mint — سجل الـ asset
-      const nftName = decodeURIComponent(params.get('nft_name') ?? '');
-      const nftDesc = decodeURIComponent(params.get('nft_desc') ?? '');
-      const nftKey  = decodeURIComponent(params.get('nft_key')  ?? '');
-      const nftMime = decodeURIComponent(params.get('nft_mime') ?? 'image/jpeg');
+    if (productId.startsWith('nft:')) {
+      // ✅ NFT Mint — استرجع البيانات من product_id
+      try {
+        const nftMeta = JSON.parse(atob(productId.slice(4)));
+        showToast('NFT Minted! 🎨');
+        setActiveTab('assets');
 
-      showToast('NFT Minted! 🎨');
-      setActiveTab('assets');
-
-      fetch('/api/bff/nft/register', {
-        method:      'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': getCsrfToken(),
-        },
-        body: JSON.stringify({
-          name:        nftName,
-          description: nftDesc,
-          imageUrl:    decodeURIComponent(nftUrl),
-          key:         nftKey,
-          mimeType:    nftMime,
-          paymentId,
-          txid,
-        }),
-      })
-        .then(() => fetchData())
-        .catch(() => {});
-
+        fetch('/api/bff/nft/register', {
+          method:      'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken(),
+          },
+          body: JSON.stringify({
+            name:        nftMeta.n,
+            description: nftMeta.d ?? '',
+            imageUrl:    nftMeta.u,
+            key:         nftMeta.k,
+            mimeType:    nftMeta.m,
+            paymentId,
+            txid,
+          }),
+        })
+          .then(() => fetchData())
+          .catch(() => {});
+      } catch {
+        showToast('NFT registered!');
+        fetchData();
+      }
     } else {
       // ✅ Marketplace Purchase
-      const listingId = params.get('product_id') ?? '';
       showToast('Purchase successful! 🎉');
       setActiveTab('purchases');
 
-      if (listingId && paymentId) {
+      if (productId && paymentId) {
         fetch('/api/bff/marketplace/buy', {
           method:      'POST',
           credentials: 'include',
@@ -220,7 +219,7 @@ function AssetsPageInner() {
             'Content-Type': 'application/json',
             'x-csrf-token': getCsrfToken(),
           },
-          body: JSON.stringify({ listing_id: listingId, payment_id: paymentId, txid }),
+          body: JSON.stringify({ listing_id: productId, payment_id: paymentId, txid }),
         })
           .then(() => { fetchPurchases(); fetchData(); })
           .catch(() => {});
