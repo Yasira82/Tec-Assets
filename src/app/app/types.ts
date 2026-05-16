@@ -23,6 +23,7 @@ export interface Listing {
   description: string;
   category:    string;
   created_at:  string;
+  metadata?:   Record<string, unknown>; 
 }
 
 export interface Purchase {
