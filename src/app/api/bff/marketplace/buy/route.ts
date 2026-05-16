@@ -4,19 +4,23 @@ export const POST = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
     const token = req.cookies.get('tec_access_token')?.value ?? '';
+    const body  = await req.json() as {
+      listing_id: string;
+      payment_id: string;
+      txid?:      string;
+    };
 
-    const body = await req.json();
-    const { listing_id, payment_id } = body;
-
-    if (!listing_id || !payment_id) {
-      return Response.json({ error: 'Missing listing_id or payment_id' }, { status: 400 });
+    if (!body.listing_id || !body.payment_id) {
+      return Response.json(
+        { error: 'listing_id and payment_id required' },
+        { status: 400 },
+      );
     }
 
-    // ✅ الـ endpoint الصح: /:id/buy
     const res = await fetch(
-      `${GATEWAY_URL}/api/assets/marketplace/${listing_id}/buy`,
+      `${GATEWAY_URL}/api/assets/marketplace/${body.listing_id}/buy`,
       {
-        method: 'POST',
+        method:  'POST',
         headers: {
           'Content-Type':   'application/json',
           Authorization:    `Bearer ${token}`,
@@ -24,8 +28,8 @@ export const POST = createHandler({
           'x-internal-key': process.env.INTERNAL_SECRET ?? '',
         },
         body: JSON.stringify({
-          buyerId:   ctx.userId,  // ✅ اسم الـ field الصح
-          paymentId: payment_id,  // ✅ اسم الـ field الصح
+          buyerId:   ctx.userId,
+          paymentId: body.payment_id,
         }),
       },
     );
@@ -33,12 +37,10 @@ export const POST = createHandler({
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      return Response.json(
-        { error: data?.message ?? 'Purchase failed' },
-        { status: res.status },
-      );
+      console.error('[BFF marketplace/buy] failed:', res.status, data);
+      return Response.json(data, { status: res.status });
     }
 
-    return { success: true, purchase: data?.data ?? data };
+    return Response.json({ success: true, data });
   },
 });
