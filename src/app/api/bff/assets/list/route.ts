@@ -42,6 +42,8 @@ export const GET = createHandler({
       'x-internal-key': internalKey,
     };
 
+    console.log('[BFF assets/list] userId:', ctx.userId);
+
     const [assetsRes, listingsRes] = await Promise.all([
       fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`, {
         headers, cache: 'no-store',
@@ -51,18 +53,22 @@ export const GET = createHandler({
       }),
     ]);
 
+    console.log('[BFF assets/list] assetsRes status:', assetsRes.status);
+
     if (!assetsRes.ok) {
-      console.error('[BFF] assets/list failed:', assetsRes.status);
+      console.error('[BFF assets/list] failed:', assetsRes.status);
       return { data: [], total: 0 };
     }
 
-    const raw          = await assetsRes.json();
-    const listingsData = listingsRes.ok ? await listingsRes.json() : {};
+    const raw = await assetsRes.json();
+    console.log('[BFF assets/list] raw count:', raw?.data?.length ?? 0, 'raw:', JSON.stringify(raw).slice(0, 200));
+
+    const listingsData  = listingsRes.ok ? await listingsRes.json() : {};
     const userListings: RawListing[] = listingsData?.data?.listings ?? [];
 
     const assets = (raw?.data ?? []).map((a: RawAsset) => {
       const activeListing = userListings.find(
-        l => l.assetId === a.id && l.status === 'ACTIVE'
+        l => l.assetId === a.id && l.status === 'ACTIVE',
       );
       return {
         id:            a.id,
@@ -77,6 +83,8 @@ export const GET = createHandler({
         metadata:      a.metadata ?? {},
       };
     });
+
+    console.log('[BFF assets/list] returning:', assets.length, 'assets');
 
     return { data: assets, total: assets.length };
   },
