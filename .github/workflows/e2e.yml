@@ -1,11 +1,12 @@
 name: E2E Tests
 
 on:
-  # ✅ E2E على PR فقط
   pull_request:
     branches: [main]
     paths:
       - 'src/**'
+      - 'e2e/**'              # ✅ أضف
+      - 'playwright.config.ts' # ✅ أضف
       - '.github/workflows/e2e.yml'
   workflow_dispatch:
 
@@ -25,7 +26,6 @@ jobs:
         with:
           node-version: '20'
 
-      # ✅ Cache node_modules
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
@@ -36,7 +36,6 @@ jobs:
       - name: Install
         run: npm install --legacy-peer-deps
 
-      # ✅ Cache Playwright browsers
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -52,6 +51,8 @@ jobs:
         env:
           NEXT_PUBLIC_API_GATEWAY_URL: 'http://localhost:8080'
           NEXT_PUBLIC_PI_SANDBOX:      'true'
+          NEXT_PUBLIC_HUB_URL:         'https://hub.tecosystem.app'
+          NEXT_PUBLIC_ASSETS_URL:      'https://assets.tecosystem.app'
           E2E_MODE:                    'true'
 
       - name: Copy static files
