@@ -2,23 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent }             from '@testing-library/react';
 import React                                      from 'react';
 
-vi.mock('./components/AssetCard', () => ({
-  AssetCard: ({ asset, onListForSale, onTransfer, onCancelListing }: any) =>
-    React.createElement('div', { 'data-testid': `asset-${asset.id}` },
-      React.createElement('span', null, asset.name),
-      React.createElement('button', { 'data-testid': `list-${asset.id}`,     onClick: () => onListForSale(asset)         }, 'List'),
-      React.createElement('button', { 'data-testid': `transfer-${asset.id}`, onClick: () => onTransfer(asset)            }, 'Transfer'),
-      React.createElement('button', { 'data-testid': `cancel-${asset.id}`,   onClick: () => onCancelListing(asset.listing_id) }, 'Cancel'),
-    ),
-}), { virtual: true });
-
+// ✅ vi.mock بـ 2 arguments بس — Vitest مش Jest
 vi.mock('../components/AssetCard', () => ({
-  AssetCard: ({ asset, onListForSale, onTransfer, onCancelListing }: any) =>
+  AssetCard: ({ asset, onListForSale, onTransfer, onCancelListing }: {
+    asset: { id: string; name: string; listing_id: string | null };
+    onListForSale:   (a: unknown) => void;
+    onTransfer:      (a: unknown) => void;
+    onCancelListing: (id: string) => void;
+  }) =>
     React.createElement('div', { 'data-testid': `asset-${asset.id}` },
       React.createElement('span', null, asset.name),
       React.createElement('button', { 'data-testid': `list-${asset.id}`,     onClick: () => onListForSale(asset)             }, 'List'),
       React.createElement('button', { 'data-testid': `transfer-${asset.id}`, onClick: () => onTransfer(asset)                }, 'Transfer'),
-      React.createElement('button', { 'data-testid': `cancel-${asset.id}`,   onClick: () => onCancelListing(asset.listing_id) }, 'Cancel'),
+      React.createElement('button', { 'data-testid': `cancel-${asset.id}`,   onClick: () => onCancelListing(asset.listing_id ?? '') }, 'Cancel'),
     ),
 }));
 
@@ -39,8 +35,8 @@ const makeAsset = (overrides: Partial<Asset> = {}): Asset => ({
 });
 
 const defaultProps = {
-  assets:          [],
-  filtered:        [],
+  assets:          [] as Asset[],
+  filtered:        [] as Asset[],
   dataLoading:     false,
   showValues:      true,
   onListForSale:   vi.fn(),
@@ -55,7 +51,7 @@ describe('AssetsTab', () => {
 
   beforeEach(() => { vi.clearAllMocks(); });
 
-  // ── Empty State ───────────────────────────────────────────
+  // ── Empty State ───────────────────────────────────────
 
   it('يعرض empty state لو مفيش assets', () => {
     render(React.createElement(AssetsTab, { ...defaultProps }));
@@ -64,19 +60,17 @@ describe('AssetsTab', () => {
 
   it('يعرض Mint NFT button في empty state', () => {
     render(React.createElement(AssetsTab, { ...defaultProps }));
-    const btn = screen.getByText(/mint nft/i);
-    fireEvent.click(btn);
+    fireEvent.click(screen.getByText(/mint nft/i));
     expect(defaultProps.onMintNFT).toHaveBeenCalledOnce();
   });
 
   it('يعرض Marketplace button في empty state', () => {
     render(React.createElement(AssetsTab, { ...defaultProps }));
-    const btn = screen.getByText(/marketplace/i);
-    fireEvent.click(btn);
+    fireEvent.click(screen.getByText(/marketplace/i));
     expect(defaultProps.onGoMarketplace).toHaveBeenCalledOnce();
   });
 
-  // ── Loading ───────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────
 
   it('يعرض skeleton لو dataLoading', () => {
     render(React.createElement(AssetsTab, { ...defaultProps, dataLoading: true }));
@@ -84,7 +78,7 @@ describe('AssetsTab', () => {
     expect(screen.queryByTestId('asset-asset-1')).toBeNull();
   });
 
-  // ── Assets List ───────────────────────────────────────────
+  // ── Assets List ───────────────────────────────────────
 
   it('يعرض assets', () => {
     const assets = [makeAsset({ id: 'a1', name: 'NFT 1' }), makeAsset({ id: 'a2', name: 'NFT 2' })];
@@ -101,23 +95,23 @@ describe('AssetsTab', () => {
     expect(screen.queryByTestId('asset-a2')).toBeNull();
   });
 
-  // ── Actions ───────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────
 
-  it('onListForSale يتعمل لما تضغط List', () => {
+  it('onListForSale يتعمل', () => {
     const assets = [makeAsset({ id: 'a1' })];
     render(React.createElement(AssetsTab, { ...defaultProps, assets, filtered: assets }));
     fireEvent.click(screen.getByTestId('list-a1'));
     expect(defaultProps.onListForSale).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
   });
 
-  it('onTransfer يتعمل لما تضغط Transfer', () => {
+  it('onTransfer يتعمل', () => {
     const assets = [makeAsset({ id: 'a1' })];
     render(React.createElement(AssetsTab, { ...defaultProps, assets, filtered: assets }));
     fireEvent.click(screen.getByTestId('transfer-a1'));
     expect(defaultProps.onTransfer).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
   });
 
-  it('onCancelListing يتعمل لما تضغط Cancel', () => {
+  it('onCancelListing يتعمل', () => {
     const assets = [makeAsset({ id: 'a1', listing_id: 'listing-001' })];
     render(React.createElement(AssetsTab, { ...defaultProps, assets, filtered: assets }));
     fireEvent.click(screen.getByTestId('cancel-a1'));
