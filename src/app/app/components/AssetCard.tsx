@@ -20,12 +20,13 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset, showValues, onListForSale, onCancelListing, allAssets = [], onRefresh,
+  asset, showValues, onListForSale, onCancelListing, onTransfer, allAssets = [], onRefresh,
 }: {
   asset:           Asset;
   showValues:      boolean;
   onListForSale:   (asset: Asset) => void;
   onCancelListing: (listingId: string) => void;
+  onTransfer?:     (asset: Asset) => void;
   allAssets?:      Asset[];
   onRefresh?:      () => void;
 }) {
@@ -98,58 +99,48 @@ export function AssetCard({
           transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
         }}
       >
-        <div style={{
-          width: 52, height: 52, borderRadius: 14,
-          background: colors.bg, border: `1px solid ${colors.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 24, flexShrink: 0, overflow: 'hidden', position: 'relative',
-        }}>
+        {/* Icon */}
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
           {nftImageUrl ? (
             <>
-              <img src={nftImageUrl} alt={assetName}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{
-                position: 'absolute', bottom: 2, right: 2,
-                fontSize: 8, background: '#00000060',
-                borderRadius: 4, padding: '1px 3px', color: '#fff',
-              }}>🔍</div>
+              <img src={nftImageUrl} alt={assetName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8, background: '#00000060', borderRadius: 4, padding: '1px 3px', color: '#fff' }}>🔍</div>
             </>
           ) : (
             typeEmoji[asset.asset_type] ?? typeEmoji.default
           )}
         </div>
 
+        {/* Name + Type */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {assetName}
           </div>
-          <div style={{
-            display: 'inline-block', fontSize: 9, fontWeight: 700,
-            letterSpacing: 1.5, color: colors.status, background: colors.border,
-            borderRadius: 6, padding: '2px 6px', textTransform: 'uppercase',
-          }}>
+          <div style={{ display: 'inline-block', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: colors.status, background: colors.border, borderRadius: 6, padding: '2px 6px', textTransform: 'uppercase' }}>
             {asset.asset_type}
           </div>
         </div>
 
+        {/* Right Side */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <div style={{
-            fontSize: 10, fontWeight: 600, letterSpacing: 1,
-            color: asset.status === 'active'  ? '#7ee7c0'
-                 : asset.status === 'on_sale' ? '#d4af37'
-                 : '#6b6b7a',
-          }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#d4af37' : '#6b6b7a' }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
           </div>
           {asset.listing_price && (
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#d4af37' }}>
-              {asset.listing_price}π
-            </div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#d4af37' }}>{asset.listing_price}π</div>
           )}
-          <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>
+
+          {/* Transfer Button — active assets only */}
+          {onTransfer && asset.status === 'active' && (
+            <button
+              onClick={e => { e.stopPropagation(); onTransfer(asset); }}
+              data-testid={`transfer-${asset.id}`}
+              style={{ fontSize: 9, fontWeight: 700, color: '#6b6b7a', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', letterSpacing: 0.5 }}>
+              ↗ Transfer
+            </button>
+          )}
+
+          {!onTransfer && <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>}
         </div>
       </div>
     </>
