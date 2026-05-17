@@ -15,6 +15,7 @@ import { NFTUploadModal }     from './components/NFTUploadModal';
 import { AssetsTab }          from './components/AssetsTab';
 import { MarketplaceTab }     from './components/MarketplaceTab';
 import { PurchasesTab }       from './components/PurchasesTab';
+import { TransferModal }      from './components/TransferModal';
 
 // ✅ ISS-003: env vars بدل hardcoded URLs
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
@@ -121,6 +122,7 @@ function AssetsPageInner() {
   const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
   const [cancelLoading,     setCancelLoading]     = useState(false);
   const [mintingNFT,        setMintingNFT]        = useState(false);
+  const [transferringAsset, setTransferringAsset] = useState<Asset | null>(null);
   const [toast,             setToast]             = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
@@ -267,6 +269,16 @@ const handleBuy = useCallback((listing: Listing) => {
     finally { setCancelLoading(false); setCancellingListing(null); }
   }, [cancellingListing, fetchListings, fetchData]);
 
+const handleTransfer = useCallback((asset: Asset) => {
+  setTransferringAsset(asset);
+}, []);
+
+const handleTransferSuccess = useCallback(() => {
+  setTransferringAsset(null);
+  showToast('Asset transferred! ↗');
+  fetchData();
+}, [fetchData, showToast]);
+  
   const handleCancelFromAssets = useCallback((listingId: string) => {
     setCancellingListing({
       id: listingId, asset_id: '', seller_id: '', price: 0,
@@ -323,7 +335,7 @@ const handleBuy = useCallback((listing: Listing) => {
           </span>
         </div>
       )}
-
+      
       {mintingNFT && <NFTUploadModal onClose={() => setMintingNFT(false)} />}
 
       {(listingAsset || editingListing) && (
@@ -344,6 +356,14 @@ const handleBuy = useCallback((listing: Listing) => {
         />
       )}
 
+{transferringAsset && (
+  <TransferModal
+    asset={transferringAsset}
+    onClose={() => setTransferringAsset(null)}
+    onSuccess={handleTransferSuccess}
+  />
+)}
+      
       <header style={{
         padding: '14px 20px',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -484,6 +504,7 @@ const handleBuy = useCallback((listing: Listing) => {
             onCancelListing={handleCancelFromAssets}
             onMintNFT={() => setMintingNFT(true)}
             onGoMarketplace={() => setActiveTab('marketplace')}
+            onTransfer={handleTransfer}
             onRefresh={fetchData}
           />
         )}
