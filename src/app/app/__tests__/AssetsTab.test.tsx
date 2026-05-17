@@ -2,15 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent }             from '@testing-library/react';
 import React                                      from 'react';
 
-// ✅ any بدل inline TypeScript types في الـ mock factory
 vi.mock('../components/AssetCard', () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   AssetCard: (props: any) =>
     React.createElement('div', { 'data-testid': `asset-${props.asset.id}` },
       React.createElement('span', null, props.asset.name),
-      React.createElement('button', { 'data-testid': `list-${props.asset.id}`,     onClick: () => props.onListForSale(props.asset)                       }, 'List'),
-      React.createElement('button', { 'data-testid': `transfer-${props.asset.id}`, onClick: () => props.onTransfer(props.asset)                          }, 'Transfer'),
-      React.createElement('button', { 'data-testid': `cancel-${props.asset.id}`,   onClick: () => props.onCancelListing(props.asset.listing_id ?? '')    }, 'Cancel'),
+      React.createElement('button', { 'data-testid': `list-${props.asset.id}`,     onClick: () => props.onListForSale(props.asset)                    }, 'List'),
+      React.createElement('button', { 'data-testid': `transfer-${props.asset.id}`, onClick: () => props.onTransfer(props.asset)                       }, 'Transfer'),
+      React.createElement('button', { 'data-testid': `cancel-${props.asset.id}`,   onClick: () => props.onCancelListing(props.asset.listing_id ?? '') }, 'Cancel'),
     ),
 }));
 
@@ -56,13 +55,14 @@ describe('AssetsTab', () => {
 
   it('يعرض Mint NFT button في empty state', () => {
     render(React.createElement(AssetsTab, { ...defaultProps }));
-    fireEvent.click(screen.getByText(/mint nft/i));
+    // ✅ getByRole بدل getByText — أدق
+    fireEvent.click(screen.getByRole('button', { name: /mint nft/i }));
     expect(defaultProps.onMintNFT).toHaveBeenCalledOnce();
   });
 
   it('يعرض Marketplace button في empty state', () => {
     render(React.createElement(AssetsTab, { ...defaultProps }));
-    fireEvent.click(screen.getByText(/marketplace/i));
+    fireEvent.click(screen.getByRole('button', { name: /marketplace/i }));
     expect(defaultProps.onGoMarketplace).toHaveBeenCalledOnce();
   });
 
