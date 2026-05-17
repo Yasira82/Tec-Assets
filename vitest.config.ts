@@ -1,12 +1,9 @@
 import { defineConfig } from 'vitest/config';
+import react            from '@vitejs/plugin-react-oxc';
 import path             from 'path';
 
 export default defineConfig({
-  // ✅ esbuild يتعامل مع JSX بدل tsconfig jsx:preserve
-  esbuild: {
-    jsx:             'automatic',
-    jsxImportSource: 'react',
-  },
+  plugins: [react()],
   test: {
     environment: 'happy-dom',
     include:     ['src/**/*.{test,spec}.{ts,tsx}'],
