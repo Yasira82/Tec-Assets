@@ -1,9 +1,15 @@
 import '@testing-library/jest-dom';
 import { vi, beforeEach } from 'vitest';
 
+// ✅ Fix: React Fast Refresh stubs (not available in test env)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).$RefreshReg$ = () => {};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).$RefreshSig$ = () => (type: unknown) => type;
+
 // ── Mock Next.js router ───────────────────────────────────
 vi.mock('next/navigation', () => ({
-  useRouter:  () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter:   () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/app',
 }));
 
