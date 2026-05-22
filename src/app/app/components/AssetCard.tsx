@@ -46,35 +46,72 @@ export function AssetCard({
   return (
     <>
       {viewerOpen && nftImageUrl && (
-        <AssetImageViewer imageUrl={nftImageUrl} altText={assetName} onClose={() => setViewerOpen(false)} />
-      )}
-      {previewOpen && (
-        <AssetPreviewModal
-          asset={asset} assetName={assetName} nftImageUrl={nftImageUrl}
-          showValues={showValues} onClose={() => setPreviewOpen(false)}
-          onListForSale={onListForSale} onCancelListing={onCancelListing}
-          onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
-          allAssets={allAssets} onRefresh={onRefresh}
+        <AssetImageViewer
+          imageUrl={nftImageUrl}
+          altText={assetName}
+          onClose={() => setViewerOpen(false)}
         />
       )}
+
+      {previewOpen && (
+        <AssetPreviewModal
+          asset={asset}
+          assetName={assetName}
+          nftImageUrl={nftImageUrl}
+          showValues={showValues}
+          onClose={() => setPreviewOpen(false)}
+          onListForSale={onListForSale}
+          onCancelListing={onCancelListing}
+          onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
+          allAssets={allAssets}
+          onRefresh={onRefresh}
+        />
+      )}
+
       <div
-        data-testid={`asset-${asset.id}`}
         onClick={() => setPreviewOpen(true)}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'perspective(1000px) rotateY(2deg) translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 30px ${colors.border}`; e.currentTarget.style.borderColor = colors.status; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = colors.border; }}
-        onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)'; e.currentTarget.style.boxShadow = `0 4px 20px ${colors.border}`; e.currentTarget.style.borderColor = colors.status; }}
-        onTouchEnd={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = colors.border; }}
-        style={{ background: '#0d0d14', border: `1px solid ${colors.border}`, borderRadius: 18, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease' }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform   = 'perspective(1000px) rotateY(2deg) translateY(-2px)';
+          e.currentTarget.style.boxShadow   = `0 8px 30px ${colors.border}`;
+          e.currentTarget.style.borderColor = colors.status;
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform   = 'none';
+          e.currentTarget.style.boxShadow   = 'none';
+          e.currentTarget.style.borderColor = colors.border;
+        }}
+        onTouchStart={e => {
+          e.currentTarget.style.transform   = 'scale(0.97)';
+          e.currentTarget.style.boxShadow   = `0 4px 20px ${colors.border}`;
+          e.currentTarget.style.borderColor = colors.status;
+        }}
+        onTouchEnd={e => {
+          e.currentTarget.style.transform   = 'none';
+          e.currentTarget.style.boxShadow   = 'none';
+          e.currentTarget.style.borderColor = colors.border;
+        }}
+        style={{
+          background: '#0d0d14',
+          border: `1px solid ${colors.border}`,
+          borderRadius: 18, padding: '16px 20px',
+          display: 'flex', alignItems: 'center', gap: 14,
+          cursor: 'pointer',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        }}
       >
+        {/* Icon */}
         <div style={{ width: 52, height: 52, borderRadius: 14, background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
           {nftImageUrl ? (
             <>
               <img src={nftImageUrl} alt={assetName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8, background: '#00000060', borderRadius: 4, padding: '1px 3px', color: '#fff' }}>🔍</div>
             </>
-          ) : (typeEmoji[asset.asset_type] ?? typeEmoji.default)}
+          ) : (
+            typeEmoji[asset.asset_type] ?? typeEmoji.default
+          )}
         </div>
 
+        {/* Name + Type */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {assetName}
@@ -84,6 +121,7 @@ export function AssetCard({
           </div>
         </div>
 
+        {/* Right Side */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#d4af37' : '#6b6b7a' }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
@@ -91,6 +129,8 @@ export function AssetCard({
           {asset.listing_price && (
             <div style={{ fontSize: 12, fontWeight: 800, color: '#d4af37' }}>{asset.listing_price}π</div>
           )}
+
+          {/* Transfer Button — active assets only */}
           {onTransfer && asset.status === 'active' && (
             <button
               onClick={e => { e.stopPropagation(); onTransfer(asset); }}
@@ -99,6 +139,7 @@ export function AssetCard({
               ↗ Transfer
             </button>
           )}
+
           {!onTransfer && <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>}
         </div>
       </div>
