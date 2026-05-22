@@ -48,12 +48,7 @@ export function AssetPreviewModal({
   const hasTraits = Object.keys(metadata).some(k => !['imageUrl', 'piPaymentId', 'name'].includes(k));
   const isDomain  = asset.asset_type === 'domain';
 
-  // ✅ case-insensitive — الـ backend بيرجع uppercase أحياناً
-  const statusLow = asset.status?.toLowerCase() ?? '';
-  const isActive  = statusLow === 'active';
-  const isOnSale  = statusLow === 'on_sale';
-
-  const startY            = useRef<number | null>(null);
+  const startY        = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
 
   const onTouchStart = (e: React.TouchEvent) => { startY.current = e.touches[0].clientY; };
@@ -81,26 +76,49 @@ export function AssetPreviewModal({
     >
       <div
         onClick={e => e.stopPropagation()}
-        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         style={{
           width: '100%', maxWidth: 480,
-          background: 'rgba(13,13,20,0.95)', backdropFilter: 'blur(20px)',
-          border: `1px solid ${colors.border}`, borderRadius: '24px 24px 0 0',
-          display: 'flex', flexDirection: 'column', maxHeight: '92vh',
+          background: 'rgba(13,13,20,0.95)',
+          backdropFilter: 'blur(20px)',
+          border: `1px solid ${colors.border}`,
+          borderRadius: '24px 24px 0 0',
+          display: 'flex', flexDirection: 'column',
+          maxHeight: '92vh',
           transform: `translateY(${dragY}px)`,
           transition: dragY === 0 ? 'transform 0.3s ease' : 'none',
           animation: dragY === 0 ? 'slideUp 0.3s ease' : 'none',
         }}
       >
+        {/* ── Handle ── */}
         <div style={{ padding: '16px 20px 0', flexShrink: 0 }}>
-          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#ffffff30', margin: '0 auto 16px' }} />
+          <div style={{
+            width: 40, height: 4, borderRadius: 2,
+            background: '#ffffff30', margin: '0 auto 16px',
+          }} />
         </div>
 
+        {/* ── Scrollable content ── */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px' }}>
+
           {nftImageUrl && (
-            <div onClick={onExpandImage} style={{ width: '100%', height: 220, borderRadius: 16, overflow: 'hidden', marginBottom: 20, cursor: 'zoom-in', border: `1px solid ${colors.border}`, position: 'relative' }}>
-              <img src={nftImageUrl} alt={assetName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderRadius: 8, padding: '4px 8px', fontSize: 11, color: '#fff' }}>
+            <div
+              onClick={onExpandImage}
+              style={{
+                width: '100%', height: 220, borderRadius: 16,
+                overflow: 'hidden', marginBottom: 20, cursor: 'zoom-in',
+                border: `1px solid ${colors.border}`, position: 'relative',
+              }}
+            >
+              <img src={nftImageUrl} alt={assetName}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{
+                position: 'absolute', bottom: 8, right: 8,
+                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                borderRadius: 8, padding: '4px 8px', fontSize: 11, color: '#fff',
+              }}>
                 🔍 Expand
               </div>
             </div>
@@ -108,27 +126,44 @@ export function AssetPreviewModal({
 
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{
+                fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 {assetName}
               </div>
-              <div style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: colors.status, background: colors.border, borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase' }}>
+              <div style={{
+                display: 'inline-block', fontSize: 10, fontWeight: 700,
+                letterSpacing: 1.5, color: colors.status, background: colors.border,
+                borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase',
+              }}>
                 {asset.asset_type}
               </div>
             </div>
-            <button onClick={() => handleShare(assetName, asset.listing_price)}
-              style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '10px 14px', color: '#6b6b7a', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>
+            <button
+              onClick={() => handleShare(assetName, asset.listing_price)}
+              style={{
+                background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12, padding: '10px 14px',
+                color: '#6b6b7a', fontSize: 16, cursor: 'pointer', flexShrink: 0,
+              }}
+            >
               🔗
             </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Status',  value: isOnSale ? 'ON SALE' : statusLow.toUpperCase() },
+              { label: 'Status',  value: asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase() },
               { label: 'Value',   value: showValues ? `${asset.value}π` : '****' },
               { label: 'Created', value: new Date(asset.created_at).toLocaleDateString() },
               { label: 'Price',   value: asset.listing_price ? `${asset.listing_price}π` : '—' },
             ].map(info => (
-              <div key={info.label} style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)', borderRadius: 12, padding: '10px 14px' }}>
+              <div key={info.label} style={{
+                background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)',
+                borderRadius: 12, padding: '10px 14px',
+              }}>
                 <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{info.label}</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{info.value}</div>
               </div>
@@ -137,38 +172,69 @@ export function AssetPreviewModal({
 
           {hasTraits && <NFTTraits metadata={metadata} colors={colors} />}
           {allAssets.length > 1 && <SimilarAssets asset={asset} allAssets={allAssets} colors={colors} />}
+
         </div>
 
-        <div style={{ flexShrink: 0, padding: '16px 20px 36px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(13,13,20,0.98)', backdropFilter: 'blur(20px)', display: 'flex', gap: 10 }}>
-
-          {isDomain && isActive && (
-            <MintAsNftButton asset={asset} onClose={onClose} onSuccess={() => onRefresh?.()} />
+        {/* ── Sticky Actions ── */}
+        <div style={{
+          flexShrink: 0,
+          padding: '16px 20px 36px',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(13,13,20,0.98)',
+          backdropFilter: 'blur(20px)',
+          display: 'flex', gap: 10,
+        }}>
+          {isDomain && asset.status === 'active' && (
+            <MintAsNftButton
+              asset={asset}
+              onClose={onClose}
+              onSuccess={() => onRefresh?.()}
+            />
           )}
 
-          {/* ✅ List for Sale — NFTs active فقط */}
-          {!isDomain && isActive && (
+          {!isDomain && asset.status === 'active' && (
             <button
               onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
-              style={{ flex: 1, padding: '16px', background: 'linear-gradient(135deg,#d4af37,#b8882a)', border: 'none', borderRadius: 16, color: '#0a0800', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+              style={{
+                flex: 1, padding: '16px',
+                background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                border: 'none', borderRadius: 16,
+                color: '#0a0800', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+              }}
+            >
               🏷️ List for Sale
             </button>
           )}
 
-          {/* ✅ Cancel — listing_id جاي من الـ BFF merge */}
-          {isOnSale && asset.listing_id && (
+          {asset.status === 'on_sale' && asset.listing_id && (
             <button
               onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
-              style={{ flex: 1, padding: '16px', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 16, color: '#e74c3c', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              style={{
+                flex: 1, padding: '16px',
+                background: 'rgba(231,76,60,0.08)',
+                border: '1px solid rgba(231,76,60,0.3)',
+                borderRadius: 16, color: '#e74c3c',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
               Cancel Listing
             </button>
           )}
 
-          <button onClick={onClose}
-            style={{ padding: '16px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, color: '#6b6b7a', fontSize: 14, cursor: 'pointer' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '16px 20px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16, color: '#6b6b7a',
+              fontSize: 14, cursor: 'pointer',
+            }}
+          >
             ✕
           </button>
         </div>
       </div>
     </div>
   );
-}
+            }
