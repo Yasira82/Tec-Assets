@@ -1,85 +1,56 @@
-import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { createHandler } from '@/lib/bff/createHandler';
 
 interface RawAsset {
-  id:        string;
-  slug:      string;
-  category:  string;
-  status:    string;
-  metadata?: Record<string, unknown>;
-  createdAt: string;
+  id:            string;
+  slug:          string;
+  category:      string;
+  status:        string;
+  metadata?:     Record<string, unknown>;
+  createdAt:     string;
+  listingId?:    string | null;
+  listingPrice?: number | null;
 }
 
-interface RawListing {
-  id:      string;
-  assetId: string;
-  status:  string;
-  price:   number;
-}
-
-const estimateValue = (a: RawAsset, activeListing?: RawListing): number => {
-  if (activeListing?.price) return activeListing.price;
-  const category = a.category?.toLowerCase();
-  if (category === 'domain') {
-    const name = a.slug.replace('.pi', '');
-    if (name.length <= 3) return 5;
-    if (name.length <= 5) return 3;
-    if (name.length <= 9) return 2;
-    return 1;
-  }
-  if (category === 'nft') return 2;
-  return 0;
-};
+const GATEWAY =
+  process.env.API_GATEWAY_URL ??
+  process.env.NEXT_PUBLIC_API_GATEWAY_URL ??
+  'https://api-gateway-production-6a68.up.railway.app';
 
 export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
-    const token       = req.cookies.get('tec_access_token')?.value ?? '';
-    const internalKey = process.env.INTERNAL_SECRET ?? '';
+    const token = req.cookies.get('tec_access_token')?.value ?? '';
 
-    const headers = {
-      Authorization:    `Bearer ${token}`,
-      'x-request-id':   ctx.requestId,
-      'x-internal-key': internalKey,
-    };
+    const res = await fetch(
+      `${GATEWAY}/api/assets/user/${encodeURIComponent(ctx.userId)}?_=${Date.now()}`,
+      {
+        headers: {
+          Authorization:    `Bearer ${token}`,
+          'x-request-id':   ctx.requestId,
+          'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+        },
+        cache: 'no-store',
+      },
+    );
 
-    // ✅ timestamp يبايبس الـ Gateway LRU cache
-    const bust = Date.now();
-
-    const [assetsRes, listingsRes] = await Promise.all([
-      fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}?_=${bust}`, {
-        headers, cache: 'no-store',
-      }),
-      fetch(`${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings?_=${bust}`, {
-        headers, cache: 'no-store',
-      }),
-    ]);
-
-    if (!assetsRes.ok) {
-      console.error('[BFF assets/list] failed:', assetsRes.status);
+    if (!res.ok) {
+      console.error('[BFF assets/list] failed:', res.status);
       return { data: [], total: 0 };
     }
 
-    const raw          = await assetsRes.json();
-    const listingsData = listingsRes.ok ? await listingsRes.json() : {};
-    const userListings: RawListing[] = listingsData?.data?.listings ?? [];
-
-    const assets = (raw?.data ?? []).map((a: RawAsset) => {
-      const activeListing = userListings.find(
-        l => l.assetId === a.id && l.status === 'ACTIVE',
-      );
-      return {
-        id:            a.id,
-        name:          (a.metadata?.name as string) ?? a.slug,
-        asset_type:    a.category?.toLowerCase() ?? 'domain',
-        value:         estimateValue(a, activeListing),
-        currency:      'PI',
-        status:        a.status?.toLowerCase() ?? 'active',
-        created_at:    a.createdAt,
-        listing_id:    activeListing?.id    ?? null,
-        listing_price: activeListing?.price ?? null,
-        metadata:      a.metadata ?? {},
-      };
-    });
+    const raw    = await res.json();
+    const assets = (raw?.data ?? []).map((a: RawAsset) => ({
+      id:            a.id,
+      name:          (a.metadata?.name as string) ?? a.slug,
+      asset_type:    a.category?.toLowerCase() ?? 'domain',
+      value:         a.category?.toLowerCase() === 'nft' ? 2 : 1,
+      currency:      'PI',
+      status:        a.status?.toLowerCase() ?? 'active',
+      created_at:    a.createdAt,
+      listing_id:    a.listingId    ?? null,
+      listing_price: a.listingPrice ?? null,
+      metadata:      a.metadata ?? {},
+    }));
 
     return { data: assets, total: assets.length };
   },
