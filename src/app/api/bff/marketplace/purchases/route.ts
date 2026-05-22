@@ -1,11 +1,10 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 
 interface RawPurchase {
-  id:       string;
-  assetId:  string;
-  price:    number;
-  title?:   string;
-  soldAt?:  string;
+  id:      string;
+  price:   number;
+  title?:  string;
+  soldAt?: string;
   asset?: {
     slug:      string;
     category:  string;
@@ -34,12 +33,16 @@ export const GET = createHandler({
 
     const raw       = await res.json();
     const purchases = (raw?.data?.purchases ?? raw?.data ?? []).map((p: RawPurchase) => ({
-      id:       p.id,
-      asset_id: p.assetId,
-      price:    p.price,
-      title:    p.title ?? p.asset?.slug ?? 'Unknown Asset',
-      sold_at:  p.soldAt ?? '',
-      metadata: p.asset?.metadata ?? {},
+      id:      p.id,
+      price:   p.price,
+      title:   p.title ?? p.asset?.slug ?? 'Unknown Asset',
+      sold_at: p.soldAt ?? '',
+      soldAt:  p.soldAt ?? '',              // ✅ PurchasesTab بيستخدم camelCase
+      asset: {                              // ✅ nested object زي ما PurchasesTab بيتوقع
+        slug:     p.asset?.slug     ?? '',
+        category: p.asset?.category ?? '',
+        metadata: p.asset?.metadata ?? {},
+      },
     }));
 
     return { purchases };
