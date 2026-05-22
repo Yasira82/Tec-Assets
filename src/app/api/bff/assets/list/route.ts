@@ -42,28 +42,25 @@ export const GET = createHandler({
       'x-internal-key': internalKey,
     };
 
-    console.log('[BFF assets/list] userId:', ctx.userId);
+    // ✅ timestamp يبايبس الـ Gateway LRU cache
+    const bust = Date.now();
 
     const [assetsRes, listingsRes] = await Promise.all([
-      fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`, {
+      fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}?_=${bust}`, {
         headers, cache: 'no-store',
       }),
-      fetch(`${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings`, {
+      fetch(`${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings?_=${bust}`, {
         headers, cache: 'no-store',
       }),
     ]);
-
-    console.log('[BFF assets/list] assetsRes status:', assetsRes.status);
 
     if (!assetsRes.ok) {
       console.error('[BFF assets/list] failed:', assetsRes.status);
       return { data: [], total: 0 };
     }
 
-    const raw = await assetsRes.json();
-    console.log('[BFF assets/list] raw count:', raw?.data?.length ?? 0, 'raw:', JSON.stringify(raw).slice(0, 200));
-
-    const listingsData  = listingsRes.ok ? await listingsRes.json() : {};
+    const raw          = await assetsRes.json();
+    const listingsData = listingsRes.ok ? await listingsRes.json() : {};
     const userListings: RawListing[] = listingsData?.data?.listings ?? [];
 
     const assets = (raw?.data ?? []).map((a: RawAsset) => {
@@ -72,7 +69,7 @@ export const GET = createHandler({
       );
       return {
         id:            a.id,
-        name:          (a.metadata?.name as string) ?? a.slug, // ✅ الاسم الحقيقي
+        name:          (a.metadata?.name as string) ?? a.slug,
         asset_type:    a.category?.toLowerCase() ?? 'domain',
         value:         estimateValue(a, activeListing),
         currency:      'PI',
@@ -83,8 +80,6 @@ export const GET = createHandler({
         metadata:      a.metadata ?? {},
       };
     });
-
-    console.log('[BFF assets/list] returning:', assets.length, 'assets');
 
     return { data: assets, total: assets.length };
   },
