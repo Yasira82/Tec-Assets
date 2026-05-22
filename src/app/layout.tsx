@@ -1,34 +1,11 @@
-import type { Metadata } from 'next';
-import Script                   from 'next/script';
-import { LocaleProvider }       from '@/lib/i18n';
-import { BackendOfflineBanner } from '@/components/BackendOfflineBanner';
+import type { Metadata }         from 'next';
+import { LocaleProvider }        from '@/lib/i18n';
+import { BackendOfflineBanner }  from '@/components/BackendOfflineBanner';
 
 export const metadata: Metadata = {
   title:       'TEC Assets — Digital Ownership',
   description: 'Manage your Pi Network digital assets — domains, NFTs, portfolio',
 };
-
-const piSandbox = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true';
-const piAppId   = process.env.NEXT_PUBLIC_PI_APP_ID ?? '';
-const piScript  = `(function(){
-  var tries=0;
-  function setReady(){window.__TEC_PI_READY=true;window.dispatchEvent(new Event('tec-pi-ready'));}
-  function initPi(){
-    if(tries++>=40)return;
-    if(typeof window.Pi==='undefined'){setTimeout(initPi,150);return;}
-    try{
-      window.Pi.init({version:'2.0',sandbox:${piSandbox},appId:'${piAppId}'});
-      setReady();
-    }catch(e){
-      var msg=String(e).toLowerCase();
-      if(msg.includes('already')||msg.includes('initialized')){
-        window.__TEC_PI_FOREIGN_SESSION=true;
-        setReady();
-      }else{setTimeout(initPi,150);}
-    }
-  }
-  initPi();
-})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -40,10 +17,45 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           html, body { height: 100%; width: 100%; background: #020205; }
           body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
         `}</style>
+
+        {/* ✅ Pi SDK — بدون async عشان يتحمل قبل الـ init */}
+        <script src="https://sdk.minepi.com/pi-sdk.js" />
+
+        <script
+  dangerouslySetInnerHTML={{
+    __html: `
+      (function() {
+        function initPi() {
+          if (typeof window.Pi !== 'undefined') {
+            try {
+              window.Pi.init({
+                version: '2.0',
+                sandbox: ${process.env.NEXT_PUBLIC_PI_SANDBOX === 'true'},
+                appId:   '${process.env.NEXT_PUBLIC_PI_APP_ID ?? ''}',
+              });
+              window.__TEC_PI_READY = true;
+              window.dispatchEvent(new Event('tec-pi-ready'));
+            } catch(e) {
+              var msg = String(e);
+              if (msg.includes('already') || msg.includes('initialized')) {
+                window.__TEC_PI_READY = true;
+                window.dispatchEvent(new Event('tec-pi-ready'));
+              } else {
+                window.__TEC_PI_ERROR = true;
+                window.dispatchEvent(new Event('tec-pi-error'));
+              }
+            }
+          } else {
+            setTimeout(initPi, 100);
+          }
+        }
+        initPi();
+      })();
+    `,
+  }}
+/>
       </head>
       <body>
-        <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
-        <Script id="pi-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: piScript }} />
         <LocaleProvider>
           <BackendOfflineBanner />
           {children}
