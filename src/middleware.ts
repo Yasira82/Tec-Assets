@@ -5,13 +5,16 @@ const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const CSRF_PROTECTED    = [
   '/api/auth/logout',
   '/api/auth/refresh',
-  '/api/bff/',
+  '/api/bff/assets/',
+  '/api/bff/marketplace/',
 ];
 
+// ✅ نفس pattern بتاع Commerce
 const CSRF_EXCLUDED = [
   '/api/bff/nft/upload',
   '/api/bff/nft/register',
-  '/api/bff/payment/',
+  '/api/bff/marketplace/buy',      // ✅ بيتعمل بعد Hub redirect — JWT بيحميه
+  '/api/bff/marketplace/cancel',   // ✅ نفس السبب
 ];
 
 export function middleware(req: NextRequest) {
@@ -31,6 +34,7 @@ export function middleware(req: NextRequest) {
   if (!CSRF_SAFE_METHODS.has(method)) {
     const isExcluded      = CSRF_EXCLUDED.some(r => pathname.startsWith(r));
     const isCsrfProtected = !isExcluded && CSRF_PROTECTED.some(r => pathname.startsWith(r));
+
     if (isCsrfProtected) {
       const csrfCookie = req.cookies.get('tec_csrf')?.value;
       const csrfHeader = req.headers.get('x-csrf-token');
