@@ -1,7 +1,7 @@
 'use client';
 
-import { useState }        from 'react';
-import { Asset, Listing }  from '../types';
+import { useState } from 'react';
+import { Asset }    from '../types';
 import { AssetImageViewer }  from './AssetImageViewer';
 import { AssetPreviewModal } from './AssetPreviewModal';
 
@@ -20,7 +20,7 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset, showValues, onListForSale, onCancelListing, onTransfer, allAssets = [], onRefresh, listings = [],
+  asset, showValues, onListForSale, onCancelListing, onTransfer, allAssets = [], onRefresh,
 }: {
   asset:           Asset;
   showValues:      boolean;
@@ -29,7 +29,6 @@ export function AssetCard({
   onTransfer?:     (asset: Asset) => void;
   allAssets?:      Asset[];
   onRefresh?:      () => void;
-  listings?:       Listing[];
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewerOpen,  setViewerOpen]  = useState(false);
@@ -47,59 +46,25 @@ export function AssetCard({
   return (
     <>
       {viewerOpen && nftImageUrl && (
-        <AssetImageViewer
-          imageUrl={nftImageUrl}
-          altText={assetName}
-          onClose={() => setViewerOpen(false)}
-        />
+        <AssetImageViewer imageUrl={nftImageUrl} altText={assetName} onClose={() => setViewerOpen(false)} />
       )}
-
       {previewOpen && (
         <AssetPreviewModal
-          asset={asset}
-          assetName={assetName}
-          nftImageUrl={nftImageUrl}
-          showValues={showValues}
-          onClose={() => setPreviewOpen(false)}
-          onListForSale={onListForSale}
-          onCancelListing={onCancelListing}
+          asset={asset} assetName={assetName} nftImageUrl={nftImageUrl}
+          showValues={showValues} onClose={() => setPreviewOpen(false)}
+          onListForSale={onListForSale} onCancelListing={onCancelListing}
           onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
-          allAssets={allAssets}
-          onRefresh={onRefresh}
-          listings={listings}
+          allAssets={allAssets} onRefresh={onRefresh}
         />
       )}
-
       <div
+        data-testid={`asset-${asset.id}`}
         onClick={() => setPreviewOpen(true)}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform   = 'perspective(1000px) rotateY(2deg) translateY(-2px)';
-          e.currentTarget.style.boxShadow   = `0 8px 30px ${colors.border}`;
-          e.currentTarget.style.borderColor = colors.status;
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform   = 'none';
-          e.currentTarget.style.boxShadow   = 'none';
-          e.currentTarget.style.borderColor = colors.border;
-        }}
-        onTouchStart={e => {
-          e.currentTarget.style.transform   = 'scale(0.97)';
-          e.currentTarget.style.boxShadow   = `0 4px 20px ${colors.border}`;
-          e.currentTarget.style.borderColor = colors.status;
-        }}
-        onTouchEnd={e => {
-          e.currentTarget.style.transform   = 'none';
-          e.currentTarget.style.boxShadow   = 'none';
-          e.currentTarget.style.borderColor = colors.border;
-        }}
-        style={{
-          background: '#0d0d14',
-          border: `1px solid ${colors.border}`,
-          borderRadius: 18, padding: '16px 20px',
-          display: 'flex', alignItems: 'center', gap: 14,
-          cursor: 'pointer',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
-        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'perspective(1000px) rotateY(2deg) translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 30px ${colors.border}`; e.currentTarget.style.borderColor = colors.status; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = colors.border; }}
+        onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)'; e.currentTarget.style.boxShadow = `0 4px 20px ${colors.border}`; e.currentTarget.style.borderColor = colors.status; }}
+        onTouchEnd={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = colors.border; }}
+        style={{ background: '#0d0d14', border: `1px solid ${colors.border}`, borderRadius: 18, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease' }}
       >
         <div style={{ width: 52, height: 52, borderRadius: 14, background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
           {nftImageUrl ? (
@@ -107,9 +72,7 @@ export function AssetCard({
               <img src={nftImageUrl} alt={assetName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8, background: '#00000060', borderRadius: 4, padding: '1px 3px', color: '#fff' }}>🔍</div>
             </>
-          ) : (
-            typeEmoji[asset.asset_type] ?? typeEmoji.default
-          )}
+          ) : (typeEmoji[asset.asset_type] ?? typeEmoji.default)}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
