@@ -4,30 +4,26 @@ export const PATCH = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
     const token = req.cookies.get('tec_access_token')?.value ?? '';
-    const body  = await req.json() as { listingId: string };
+    const body  = await req.json();
 
     if (!body.listingId) {
       return Response.json({ error: 'listingId required' }, { status: 400 });
     }
 
     const res = await fetch(
-      `${GATEWAY_URL}/api/assets/marketplace/${encodeURIComponent(body.listingId)}/cancel`,
+      `${GATEWAY_URL}/api/assets/marketplace/${body.listingId}/cancel`,
       {
-        method: 'PATCH',
-        cache:  'no-store',
+        method:  'PATCH',
         headers: {
-          'Content-Type':   'application/json',
-          Authorization:    `Bearer ${token}`,
-          'x-request-id':   ctx.requestId,
-          'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+          'Content-Type': 'application/json',
+          Authorization:  `Bearer ${token}`,
+          'x-request-id': ctx.requestId,
         },
-        body: JSON.stringify({
-          sellerId: ctx.userId,           // ✅ من الـ JWT — مش من الـ body
-        }),
+        body: JSON.stringify({ sellerId: ctx.userId }),
       },
     );
 
-    const data = await res.json().catch(() => ({}));
-    return Response.json(data, { status: res.status });
+    const data = await res.json();
+    return data;
   },
 });
