@@ -17,18 +17,24 @@ import { MarketplaceTab }     from './components/MarketplaceTab';
 import { PurchasesTab }       from './components/PurchasesTab';
 import { TransferModal }      from './components/TransferModal';
 
+// ✅ ISS-003: env vars بدل hardcoded URLs
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
 const SSO_URL    = `${HUB_URL}/api/auth/sso?target=${encodeURIComponent(ASSETS_URL)}`;
 
-const getCsrfToken = (): string =>
-  typeof document === 'undefined' ? '' :
-  document.cookie.split('; ').find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+const getCsrfToken = (): string => {
+  if (typeof document === 'undefined') return '';
+  return document.cookie.split('; ')
+    .find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+};
 
-const getTokenFromCookie = (): string | null =>
-  typeof document === 'undefined' ? null :
-  document.cookie.split('; ').find(row => row.startsWith('tec_access_token='))?.split('=')?.[1] ?? null;
+const getTokenFromCookie = (): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.split('; ').find(row => row.startsWith('tec_access_token='));
+  return match ? match.split('=')[1] : null;
+};
 
+// ── Bottom Nav ────────────────────────────────────────────
 const BottomNav = ({
   activeTab, setActiveTab, setAssetFilter,
 }: {
@@ -46,23 +52,52 @@ const BottomNav = ({
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
-      background: 'rgba(2,2,5,0.92)', backdropFilter: 'blur(20px)',
+      background: 'rgba(2,2,5,0.92)',
+      backdropFilter: 'blur(20px)',
       borderTop: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)',
+      display: 'flex',
+      paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
       {items.map(item => {
         const isActive = activeTab === item.key;
         return (
-          <button key={item.key}
-            onClick={() => { navigator.vibrate?.(8); if (item.key === 'assets') setAssetFilter('all'); setActiveTab(item.key); }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '10px 0 12px', background: 'none', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s' }}>
-            <div style={{ fontSize: 20, filter: isActive ? 'none' : 'grayscale(1) opacity(0.4)', transition: 'filter 0.2s, transform 0.2s', transform: isActive ? 'scale(1.15)' : 'scale(1)' }}>
+          <button
+            key={item.key}
+            onClick={() => {
+              navigator.vibrate?.(8);
+              if (item.key === 'assets') setAssetFilter('all');
+              setActiveTab(item.key);
+            }}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 4, padding: '10px 0 12px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <div style={{
+              fontSize: 20,
+              filter: isActive ? 'none' : 'grayscale(1) opacity(0.4)',
+              transition: 'filter 0.2s, transform 0.2s',
+              transform: isActive ? 'scale(1.15)' : 'scale(1)',
+            }}>
               {item.icon}
             </div>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: isActive ? '#d4af37' : '#3a3a4a', transition: 'color 0.2s' }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
+              color: isActive ? '#d4af37' : '#3a3a4a',
+              transition: 'color 0.2s',
+            }}>
               {item.label}
             </div>
-            {isActive && <div style={{ position: 'absolute', bottom: 0, width: 20, height: 2, borderRadius: 1, background: '#d4af37' }} />}
+            {isActive && (
+              <div style={{
+                position: 'absolute', bottom: 0,
+                width: 20, height: 2, borderRadius: 1,
+                background: '#d4af37',
+              }} />
+            )}
           </button>
         );
       })}
@@ -97,7 +132,7 @@ function AssetsPageInner() {
 
   useEffect(() => {
     if (!loaded) return;
-    if (settings.defaultTab === 'domains')   { setActiveTab('assets'); setAssetFilter('domains'); }
+    if (settings.defaultTab === 'domains') { setActiveTab('assets'); setAssetFilter('domains'); }
     else if (settings.defaultTab === 'nfts') { setActiveTab('assets'); setAssetFilter('nfts'); }
   }, [loaded, settings.defaultTab]);
 
@@ -131,73 +166,84 @@ function AssetsPageInner() {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
-    const token = getTokenFromCookie();
-    if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
+  if (isLoading) return;
+  const token = getTokenFromCookie();
+  if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
 
-    const params        = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment_status');
+  const params        = new URLSearchParams(window.location.search);
+  const paymentStatus = params.get('payment_status');
 
-    if (paymentStatus === 'success') {
-      const txid      = params.get('txid')       ?? '';
-      const paymentId = params.get('payment_id') ?? '';
-      const productId = params.get('product_id') ?? '';
+  if (paymentStatus === 'success') {
+    const txid      = params.get('txid')       ?? '';
+    const paymentId = params.get('payment_id') ?? '';
+    const productId = params.get('product_id') ?? '';
 
-      if (productId.startsWith('nft:')) {
-        try {
-          const nftMeta = JSON.parse(atob(productId.slice(4)));
-          showToast('NFT Minted! 🎨');
-          setActiveTab('assets');
+    if (productId.startsWith('nft:')) {
+      try {
+        const nftMeta = JSON.parse(atob(productId.slice(4)));
+        showToast('NFT Minted! 🎨');
+        setActiveTab('assets');
 
-          fetch('/api/bff/nft/register', {
-            method: 'POST', credentials: 'include',
-            headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-            body: JSON.stringify({
-              name:        nftMeta.n,
-              description: nftMeta.d ?? '',
-              imageUrl:    nftMeta.u,
-              key:         nftMeta.k,
-              mimeType:    nftMeta.m,
-              paymentId,
-              txid,
-            }),
+        fetch('/api/bff/nft/register', {
+          method:      'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken(),
+          },
+          body: JSON.stringify({
+            name:        nftMeta.n,
+            description: nftMeta.d ?? '',
+            imageUrl:    nftMeta.u,
+            key:         nftMeta.k,
+            mimeType:    nftMeta.m,
+            paymentId,
+            txid,
+          }),
+        })
+          .then(async (res) => {
+            const data = await res.json().catch(() => ({})) as { error?: string };
+            if (res.ok) {
+              fetchData();
+            } else {
+              console.error('[NFT register] failed:', res.status, data);
+              showToast(`Register failed: ${data.error ?? res.status}`, 'error');
+            }
           })
-            .then(async (res) => {
-              const data = await res.json().catch(() => ({})) as { error?: string };
-              if (res.ok) {
-                // ✅ استنى الـ backend يحفظ قبل ما نجيب الـ list
-                await new Promise(r => setTimeout(r, 2000));
-                fetchData();
-              } else {
-                console.error('[NFT register] failed:', res.status, data);
-                showToast(`Register failed: ${data.error ?? res.status}`, 'error');
-              }
-            })
-            .catch((err: unknown) => {
-              console.error('[NFT register] network error:', err);
-              showToast('Register failed — check console', 'error');
-            });
-        } catch {
-          showToast('NFT data error', 'error');
-        }
-      } else {
-        showToast('Purchase successful! 🎉');
-        setActiveTab('purchases');
-        if (productId && paymentId) {
-          fetch('/api/bff/marketplace/buy', {
-            method: 'POST', credentials: 'include',
-            headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-            body: JSON.stringify({ listing_id: productId, payment_id: paymentId, txid }),
-          }).then(() => { fetchPurchases(); fetchData(); }).catch(() => {});
-        }
+          .catch((err: unknown) => {
+            console.error('[NFT register] network error:', err);
+            showToast('Register failed — check console', 'error');
+          });
+      } catch {
+        showToast('NFT data error', 'error');
       }
-      window.history.replaceState({}, '', '/app');
-    }
-  }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
+    } else {
+      showToast('Purchase successful! 🎉');
+      setActiveTab('purchases');
 
-  // ✅ OLD working handleBuy — always Hub redirect
-  const handleBuy = useCallback((listing: Listing) => {
-    if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
+      if (productId && paymentId) {
+        fetch('/api/bff/marketplace/buy', {
+          method:      'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken(),
+          },
+          body: JSON.stringify({ listing_id: productId, payment_id: paymentId, txid }),
+        })
+          .then(() => { fetchPurchases(); fetchData(); })
+          .catch(() => {});
+      }
+    }
+
+    window.history.replaceState({}, '', '/app');
+  }
+}, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
+
+const handleBuy = useCallback((listing: Listing) => {
+  if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
+
+    // ✅ ISS-003: ASSETS_URL بدل hardcoded + /hub?pay=1 (Hub Modal pattern)
     window.location.href = `${HUB_URL}/hub?pay=1`
       + `&amount=${listing.price}`
       + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
@@ -212,7 +258,10 @@ function AssetsPageInner() {
     try {
       const res = await fetch('/api/bff/marketplace/cancel', {
         method: 'PATCH', credentials: 'include',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': getCsrfToken(),
+        },
         body: JSON.stringify({ listingId: cancellingListing.id }),
       });
       if (res.ok) { fetchListings(); fetchData(); }
@@ -220,13 +269,16 @@ function AssetsPageInner() {
     finally { setCancelLoading(false); setCancellingListing(null); }
   }, [cancellingListing, fetchListings, fetchData]);
 
-  const handleTransfer = useCallback((asset: Asset) => { setTransferringAsset(asset); }, []);
-  const handleTransferSuccess = useCallback(() => {
-    setTransferringAsset(null);
-    showToast('Asset transferred! ↗');
-    fetchData();
-  }, [fetchData, showToast]);
+const handleTransfer = useCallback((asset: Asset) => {
+  setTransferringAsset(asset);
+}, []);
 
+const handleTransferSuccess = useCallback(() => {
+  setTransferringAsset(null);
+  showToast('Asset transferred! ↗');
+  fetchData();
+}, [fetchData, showToast]);
+  
   const handleCancelFromAssets = useCallback((listingId: string) => {
     setCancellingListing({
       id: listingId, asset_id: '', seller_id: '', price: 0,
@@ -242,9 +294,9 @@ function AssetsPageInner() {
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered       = assetFilter === 'all' ? assets : assets.filter(a =>
+  const filtered   = assetFilter === 'all' ? assets : assets.filter(a =>
     a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
-  const totalValue     = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const totalValue = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
   const displayBalance = settings.hideBalance ? '****' : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
   const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
@@ -277,12 +329,13 @@ function AssetsPageInner() {
           animation: 'toastIn 0.3s ease', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         }}>
           <span style={{ fontSize: 16 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: toast.type === 'success' ? '#7ee7c0' : '#e74c3c' }}>
+          <span style={{ fontSize: 13, fontWeight: 600,
+            color: toast.type === 'success' ? '#7ee7c0' : '#e74c3c' }}>
             {toast.msg}
           </span>
         </div>
       )}
-
+      
       {mintingNFT && <NFTUploadModal onClose={() => setMintingNFT(false)} />}
 
       {(listingAsset || editingListing) && (
@@ -303,25 +356,32 @@ function AssetsPageInner() {
         />
       )}
 
-      {transferringAsset && (
-        <TransferModal
-          asset={transferringAsset}
-          onClose={() => setTransferringAsset(null)}
-          onSuccess={handleTransferSuccess}
-        />
-      )}
-
+{transferringAsset && (
+  <TransferModal
+    asset={transferringAsset}
+    onClose={() => setTransferringAsset(null)}
+    onSuccess={handleTransferSuccess}
+  />
+)}
+      
       <header style={{
-        padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+        padding: '14px 20px',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, background: 'rgba(2,2,5,0.92)',
-        backdropFilter: 'blur(20px)', zIndex: 100,
+        position: 'sticky', top: 0,
+        background: 'rgba(2,2,5,0.92)',
+        backdropFilter: 'blur(20px)',
+        zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button className="btn" onClick={() => goToTEC('HUB')} style={{
-            background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '6px 10px',
-            color: '#d4af37', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '6px 10px',
+            color: '#d4af37', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 2,
           }}>
             <span style={{ fontSize: 16 }}>🔷</span>
             <span style={{ fontSize: 8, color: '#4a4a5a', letterSpacing: 1 }}>HUB</span>
@@ -336,9 +396,11 @@ function AssetsPageInner() {
             {user?.piUsername ? `@${user.piUsername}` : ''}
           </div>
           <button className="btn" onClick={() => router.push('/app/settings')} style={{
-            background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
-            padding: '8px 12px', color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '8px 12px',
+            color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
           }}>
             ⚙️
           </button>
@@ -350,9 +412,11 @@ function AssetsPageInner() {
           <div style={{
             borderRadius: 24, padding: '22px 24px',
             background: 'linear-gradient(135deg,rgba(26,18,8,0.9) 0%,rgba(15,15,26,0.9) 60%,rgba(10,15,31,0.9) 100%)',
-            backdropFilter: 'blur(20px)', border: '1px solid rgba(212,175,55,0.15)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(212,175,55,0.15)',
           }}>
-            <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
+            <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3,
+              textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
                 {dataLoading ? '—' : displayTotal}
@@ -368,7 +432,8 @@ function AssetsPageInner() {
                 { label: 'Purchases', value: purchases.length.toString() },
               ].map(s => (
                 <div key={s.label} style={{
-                  background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)',
+                  background: 'rgba(255,255,255,0.04)',
+                  backdropFilter: 'blur(10px)',
                   borderRadius: 12, padding: '10px 12px',
                 }}>
                   <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
@@ -406,7 +471,8 @@ function AssetsPageInner() {
           {(['all', 'domains', 'nfts'] as const).map(tab => (
             <button key={tab} onClick={() => setAssetFilter(tab)} style={{
               padding: '6px 14px', borderRadius: 20, cursor: 'pointer',
-              fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' as const,
+              fontSize: 11, fontWeight: 600, letterSpacing: 1,
+              textTransform: 'uppercase' as const,
               background: assetFilter === tab ? 'rgba(255,255,255,0.08)' : 'none',
               color:      assetFilter === tab ? '#fff' : '#3a3a4a',
               border:     assetFilter === tab ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
@@ -417,8 +483,10 @@ function AssetsPageInner() {
           ))}
           <button onClick={() => setMintingNFT(true)} style={{
             marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
-            background: 'rgba(123,107,200,0.08)', border: '1px solid rgba(123,107,200,0.25)',
-            color: '#b39ddb', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+            background: 'rgba(123,107,200,0.08)',
+            border: '1px solid rgba(123,107,200,0.25)',
+            color: '#b39ddb', fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', whiteSpace: 'nowrap',
           }}>
             + NFT
           </button>
@@ -428,33 +496,53 @@ function AssetsPageInner() {
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {activeTab === 'assets' && (
           <AssetsTab
-            assets={assets} filtered={filtered} dataLoading={dataLoading}
-            showValues={settings.showValues} onListForSale={setListingAsset}
-            onCancelListing={handleCancelFromAssets} onMintNFT={() => setMintingNFT(true)}
-            onGoMarketplace={() => setActiveTab('marketplace')} onTransfer={handleTransfer}
+            assets={assets}
+            filtered={filtered}
+            dataLoading={dataLoading}
+            showValues={settings.showValues}
+            onListForSale={setListingAsset}
+            onCancelListing={handleCancelFromAssets}
+            onMintNFT={() => setMintingNFT(true)}
+            onGoMarketplace={() => setActiveTab('marketplace')}
+            onTransfer={handleTransfer}
             onRefresh={fetchData}
           />
         )}
         {activeTab === 'marketplace' && (
           <MarketplaceTab
-            listings={listings} currentUserId={user?.id ?? ''}
-            onBuy={handleBuy} onEditPrice={setEditingListing}
-            onCancel={setCancellingListing} onGoAssets={() => setActiveTab('assets')}
+            listings={listings}
+            currentUserId={user?.id ?? ''}
+            onBuy={handleBuy}
+            onEditPrice={setEditingListing}
+            onCancel={setCancellingListing}
+            onGoAssets={() => setActiveTab('assets')}
           />
         )}
         {activeTab === 'purchases' && (
-          <PurchasesTab purchases={purchases} onGoMarketplace={() => setActiveTab('marketplace')} />
+          <PurchasesTab
+            purchases={purchases}
+            onGoMarketplace={() => setActiveTab('marketplace')}
+          />
         )}
         {activeTab === 'portfolio' && (
-          <PortfolioTab assets={assets} wallet={wallet} showValues={settings.showValues} hideBalance={settings.hideBalance} />
+          <PortfolioTab
+            assets={assets}
+            wallet={wallet}
+            showValues={settings.showValues}
+            hideBalance={settings.hideBalance}
+          />
         )}
       </div>
 
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} setAssetFilter={setAssetFilter} />
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        setAssetFilter={setAssetFilter}
+      />
     </div>
   );
 }
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-                                 }
+        }
