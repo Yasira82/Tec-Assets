@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState }   from 'react';
-import { Asset }              from '../types';
+import { Asset, Listing }     from '../types';
 import { NFTTraits }          from './NFTTraits';
 import { SimilarAssets }      from './SimilarAssets';
 import { MintAsNftButton }    from './MintAsNftButton';
@@ -30,7 +30,7 @@ const handleShare = async (assetName: string, price?: number | null) => {
 export function AssetPreviewModal({
   asset, assetName, nftImageUrl, showValues,
   onClose, onListForSale, onCancelListing, onExpandImage,
-  allAssets = [], onRefresh,
+  allAssets = [], onRefresh, listings = [],
 }: {
   asset:           Asset;
   assetName:       string;
@@ -42,11 +42,20 @@ export function AssetPreviewModal({
   onExpandImage:   () => void;
   allAssets?:      Asset[];
   onRefresh?:      () => void;
+  listings?:       Listing[];
 }) {
   const colors    = assetColors[asset.asset_type] ?? assetColors.default;
   const metadata  = (asset.metadata ?? {}) as Record<string, unknown>;
   const hasTraits = Object.keys(metadata).some(k => !['imageUrl', 'piPaymentId', 'name'].includes(k));
   const isDomain  = asset.asset_type === 'domain';
+
+  // ✅ ابحث عن الـ listing من الـ listings array لو listing_id مش موجود على الـ asset
+  const activeListing = listings.find(
+    l => l.asset_id === asset.id && (l.status === 'ACTIVE' || l.status === 'active'),
+  );
+  const listingId = asset.listing_id ?? activeListing?.id ?? null;
+  const isOnSale  = asset.status === 'on_sale' || asset.status === 'ON_SALE' || !!activeListing;
+  const isActive  = asset.status === 'active'  || asset.status === 'ACTIVE';
 
   const startY        = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
@@ -155,10 +164,10 @@ export function AssetPreviewModal({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Status',  value: asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase() },
+              { label: 'Status',  value: isOnSale ? 'ON SALE' : isActive ? 'ACTIVE' : asset.status.toUpperCase() },
               { label: 'Value',   value: showValues ? `${asset.value}π` : '****' },
               { label: 'Created', value: new Date(asset.created_at).toLocaleDateString() },
-              { label: 'Price',   value: asset.listing_price ? `${asset.listing_price}π` : '—' },
+              { label: 'Price',   value: asset.listing_price ? `${asset.listing_price}π` : activeListing?.price ? `${activeListing.price}π` : '—' },
             ].map(info => (
               <div key={info.label} style={{
                 background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)',
@@ -184,7 +193,8 @@ export function AssetPreviewModal({
           backdropFilter: 'blur(20px)',
           display: 'flex', gap: 10,
         }}>
-          {isDomain && asset.status === 'active' && (
+          {/* Mint Domain as NFT */}
+          {isDomain && isActive && (
             <MintAsNftButton
               asset={asset}
               onClose={onClose}
@@ -192,7 +202,8 @@ export function AssetPreviewModal({
             />
           )}
 
-          {!isDomain && asset.status === 'active' && (
+          {/* ✅ List for Sale */}
+          {!isDomain && isActive && (
             <button
               onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
               style={{
@@ -206,9 +217,10 @@ export function AssetPreviewModal({
             </button>
           )}
 
-          {asset.status === 'on_sale' && asset.listing_id && (
+          {/* ✅ Cancel Listing — يشتغل حتى لو listing_id مش على الـ asset */}
+          {isOnSale && listingId && (
             <button
-              onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
+              onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(listingId); }}
               style={{
                 flex: 1, padding: '16px',
                 background: 'rgba(231,76,60,0.08)',
