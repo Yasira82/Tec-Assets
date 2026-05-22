@@ -1,7 +1,7 @@
 'use client';
 
-import { Asset, Listing } from '../types';
-import { AssetCard }      from './AssetCard';
+import { Asset }     from '../types';
+import { AssetCard } from './AssetCard';
 
 const SkeletonCard = () => (
   <div style={{ background: '#0d0d14', borderRadius: 18, border: '1px solid #ffffff08', animation: 'shimmer 1.4s ease infinite', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px' }}>
@@ -20,7 +20,6 @@ const SkeletonCard = () => (
 export function AssetsTab({
   assets, filtered, dataLoading, showValues,
   onListForSale, onCancelListing, onMintNFT, onGoMarketplace, onTransfer, onRefresh,
-  listings = [],
 }: {
   assets:          Asset[];
   filtered:        Asset[];
@@ -32,7 +31,6 @@ export function AssetsTab({
   onGoMarketplace: () => void;
   onTransfer:      (asset: Asset) => void;
   onRefresh?:      () => void;
-  listings?:       Listing[];
 }) {
   if (dataLoading) return <>{[1,2,3].map(i => <SkeletonCard key={i} />)}</>;
 
@@ -66,7 +64,6 @@ export function AssetsTab({
           onTransfer={onTransfer}
           allAssets={assets}
           onRefresh={onRefresh}
-          listings={listings}
         />
       ))}
     </>
