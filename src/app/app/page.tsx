@@ -173,11 +173,15 @@ function AssetsPageInner() {
             body: JSON.stringify({ name: nftMeta.n, description: nftMeta.d ?? '', imageUrl: nftMeta.u, key: nftMeta.k, mimeType: nftMeta.m, paymentId, txid }),
           })
             .then(async (res) => {
-              const data = await res.json().catch(() => ({})) as { error?: string };
-              if (res.ok) { fetchData(); }
-              else { showToast(`Register failed: ${data.error ?? res.status}`, 'error'); }
-            })
-            .catch(() => { showToast('Register failed', 'error'); });
+  const data = await res.json().catch(() => ({})) as { error?: string };
+  if (res.ok) {
+    await new Promise(r => setTimeout(r, 1500)); // ✅
+    fetchData();
+  } else {
+    showToast(`Register failed: ${data.error ?? res.status}`, 'error');
+  }
+})
+.catch(() => { showToast('Register failed', 'error'); });
         } catch { showToast('NFT data error', 'error'); }
       } else {
         showToast('Purchase successful! 🎉');
