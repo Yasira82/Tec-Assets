@@ -16,59 +16,75 @@ interface RawListing {
   price:   number;
 }
 
-const BASE_VALUE: Record<string, number> = {
-  domain: 1, nft: 2, token: 1, badge: 1, digital_asset: 1,
+const estimateValue = (a: RawAsset, activeListing?: RawListing): number => {
+  if (activeListing?.price) return activeListing.price;
+  const category = a.category?.toLowerCase();
+  if (category === 'domain') {
+    const name = a.slug.replace('.pi', '');
+    if (name.length <= 3) return 5;
+    if (name.length <= 5) return 3;
+    if (name.length <= 9) return 2;
+    return 1;
+  }
+  if (category === 'nft') return 2;
+  return 0;
 };
 
 export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
-    const token = req.cookies.get('tec_access_token')?.value ?? '';
+    const token       = req.cookies.get('tec_access_token')?.value ?? '';
+    const internalKey = process.env.INTERNAL_SECRET ?? '';
+
     const headers = {
       Authorization:    `Bearer ${token}`,
       'x-request-id':   ctx.requestId,
-      'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+      'x-internal-key': internalKey,
     };
-    const bust = Date.now();
+
+    console.log('[BFF assets/list] userId:', ctx.userId);
 
     const [assetsRes, listingsRes] = await Promise.all([
-      fetch(
-        `${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}?_=${bust}`,
-        { headers, cache: 'no-store' },
-      ),
-      fetch(
-        `${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings?_=${bust}`,
-        { headers, cache: 'no-store' },
-      ),
+      fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`, {
+        headers, cache: 'no-store',
+      }),
+      fetch(`${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings`, {
+        headers, cache: 'no-store',
+      }),
     ]);
 
+    console.log('[BFF assets/list] assetsRes status:', assetsRes.status);
+
     if (!assetsRes.ok) {
-      console.error('[BFF assets/list] assets fetch failed:', assetsRes.status);
+      console.error('[BFF assets/list] failed:', assetsRes.status);
       return { data: [], total: 0 };
     }
 
-    const rawAssets   = await assetsRes.json();
-    const rawListings = listingsRes.ok ? await listingsRes.json() : {};
-    const listings: RawListing[] = rawListings?.data?.listings ?? [];
+    const raw = await assetsRes.json();
+    console.log('[BFF assets/list] raw count:', raw?.data?.length ?? 0, 'raw:', JSON.stringify(raw).slice(0, 200));
 
-    const assets = (rawAssets?.data ?? []).map((a: RawAsset) => {
-      const type   = a.category?.toLowerCase() ?? 'digital_asset';
-      const active = listings.find(
+    const listingsData  = listingsRes.ok ? await listingsRes.json() : {};
+    const userListings: RawListing[] = listingsData?.data?.listings ?? [];
+
+    const assets = (raw?.data ?? []).map((a: RawAsset) => {
+      const activeListing = userListings.find(
         l => l.assetId === a.id && l.status === 'ACTIVE',
       );
       return {
         id:            a.id,
-        name:          (a.metadata?.name as string) ?? a.slug,
-        asset_type:    type,
+        name:          (a.metadata?.name as string) ?? a.slug, // ✅ الاسم الحقيقي
+        asset_type:    a.category?.toLowerCase() ?? 'domain',
+        value:         estimateValue(a, activeListing),
+        currency:      'PI',
         status:        a.status?.toLowerCase() ?? 'active',
-        value:         active?.price ?? BASE_VALUE[type] ?? 1,
-        currency:      'PI' as const,
         created_at:    a.createdAt,
-        listing_id:    active?.id    ?? null,
-        listing_price: active?.price ?? null,
+        listing_id:    activeListing?.id    ?? null,
+        listing_price: activeListing?.price ?? null,
         metadata:      a.metadata ?? {},
       };
     });
+
+    console.log('[BFF assets/list] returning:', assets.length, 'assets');
 
     return { data: assets, total: assets.length };
   },
