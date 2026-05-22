@@ -1,15 +1,17 @@
+export type AssetType   = 'domain' | 'nft' | 'token' | 'badge' | 'digital_asset';
+export type AssetStatus = 'active' | 'pending' | 'locked' | 'on_sale';
+
 export interface Asset {
   id:            string;
   name:          string;
-  asset_type:    string;
-  value:         number | string;
-  currency:      string;
-  status:        string;
+  asset_type:    AssetType;
+  status:        AssetStatus;
+  value:         number;
+  currency:      'PI';
   created_at:    string;
   listing_id:    string | null;
   listing_price: number | null;
-  owner_id?:     string;                  // ✅ أضف
-  metadata?:     Record<string, unknown>;
+  metadata:      Record<string, unknown>;
 }
 
 export interface Listing {
@@ -17,35 +19,23 @@ export interface Listing {
   asset_id:    string;
   seller_id:   string;
   price:       number;
-  currency:    string;
+  currency:    'PI';
   status:      string;
   title:       string;
   description: string;
   category:    string;
   created_at:  string;
-  metadata?:   Record<string, unknown>; 
+  metadata:    Record<string, unknown>;
 }
 
 export interface Purchase {
-  id:        string;
-  assetId:   string;
-  sellerId:  string;
-  buyerId:   string;
-  price:     number;
-  currency:  string;
-  status:    string;
-  soldAt:    string;
-  asset: {
-    slug:     string;
-    category: string;
-    metadata: Record<string, unknown>;
-  };
+  id:       string;
+  asset_id: string;
+  price:    number;
+  title:    string;
+  sold_at:  string;
+  metadata: Record<string, unknown>;
 }
 
-export interface WalletData {
-  balance:  number;
-  currency: string;
-  walletId: string | null;
-}
-
-export type MainTab = 'assets' | 'portfolio' | 'marketplace' | 'purchases';
+export interface WalletData { balance: number; currency: string; }
+export type MainTab = 'assets' | 'marketplace' | 'purchases' | 'portfolio';
