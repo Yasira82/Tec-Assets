@@ -18,9 +18,10 @@ export const POST = createHandler({
     }
 
     const res = await fetch(
-      `${GATEWAY_URL}/api/assets/marketplace/${body.listing_id}/buy`,
+      `${GATEWAY_URL}/api/assets/marketplace/${encodeURIComponent(body.listing_id)}/buy`,
       {
-        method:  'POST',
+        method: 'POST',
+        cache:  'no-store',
         headers: {
           'Content-Type':   'application/json',
           Authorization:    `Bearer ${token}`,
@@ -28,7 +29,7 @@ export const POST = createHandler({
           'x-internal-key': process.env.INTERNAL_SECRET ?? '',
         },
         body: JSON.stringify({
-          buyerId:   ctx.userId,
+          buyerId:   ctx.userId,       // ✅ من الـ JWT — مش من الـ body
           paymentId: body.payment_id,
         }),
       },
@@ -38,9 +39,8 @@ export const POST = createHandler({
 
     if (!res.ok) {
       console.error('[BFF marketplace/buy] failed:', res.status, data);
-      return Response.json(data, { status: res.status });
     }
 
-    return Response.json({ success: true, data });
+    return Response.json(data, { status: res.status });
   },
 });
