@@ -175,8 +175,10 @@ function AssetsPageInner() {
             .then(async (res) => {
   const data = await res.json().catch(() => ({})) as { error?: string };
   if (res.ok) {
-    await new Promise(r => setTimeout(r, 1500)); // ✅
+    await new Promise(r => setTimeout(r, 3000));
     fetchData();
+    // ✅ retry بعد 4 ثواني تانية لو الـ gateway cache
+    setTimeout(() => fetchData(), 4000);
   } else {
     showToast(`Register failed: ${data.error ?? res.status}`, 'error');
   }
