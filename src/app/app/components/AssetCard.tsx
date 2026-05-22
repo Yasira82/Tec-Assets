@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Asset }    from '../types';
+import { useState }        from 'react';
+import { Asset, Listing }  from '../types';
 import { AssetImageViewer }  from './AssetImageViewer';
 import { AssetPreviewModal } from './AssetPreviewModal';
 
@@ -20,7 +20,7 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset, showValues, onListForSale, onCancelListing, onTransfer, allAssets = [], onRefresh,
+  asset, showValues, onListForSale, onCancelListing, onTransfer, allAssets = [], onRefresh, listings = [],
 }: {
   asset:           Asset;
   showValues:      boolean;
@@ -29,6 +29,7 @@ export function AssetCard({
   onTransfer?:     (asset: Asset) => void;
   allAssets?:      Asset[];
   onRefresh?:      () => void;
+  listings?:       Listing[];
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewerOpen,  setViewerOpen]  = useState(false);
@@ -65,6 +66,7 @@ export function AssetCard({
           onExpandImage={() => { setPreviewOpen(false); setViewerOpen(true); }}
           allAssets={allAssets}
           onRefresh={onRefresh}
+          listings={listings}
         />
       )}
 
@@ -99,7 +101,6 @@ export function AssetCard({
           transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
         }}
       >
-        {/* Icon */}
         <div style={{ width: 52, height: 52, borderRadius: 14, background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
           {nftImageUrl ? (
             <>
@@ -111,7 +112,6 @@ export function AssetCard({
           )}
         </div>
 
-        {/* Name + Type */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {assetName}
@@ -121,7 +121,6 @@ export function AssetCard({
           </div>
         </div>
 
-        {/* Right Side */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#d4af37' : '#6b6b7a' }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
@@ -129,8 +128,6 @@ export function AssetCard({
           {asset.listing_price && (
             <div style={{ fontSize: 12, fontWeight: 800, color: '#d4af37' }}>{asset.listing_price}π</div>
           )}
-
-          {/* Transfer Button — active assets only */}
           {onTransfer && asset.status === 'active' && (
             <button
               onClick={e => { e.stopPropagation(); onTransfer(asset); }}
@@ -139,7 +136,6 @@ export function AssetCard({
               ↗ Transfer
             </button>
           )}
-
           {!onTransfer && <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>}
         </div>
       </div>
