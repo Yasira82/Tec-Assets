@@ -48,12 +48,12 @@ export function AssetPreviewModal({
   const hasTraits = Object.keys(metadata).some(k => !['imageUrl', 'piPaymentId', 'name'].includes(k));
   const isDomain  = asset.asset_type === 'domain';
 
-  // ✅ case-insensitive status check
+  // ✅ case-insensitive — الـ backend بيرجع uppercase أحياناً
   const statusLow = asset.status?.toLowerCase() ?? '';
   const isActive  = statusLow === 'active';
   const isOnSale  = statusLow === 'on_sale';
 
-  const startY        = useRef<number | null>(null);
+  const startY            = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
 
   const onTouchStart = (e: React.TouchEvent) => { startY.current = e.touches[0].clientY; };
@@ -145,7 +145,7 @@ export function AssetPreviewModal({
             <MintAsNftButton asset={asset} onClose={onClose} onSuccess={() => onRefresh?.()} />
           )}
 
-          {/* ✅ List for Sale — NFTs when active */}
+          {/* ✅ List for Sale — NFTs active فقط */}
           {!isDomain && isActive && (
             <button
               onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
@@ -154,7 +154,7 @@ export function AssetPreviewModal({
             </button>
           )}
 
-          {/* ✅ Cancel Listing */}
+          {/* ✅ Cancel — listing_id جاي من الـ BFF merge */}
           {isOnSale && asset.listing_id && (
             <button
               onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
@@ -171,4 +171,4 @@ export function AssetPreviewModal({
       </div>
     </div>
   );
-        }
+}
