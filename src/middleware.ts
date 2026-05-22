@@ -8,11 +8,11 @@ const CSRF_PROTECTED    = [
   '/api/bff/',
 ];
 
-// ✅ JWT-validated مباشرة — CSRF redundant
-const CSRF_EXCLUDED = new Set([
+const CSRF_EXCLUDED = [
   '/api/bff/nft/upload',
   '/api/bff/nft/register',
-]);
+  '/api/bff/payment/',
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -29,8 +29,9 @@ export function middleware(req: NextRequest) {
   }
 
   if (!CSRF_SAFE_METHODS.has(method)) {
-    const isCsrfProtected = CSRF_PROTECTED.some(r => pathname.startsWith(r));
-    if (isCsrfProtected && !CSRF_EXCLUDED.has(pathname)) {
+    const isExcluded      = CSRF_EXCLUDED.some(r => pathname.startsWith(r));
+    const isCsrfProtected = !isExcluded && CSRF_PROTECTED.some(r => pathname.startsWith(r));
+    if (isCsrfProtected) {
       const csrfCookie = req.cookies.get('tec_csrf')?.value;
       const csrfHeader = req.headers.get('x-csrf-token');
       if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
