@@ -1,39 +1,36 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 
 export const POST = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
     const token = req.cookies.get('tec_access_token')?.value ?? '';
-    const body  = await req.json() as {
-      assetId:      string;
-      price:        number;
-      title?:       string;
-      description?: string;
-    };
+    const body  = await req.json();
 
-    if (!body.assetId || !body.price) {
-      return Response.json({ error: 'assetId and price required' }, { status: 400 });
+    if (!body.assetId || !body.price || body.price <= 0) {
+      return Response.json(
+        { error: 'assetId and price required' },
+        { status: 400 },
+      );
     }
 
     const res = await fetch(`${GATEWAY_URL}/api/assets/marketplace/list`, {
-      method: 'POST',
-      cache:  'no-store',
+      method:  'POST',
       headers: {
-        'Content-Type':   'application/json',
-        Authorization:    `Bearer ${token}`,
-        'x-request-id':   ctx.requestId,
-        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+        'Content-Type': 'application/json',
+        Authorization:  `Bearer ${token}`,
+        'x-request-id': ctx.requestId,
       },
       body: JSON.stringify({
         assetId:     body.assetId,
-        sellerId:    ctx.userId,          // ✅ من الـ JWT — مش من الـ body
-        price:       body.price,
+        sellerId:    ctx.userId,
+        price:       Number(body.price),
         title:       body.title,
         description: body.description,
       }),
     });
 
-    const data = await res.json().catch(() => ({}));
-    return Response.json(data, { status: res.status });
+    const data = await res.json();
+    return data;
   },
 });
