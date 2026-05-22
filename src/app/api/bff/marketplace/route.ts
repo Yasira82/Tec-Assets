@@ -39,20 +39,20 @@ export const GET = createHandler({
     if (!res.ok) return { listings: [], total: 0 };
 
     const raw      = await res.json();
-    const listings = (raw?.data ?? raw?.listings ?? [])
+    const listings = (raw?.listings ?? raw?.data ?? [])
       .filter((l: RawListing) => l.status === 'ACTIVE')
       .map((l: RawListing) => ({
         id:          l.id,
         asset_id:    l.assetId,
         seller_id:   l.sellerId,
         price:       l.price,
-        currency:    l.currency    ?? 'PI',
+        currency:    (l.currency ?? 'PI') as 'PI',
         status:      l.status?.toLowerCase() ?? 'active',
         title:       l.title       ?? l.asset?.slug ?? 'Unknown Asset',
         description: l.description ?? '',
-        category:    l.asset?.category?.toLowerCase() ?? 'domain',
+        category:    l.asset?.category?.toLowerCase() ?? 'digital_asset',
         created_at:  l.createdAt,
-        metadata:    l.asset?.metadata ?? {},       // ✅ NFT images
+        metadata:    l.asset?.metadata ?? {},
       }));
 
     return { listings, total: listings.length };
