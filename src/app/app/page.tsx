@@ -270,14 +270,6 @@ const handleBuy = useCallback(async (listing: Listing) => {
   window.location.href = url;
 }, []);
 
-  // ✅ نفس pattern بتاع Commerce — بيدي Pi Bridge وقت يتجهّز
-  if (window.Pi) {
-    await window.Pi.authenticate(['username'], () => {}).catch(() => {});
-  }
-
-  window.location.href = url;
-}, []);
-
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
     setCancelLoading(true);
@@ -571,4 +563,4 @@ const handleTransferSuccess = useCallback(() => {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-          }
+}
