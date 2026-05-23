@@ -23,7 +23,7 @@ const piScript = `(function(){
       setReady();
     }catch(e){
       var msg=String(e).toLowerCase();
-      if(msg.includes('already')){
+      if(msg.includes('already')||msg.includes('initialized')){
         window.__TEC_PI_FOREIGN_SESSION=true;
         setReady();
       }else{setTimeout(initPi,150);}
