@@ -256,13 +256,20 @@ function AssetsPageInner() {
   }
 }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
-const handleBuy = useCallback((listing: Listing) => {
-  window.location.href = `${HUB_URL}/hub?pay=1`
+const handleBuy = useCallback(async (listing: Listing) => {
+  const url = `${HUB_URL}/hub?pay=1`
     + `&amount=${listing.price}`
     + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
     + `&product_id=${listing.id}`
     + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
     + `&source=assets`;
+
+  // ✅ نفس pattern بتاع Commerce — بيدي Pi Bridge وقت يتجهّز
+  if (window.Pi) {
+    await window.Pi.authenticate(['username'], () => {}).catch(() => {});
+  }
+
+  window.location.href = url;
 }, []);
 
   const handleCancelConfirm = useCallback(async () => {
