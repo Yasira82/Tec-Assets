@@ -6,6 +6,7 @@ import { usePiAuth }                        from '@/lib-client/hooks/usePiAuth';
 import { ErrorBoundary }                    from '@/components/ErrorBoundary';
 import { goToTEC }                          from '@/lib/tec-navigation';
 import { useSettings }                      from '@/lib/hooks/useSettings';
+import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
 import { Asset, Listing, WalletData, MainTab, Purchase } from './types';
 import { ListForSaleModal }   from './components/ListForSaleModal';
 import { CancelConfirmModal } from './components/CancelConfirmModal';
@@ -257,18 +258,67 @@ function AssetsPageInner() {
 }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
 const handleBuy = useCallback(async (listing: Listing) => {
-  const url = `${HUB_URL}/hub?pay=1`
-    + `&amount=${listing.price}`
-    + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
-    + `&product_id=${listing.id}`
-    + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
-    + `&source=assets`;
-
-  if (window.Pi) {
-    await window.Pi.authenticate(['username'], () => {}).catch(() => {});
+  // ── Hub → Assets: foreign session → Hub redirect ✅ ──
+  if ((window as any).__TEC_PI_FOREIGN_SESSION) {
+    const url = `${HUB_URL}/hub?pay=1`
+      + `&amount=${listing.price}`
+      + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
+      + `&product_id=${listing.id}`
+      + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
+      + `&source=assets`;
+    window.location.href = url;
+    return;
   }
-  window.location.href = url;
-}, []);
+
+  // ── Assets directly: direct payment ✅ ──
+  if (!window.Pi || !piReady) {
+    showToast('Pi Browser required', 'error');
+    return;
+  }
+
+  showToast('Preparing payment...', 'success');
+
+  try {
+    const internalId = await createPaymentRecord(
+      listing.price,
+      listing.id,
+      `Buy ${listing.title} — TEC Assets`,
+    );
+    if (!internalId) { showToast('Payment init failed', 'error'); return; }
+
+    const result = await createU2APayment(
+      listing.price,
+      `Buy ${listing.title} — TEC Assets`,
+      { source: 'assets', listing_id: listing.id },
+      internalId,
+    );
+
+    if (result.success) {
+      await fetch('/api/bff/marketplace/buy', {
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+        body:        JSON.stringify({
+          listing_id: listing.id,
+          payment_id: internalId,
+          txid:       result.txid ?? '',
+        }),
+      }).catch(() => {});
+
+      showToast('Purchase successful! 🎉');
+      setActiveTab('purchases');
+      fetchPurchases();
+      fetchData();
+    } else if (result.status === 'cancelled') {
+      showToast('Payment cancelled', 'error');
+    } else {
+      showToast(`Payment failed: ${result.message ?? 'unknown'}`, 'error');
+    }
+  } catch (err) {
+    showToast('Payment error — please try again', 'error');
+    console.error('[handleBuy]', err);
+  }
+}, [piReady, showToast, fetchData, fetchPurchases]);
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
