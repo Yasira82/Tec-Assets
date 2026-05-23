@@ -258,7 +258,6 @@ function AssetsPageInner() {
 }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
 const handleBuy = useCallback(async (listing: Listing) => {
-  // ── Hub → Assets: foreign session → Hub redirect ✅ ──
   if ((window as any).__TEC_PI_FOREIGN_SESSION) {
     const url = `${HUB_URL}/hub?pay=1`
       + `&amount=${listing.price}`
@@ -270,9 +269,20 @@ const handleBuy = useCallback(async (listing: Listing) => {
     return;
   }
 
-  // ── Assets directly: direct payment ✅ ──
   if (!window.Pi || !piReady) {
     showToast('Pi Browser required', 'error');
+    return;
+  }
+
+  // ✅ Refresh token قبل الدفع
+  const refreshed = await fetch('/api/auth/refresh', {
+    method:      'POST',
+    credentials: 'include',
+    headers:     { 'x-csrf-token': getCsrfToken() },
+  }).then(r => r.ok).catch(() => false);
+
+  if (!refreshed) {
+    showToast('Session expired — please reopen the app', 'error');
     return;
   }
 
