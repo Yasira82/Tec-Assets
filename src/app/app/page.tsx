@@ -124,32 +124,15 @@ function AssetsPageInner() {
   const [mintingNFT,        setMintingNFT]        = useState(false);
   const [transferringAsset, setTransferringAsset] = useState<Asset | null>(null);
   const [toast,             setToast]             = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [piReady,           setPiReady]           = useState(false);
-  
+
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-    // ── Pi SDK ready ✅ ─────────────────────────────────────
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if ((window as any).__TEC_PI_READY) { setPiReady(true); return; }
-    const h = () => setPiReady(true);
-    window.addEventListener('tec-pi-ready', h, { once: true });
-    return () => window.removeEventListener('tec-pi-ready', h);
-  }, []);
-
-  // ── Establish Pi auth session — نفس Commerce بالظبط ✅ ─────
-  useEffect(() => {
-    if (!piReady || (window as any).__TEC_PI_FOREIGN_SESSION) return;
-    window.Pi?.authenticate(['username'], () => {}).catch(() => {});
-  }, [piReady]);
-
   useEffect(() => {
     if (!loaded) return;
     if (settings.defaultTab === 'domains') { setActiveTab('assets'); setAssetFilter('domains'); }
-  
     else if (settings.defaultTab === 'nfts') { setActiveTab('assets'); setAssetFilter('nfts'); }
   }, [loaded, settings.defaultTab]);
 
@@ -258,16 +241,13 @@ function AssetsPageInner() {
 }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
 const handleBuy = useCallback((listing: Listing) => {
-  if (!window.Pi) { showToast('Open in Pi Browser to pay', 'error'); return; }
-
-    // ✅ ISS-003: ASSETS_URL بدل hardcoded + /hub?pay=1 (Hub Modal pattern)
-    window.location.href = `${HUB_URL}/hub?pay=1`
-      + `&amount=${listing.price}`
-      + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
-      + `&product_id=${listing.id}`
-      + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
-      + `&source=assets`;
-  }, [showToast]);
+  window.location.href = `${HUB_URL}/hub?pay=1`
+    + `&amount=${listing.price}`
+    + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
+    + `&product_id=${listing.id}`
+    + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
+    + `&source=assets`;
+}, []);
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
@@ -562,4 +542,4 @@ const handleTransferSuccess = useCallback(() => {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-        }
+                                    }
