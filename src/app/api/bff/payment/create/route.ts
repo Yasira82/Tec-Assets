@@ -1,26 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 
-const GW = process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'https://api-gateway-production-6a68.up.railway.app';
+export const POST = createHandler({
+  requireAuth: true,
+  handler: async ({ ctx, req }) => {
+    const token = req.cookies.get('tec_access_token')?.value ?? '';
+    const body  = await req.json() as {
+      amount:      number;
+      product_id:  string;
+      memo:        string;
+      source?:     string;
+    };
 
-export async function POST(req: NextRequest) {
-  try {
-    const token = req.cookies.get('tec_access_token')?.value;
-    const body  = await req.json();
-
-    const res = await fetch(`${GW}/api/payment/create`, {
-      method:  'POST',
+    const res = await fetch(`${GATEWAY_URL}/api/payment/create`, {
+      method: 'POST',
+      cache:  'no-store',
       headers: {
-        'Content-Type':  'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-        'x-request-id':  crypto.randomUUID(),
+        'Content-Type':   'application/json',
+        Authorization:    `Bearer ${token}`,
+        'x-request-id':   ctx.requestId,
+        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        userId:         ctx.userId,          // ✅ من JWT — مش من الـ body
+        amount:         body.amount,
+        currency:       'PI',
+        payment_method: 'pi',
+        source:         body.source ?? 'assets',
+        metadata: {
+          product_id: body.product_id,
+          memo:       body.memo,
+          app_source: 'assets',
+        },
+      }),
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log('[bff] /api/bff/payment/create status=' + res.status);
-    return NextResponse.json(data, { status: res.status });
-  } catch (err) {
-    return NextResponse.json({ error: 'BFF error', message: String(err) }, { status: 502 });
-  }
-}
+    return Response.json(data, { status: res.ok ? 200 : res.status });
+  },
+});
