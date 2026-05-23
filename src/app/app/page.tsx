@@ -123,12 +123,28 @@ function AssetsPageInner() {
   const [cancelLoading,     setCancelLoading]     = useState(false);
   const [mintingNFT,        setMintingNFT]        = useState(false);
   const [transferringAsset, setTransferringAsset] = useState<Asset | null>(null);
-  const [toast,             setToast]             = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [toast,   setToast]   = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [piReady, setPiReady] = useState(false);
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
+
+  // ── Pi SDK ready — نفس Commerce ✅ ──────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ((window as any).__TEC_PI_READY) { setPiReady(true); return; }
+    const h = () => setPiReady(true);
+    window.addEventListener('tec-pi-ready', h, { once: true });
+    return () => window.removeEventListener('tec-pi-ready', h);
+  }, []);
+
+  // ── Establish Pi session before payment — نفس Commerce ✅ ─
+  useEffect(() => {
+    if (!piReady || (window as any).__TEC_PI_FOREIGN_SESSION) return;
+    window.Pi?.authenticate(['username'], () => {}).catch(() => {});
+  }, [piReady]);
 
   useEffect(() => {
     if (!loaded) return;
