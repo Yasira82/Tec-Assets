@@ -140,13 +140,11 @@ function AssetsPageInner() {
     return () => window.removeEventListener('tec-pi-ready', h);
   }, []);
 
-  // ── DIAGNOSTIC — هيعرض alert فوري ──
-useEffect(() => {
-  if (!piReady || (window as any).__TEC_PI_FOREIGN_SESSION) return;
-  window.Pi?.authenticate(['username'], () => {})
-    .then(() => alert('Pi Auth OK ✅'))
-    .catch((e: any) => alert('Pi Auth FAIL ❌: ' + (e?.message ?? String(e))));
-}, [piReady]);
+  // ── Establish Pi session before payment — نفس Commerce ✅ ─
+  useEffect(() => {
+    if (!piReady || (window as any).__TEC_PI_FOREIGN_SESSION) return;
+    window.Pi?.authenticate(['username'], () => {}).catch(() => {});
+  }, [piReady]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -567,4 +565,4 @@ const handleTransferSuccess = useCallback(() => {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-                                    }
+          }
