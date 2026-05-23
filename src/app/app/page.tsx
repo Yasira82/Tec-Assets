@@ -264,6 +264,12 @@ const handleBuy = useCallback(async (listing: Listing) => {
     + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
     + `&source=assets`;
 
+  if (window.Pi) {
+    await window.Pi.authenticate(['username'], () => {}).catch(() => {});
+  }
+  window.location.href = url;
+}, []);
+
   // ✅ نفس pattern بتاع Commerce — بيدي Pi Bridge وقت يتجهّز
   if (window.Pi) {
     await window.Pi.authenticate(['username'], () => {}).catch(() => {});
