@@ -258,20 +258,17 @@ function AssetsPageInner() {
 }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
 
 const handleBuy = useCallback(async (listing: Listing) => {
-  // ── Mode 1: جاي من Hub → Hub redirect ✅ ──────────────
-  if ((window as any).__TEC_PI_FOREIGN_SESSION) {
-    const url = `${HUB_URL}/hub?pay=1`
-      + `&amount=${listing.price}`
-      + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
-      + `&product_id=${listing.id}`
-      + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
-      + `&source=assets`;
-    if (window.Pi) {
-      await window.Pi.authenticate(['username'], () => {}).catch(() => {});
-    }
-    window.location.href = url;
-    return;
+  const url = `${HUB_URL}/hub?pay=1`
+    + `&amount=${listing.price}`
+    + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
+    + `&product_id=${listing.id}`
+    + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
+    + `&source=assets`;
+  if (window.Pi) {
+    await window.Pi.authenticate(['username'], () => {}).catch(() => {});
   }
+  window.location.href = url;
+}, []);
 
   // ── Mode 2: دخل مباشرة → Direct payment ✅ ────────────
   if (!window.Pi || !piReady) {
