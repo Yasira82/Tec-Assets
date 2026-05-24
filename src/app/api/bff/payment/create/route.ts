@@ -35,6 +35,7 @@ export const POST = createHandler({
     });
 
     const data = await res.json().catch(() => ({}));
+    console.log('[payment/create] gateway status:', res.status, 'response:', JSON.stringify(data)); // ← أضف
     return Response.json(data, { status: res.ok ? 200 : res.status });
   },
 });
