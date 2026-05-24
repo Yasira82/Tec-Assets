@@ -13,7 +13,7 @@ export const POST = createHandler({
 
     const txid = body.transaction_id ?? body.txid ?? '';
 
-    const res = await fetch(`${GATEWAY_URL}/api/payment/complete`, {
+    const res = await fetch(`${GATEWAY_URL}/api/v1/payment/complete`, {
       method: 'POST',
       cache:  'no-store',
       headers: {
