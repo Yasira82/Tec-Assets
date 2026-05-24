@@ -9,7 +9,7 @@ export const POST = createHandler({
       pi_payment_id: string;
     };
 
-    const res = await fetch(`${GATEWAY_URL}/api/payment/approve`, {
+    const res = await fetch(`${GATEWAY_URL}/api/v1/payment/approve`, {
       method: 'POST',
       cache:  'no-store',
       headers: {
