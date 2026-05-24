@@ -11,7 +11,7 @@ export const POST = createHandler({
       source?:     string;
     };
 
-    const res = await fetch(`${GATEWAY_URL}/api/payment/create`, {
+    const res = await fetch(`${GATEWAY_URL}/api/v1/payment/create`, {
       method: 'POST',
       cache:  'no-store',
       headers: {
