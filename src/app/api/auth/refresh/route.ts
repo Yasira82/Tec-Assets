@@ -1,40 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const GATEWAY = process.env.API_GATEWAY_URL
+             ?? process.env.NEXT_PUBLIC_API_GATEWAY_URL
+             ?? 'https://api-gateway-production-6a68.up.railway.app';
+
 export async function POST(req: NextRequest) {
+  const refreshToken = req.cookies.get('tec_refresh_token')?.value;
+  if (!refreshToken) {
+    return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
+  }
+
   try {
-    const refreshToken = req.cookies.get('tec_refresh_token')?.value;
-
-    if (!refreshToken) {
-      return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
-    }
-
-    const GATEWAY = process.env.NEXT_PUBLIC_API_GATEWAY_URL!;
-
-    const backendRes = await fetch(`${GATEWAY}/api/v1/auth/refresh`, {
+    const res = await fetch(`${GATEWAY}/api/auth/refresh`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ refreshToken }),
     });
 
-    const data = await backendRes.json().catch(() => ({}));
-
-    if (!backendRes.ok) {
-      return NextResponse.json(data, { status: backendRes.status });
+    if (!res.ok) {
+      return NextResponse.json({ error: 'Refresh failed' }, { status: 401 });
     }
 
-    const res = NextResponse.json({ token: data.token });
+    const data      = await res.json();
+    const newToken  = data?.data?.accessToken ?? data?.accessToken ?? data?.token ?? null;
+    if (!newToken) {
+      return NextResponse.json({ error: 'No token returned' }, { status: 401 });
+    }
 
-    // ✅ تحديث الـ access token cookie
-    res.cookies.set('tec_access_token', data.token, {
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set('tec_access_token', newToken, {
       httpOnly: false,
       secure:   true,
       sameSite: 'none',
       maxAge:   60 * 60 * 24,
+      domain:   '.tecosystem.app',
       path:     '/',
     });
 
-    return res;
+    return response;
   } catch {
-    return NextResponse.json({ error: 'Refresh failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Refresh error' }, { status: 500 });
   }
 }
