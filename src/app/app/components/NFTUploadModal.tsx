@@ -115,12 +115,12 @@ export function NFTUploadModal({
     setLoading(true);
     setError('');
 
-    await fetch(`${HUB_URL}/api/auth/refresh`, {
-      method:      'POST',
-      credentials: 'include',
-      headers:     { 'x-csrf-token': getCsrfToken() },
-    }).catch(() => {});
-
+    await fetch('/api/auth/refresh', {
+  method:      'POST',
+  credentials: 'include',
+  headers:     { 'Content-Type': 'application/json' },
+}).catch(() => {});
+    
     try {
       const internalId = await createPaymentRecord(
         MINT_FEE,
