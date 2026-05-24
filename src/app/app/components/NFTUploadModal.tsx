@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState }                                  from 'react';
+import { createPaymentRecord, createU2APayment }     from '@/lib/pi-payment';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -20,7 +21,13 @@ const toBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-export function NFTUploadModal({ onClose }: { onClose: () => void }) {
+export function NFTUploadModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose:    () => void;
+  onSuccess?: () => void;
+}) {
   const [step,        setStep]        = useState<'upload' | 'details'>('upload');
   const [file,        setFile]        = useState<File | null>(null);
   const [preview,     setPreview]     = useState<string | null>(null);
@@ -51,16 +58,11 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError('');
     try {
-      // ✅ base64 JSON بدل FormData
       const base64 = await toBase64(file);
-
       const res = await fetch('/api/bff/nft/upload', {
         method:      'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': getCsrfToken(),
-        },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
         body: JSON.stringify({
           filename: file.name,
           mimeType: file.type,
@@ -68,16 +70,13 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
           data:     base64,
         }),
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
         setError(err.error ?? 'Upload failed');
         return;
       }
-
       const data = await res.json();
       if (!data.publicUrl) { setError('No URL returned'); return; }
-
       setUploadedUrl(data.publicUrl);
       setUploadedKey(data.key ?? null);
       setStep('details');
@@ -89,28 +88,86 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleMint = () => {
-  if (!name || !uploadedUrl) return;
+  const handleMint = async () => {
+    if (!name || !uploadedUrl) return;
 
-  // ✅ encode NFT data في product_id عشان Hub يرجعه
-  const nftMeta = btoa(JSON.stringify({
-    n: name,
-    d: description,
-    u: uploadedUrl,
-    k: uploadedKey ?? '',
-    m: file?.type ?? 'image/jpeg',
-  }));
+    const nftMeta = btoa(JSON.stringify({
+      n: name, d: description,
+      u: uploadedUrl, k: uploadedKey ?? '',
+      m: file?.type ?? 'image/jpeg',
+    }));
 
-  const params = new URLSearchParams({
-    pay:        '1',
-    amount:     MINT_FEE.toString(),
-    memo:       `Mint NFT: ${name}`,
-    product_id: `nft:${nftMeta}`,
-    return_url: `${ASSETS_URL}/app`,
-    source:     'assets',
-  });
-  window.location.href = `${HUB_URL}/hub?${params.toString()}`;
-};
+    // ── Mode 1: جاي من Hub أو Pi SDK مش جاهز → Hub redirect ──
+    if ((window as any).__TEC_PI_FOREIGN_SESSION || !window.Pi) {
+      const params = new URLSearchParams({
+        pay:        '1',
+        amount:     MINT_FEE.toString(),
+        memo:       `Mint NFT: ${name}`,
+        product_id: `nft:${nftMeta}`,
+        return_url: `${ASSETS_URL}/app`,
+        source:     'assets',
+      });
+      window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+      return;
+    }
+
+    // ── Mode 2: Assets مباشرة → direct payment ────────────────
+    setLoading(true);
+    setError('');
+
+    await fetch(`${HUB_URL}/api/auth/refresh`, {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'x-csrf-token': getCsrfToken() },
+    }).catch(() => {});
+
+    try {
+      const internalId = await createPaymentRecord(
+        MINT_FEE,
+        `nft:${nftMeta}`,
+        `Mint NFT: ${name}`,
+      );
+      if (!internalId) { setError('Payment init failed'); return; }
+
+      const result = await createU2APayment(
+        MINT_FEE,
+        `Mint NFT: ${name}`,
+        { source: 'assets', type: 'nft_mint' },
+        internalId,
+      );
+
+      if (result.success) {
+        const res = await fetch('/api/bff/nft/register', {
+          method:      'POST',
+          credentials: 'include',
+          headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+          body: JSON.stringify({
+            name, description,
+            imageUrl:  uploadedUrl,
+            key:       uploadedKey ?? '',
+            mimeType:  file?.type ?? 'image/jpeg',
+            paymentId: internalId,
+            txid:      result.txid ?? '',
+          }),
+        });
+        if (res.ok || res.status === 409) {
+          onSuccess?.();
+          onClose();
+        } else {
+          setError('NFT minted but registration failed — contact support');
+        }
+      } else if (result.status === 'cancelled') {
+        setError('Payment cancelled');
+      } else {
+        setError(`Mint failed: ${result.message ?? 'unknown'}`);
+      }
+    } catch (err) {
+      console.error('[handleMint]', err);
+      setError('Mint failed — please try again');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -198,11 +255,9 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 8 }}>NFT NAME *</div>
               <input
-                type="text"
-                value={name}
+                type="text" value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="My Awesome NFT"
-                autoFocus
+                placeholder="My Awesome NFT" autoFocus
                 style={{
                   width: '100%', background: '#0a0a12',
                   border: '1px solid #7b6bc840', borderRadius: 14,
@@ -217,8 +272,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="Describe your NFT..."
-                rows={2}
+                placeholder="Describe your NFT..." rows={2}
                 style={{
                   width: '100%', background: '#0a0a12',
                   border: '1px solid #ffffff10', borderRadius: 14,
@@ -244,7 +298,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            <button onClick={handleMint} disabled={!name} style={{
+            <button onClick={handleMint} disabled={!name || loading} style={{
               width: '100%', padding: '16px',
               background: name ? 'linear-gradient(135deg,#2d1b69,#1a0f3d)' : '#ffffff10',
               border: name ? '1px solid #7b6bc840' : 'none',
@@ -253,7 +307,7 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
               fontSize: 15, fontWeight: 800,
               cursor: name ? 'pointer' : 'default',
             }}>
-              {`🎨 Mint NFT for ${MINT_FEE}π`}
+              {loading ? 'Processing...' : `🎨 Mint NFT for ${MINT_FEE}π`}
             </button>
 
             <button onClick={() => setStep('upload')} style={{
@@ -276,4 +330,4 @@ export function NFTUploadModal({ onClose }: { onClose: () => void }) {
       </div>
     </>
   );
-                  }
+            }
