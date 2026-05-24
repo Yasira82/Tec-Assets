@@ -280,10 +280,10 @@ const handleBuy = useCallback(async (listing: Listing) => {
   }
 
   const refreshed = await fetch('/api/auth/refresh', {
-    method:      'POST',
-    credentials: 'include',
-    headers:     { 'x-csrf-token': getCsrfToken() },
-  }).then(r => r.ok).catch(() => false);
+  method:      'POST',
+  credentials: 'include',
+  headers:     { 'Content-Type': 'application/json' },
+}).then(r => r.ok).catch(() => false);
 
   if (!refreshed) {
     showToast('Session expired — please reopen the app', 'error');
