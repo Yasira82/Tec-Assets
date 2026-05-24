@@ -1,383 +1,32 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter }                        from 'next/navigation';
-import { usePiAuth }                        from '@/lib-client/hooks/usePiAuth';
-import { ErrorBoundary }                    from '@/components/ErrorBoundary';
-import { goToTEC }                          from '@/lib/tec-navigation';
-import { useSettings }                      from '@/lib/hooks/useSettings';
-import { Asset, Listing, WalletData, MainTab, Purchase } from './types';
-import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
+import { useAssetsPage, getTokenFromCookie } from './hooks/useAssetsPage';
+import { ErrorBoundary }   from '@/components/ErrorBoundary';
+import { goToTEC }         from '@/lib/tec-navigation';
+import { Skeleton }        from './components/Skeleton';
+import { NFTUploadModal }  from './components/NFTUploadModal';
 import { ListForSaleModal }   from './components/ListForSaleModal';
 import { CancelConfirmModal } from './components/CancelConfirmModal';
-import { PortfolioTab }       from './components/PortfolioTab';
-import { Skeleton }           from './components/Skeleton';
-import { NFTUploadModal }     from './components/NFTUploadModal';
-import { AssetsTab }          from './components/AssetsTab';
-import { MarketplaceTab }     from './components/MarketplaceTab';
-import { PurchasesTab }       from './components/PurchasesTab';
 import { TransferModal }      from './components/TransferModal';
-
-// ✅ ISS-003: env vars بدل hardcoded URLs
-const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
-const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
-const SSO_URL    = `${HUB_URL}/api/auth/sso?target=${encodeURIComponent(ASSETS_URL)}`;
-
-const getCsrfToken = (): string => {
-  if (typeof document === 'undefined') return '';
-  return document.cookie.split('; ')
-    .find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
-};
-
-const getTokenFromCookie = (): string | null => {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.split('; ').find(row => row.startsWith('tec_access_token='));
-  return match ? match.split('=')[1] : null;
-};
-
-// ── Bottom Nav ────────────────────────────────────────────
-const BottomNav = ({
-  activeTab, setActiveTab, setAssetFilter,
-}: {
-  activeTab:      MainTab;
-  setActiveTab:   (tab: MainTab) => void;
-  setAssetFilter: (f: 'all' | 'domains' | 'nfts') => void;
-}) => {
-  const items = [
-    { key: 'assets',      icon: '💎', label: 'Assets'    },
-    { key: 'marketplace', icon: '🛒', label: 'Market'    },
-    { key: 'purchases',   icon: '🧾', label: 'History'   },
-    { key: 'portfolio',   icon: '📊', label: 'Portfolio' },
-  ] as const;
-
-  return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
-      background: 'rgba(2,2,5,0.92)',
-      backdropFilter: 'blur(20px)',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex',
-      paddingBottom: 'env(safe-area-inset-bottom)',
-    }}>
-      {items.map(item => {
-        const isActive = activeTab === item.key;
-        return (
-          <button
-            key={item.key}
-            onClick={() => {
-              navigator.vibrate?.(8);
-              if (item.key === 'assets') setAssetFilter('all');
-              setActiveTab(item.key);
-            }}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              gap: 4, padding: '10px 0 12px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              transition: 'opacity 0.2s',
-            }}
-          >
-            <div style={{
-              fontSize: 20,
-              filter: isActive ? 'none' : 'grayscale(1) opacity(0.4)',
-              transition: 'filter 0.2s, transform 0.2s',
-              transform: isActive ? 'scale(1.15)' : 'scale(1)',
-            }}>
-              {item.icon}
-            </div>
-            <div style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-              color: isActive ? '#d4af37' : '#3a3a4a',
-              transition: 'color 0.2s',
-            }}>
-              {item.label}
-            </div>
-            {isActive && (
-              <div style={{
-                position: 'absolute', bottom: 0,
-                width: 20, height: 2, borderRadius: 1,
-                background: '#d4af37',
-              }} />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-};
+import { AssetsTab }      from './components/AssetsTab';
+import { MarketplaceTab } from './components/MarketplaceTab';
+import { PurchasesTab }   from './components/PurchasesTab';
+import { PortfolioTab }   from './components/PortfolioTab';
+import { BottomNav }      from './components/BottomNav';
+import { MainTab }        from './types';
 
 function AssetsPageInner() {
-  const { user, isAuthenticated, isLoading } = usePiAuth();
-  const { settings, loaded }                 = useSettings();
-  const router                               = useRouter();
-
-  const [wallet,            setWallet]            = useState<WalletData | null>(null);
-  const [assets,            setAssets]            = useState<Asset[]>([]);
-  const [listings,          setListings]          = useState<Listing[]>([]);
-  const [purchases,         setPurchases]         = useState<Purchase[]>([]);
-  const [activeTab,         setActiveTab]         = useState<MainTab>('assets');
-  const [assetFilter,       setAssetFilter]       = useState<'all' | 'domains' | 'nfts'>('all');
-  const [dataLoading,       setDataLoading]       = useState(true);
-  const [listingAsset,      setListingAsset]      = useState<Asset | null>(null);
-  const [editingListing,    setEditingListing]    = useState<Listing | null>(null);
-  const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
-  const [cancelLoading,     setCancelLoading]     = useState(false);
-  const [mintingNFT,        setMintingNFT]        = useState(false);
-  const [transferringAsset, setTransferringAsset] = useState<Asset | null>(null);
-  const [toast,   setToast]   = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [piReady, setPiReady] = useState(false);
-
-  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  }, []);
-
-  // ── Pi SDK ready — نفس Commerce ✅ ──────────────────────
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if ((window as any).__TEC_PI_READY) { setPiReady(true); return; }
-    const h = () => setPiReady(true);
-    window.addEventListener('tec-pi-ready', h, { once: true });
-    return () => window.removeEventListener('tec-pi-ready', h);
-  }, []);
-
-  // ── Establish Pi session before payment — نفس Commerce ✅ ─
-  useEffect(() => {
-    if (!piReady || (window as any).__TEC_PI_FOREIGN_SESSION) return;
-    window.Pi?.authenticate(['username'], () => {}).catch(() => {});
-  }, [piReady]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    if (settings.defaultTab === 'domains') { setActiveTab('assets'); setAssetFilter('domains'); }
-    else if (settings.defaultTab === 'nfts') { setActiveTab('assets'); setAssetFilter('nfts'); }
-  }, [loaded, settings.defaultTab]);
-
-  const fetchListings = useCallback(async () => {
-    try {
-      const res = await fetch('/api/bff/marketplace', { credentials: 'include', cache: 'no-store' });
-      if (res.ok) { const data = await res.json(); setListings(data?.listings ?? []); }
-    } catch { /* silent */ }
-  }, []);
-
-  const fetchPurchases = useCallback(async () => {
-    try {
-      const res = await fetch('/api/bff/marketplace/purchases', { credentials: 'include', cache: 'no-store' });
-      if (res.ok) { const data = await res.json(); setPurchases(data?.purchases ?? []); }
-    } catch { /* silent */ }
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    const token = getTokenFromCookie();
-    if (!token) return;
-    setDataLoading(true);
-    try {
-      const [walletRes, assetsRes] = await Promise.all([
-        fetch('/api/bff/wallet/balance', { credentials: 'include', cache: 'no-store' }),
-        fetch('/api/bff/assets/list',    { credentials: 'include', cache: 'no-store' }),
-      ]);
-      if (walletRes.ok) setWallet(await walletRes.json());
-      if (assetsRes.ok) { const data = await assetsRes.json(); setAssets(data?.data ?? []); }
-    } catch { /* silent */ }
-    finally { setDataLoading(false); }
-  }, []);
-
-  useEffect(() => {
-  if (isLoading) return;
-  const token = getTokenFromCookie();
-  if (!token && !isAuthenticated) { window.location.href = SSO_URL; return; }
-
-  const params        = new URLSearchParams(window.location.search);
-  const paymentStatus = params.get('payment_status');
-
-  if (paymentStatus === 'success') {
-    const txid      = params.get('txid')       ?? '';
-    const paymentId = params.get('payment_id') ?? '';
-    const productId = params.get('product_id') ?? '';
-
-    if (productId.startsWith('nft:')) {
-      try {
-        const nftMeta = JSON.parse(atob(productId.slice(4)));
-        showToast('NFT Minted! 🎨');
-        setActiveTab('assets');
-
-        fetch('/api/bff/nft/register', {
-          method:      'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-csrf-token': getCsrfToken(),
-          },
-          body: JSON.stringify({
-            name:        nftMeta.n,
-            description: nftMeta.d ?? '',
-            imageUrl:    nftMeta.u,
-            key:         nftMeta.k,
-            mimeType:    nftMeta.m,
-            paymentId,
-            txid,
-          }),
-        })
-          .then(async (res) => {
-            const data = await res.json().catch(() => ({})) as { error?: string };
-            if (res.ok) {
-              fetchData();
-            } else {
-              console.error('[NFT register] failed:', res.status, data);
-              showToast(`Register failed: ${data.error ?? res.status}`, 'error');
-            }
-          })
-          .catch((err: unknown) => {
-            console.error('[NFT register] network error:', err);
-            showToast('Register failed — check console', 'error');
-          });
-      } catch {
-        showToast('NFT data error', 'error');
-      }
-    } else {
-      showToast('Purchase successful! 🎉');
-      setActiveTab('purchases');
-
-      if (productId && paymentId) {
-        fetch('/api/bff/marketplace/buy', {
-          method:      'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-csrf-token': getCsrfToken(),
-          },
-          body: JSON.stringify({ listing_id: productId, payment_id: paymentId, txid }),
-        })
-          .then(() => { fetchPurchases(); fetchData(); })
-          .catch(() => {});
-      }
-    }
-
-    window.history.replaceState({}, '', '/app');
-  }
-}, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
-
-const handleBuy = useCallback(async (listing: Listing) => {
-  const url = `${HUB_URL}/hub?pay=1`
-    + `&amount=${listing.price}`
-    + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
-    + `&product_id=${listing.id}`
-    + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
-    + `&source=assets`;
-  if (window.Pi) {
-    await window.Pi.authenticate(['username'], () => {}).catch(() => {});
-  }
-  window.location.href = url;
-}, []);
-
-  // ── Mode 2: دخل مباشرة → Direct payment ✅ ────────────
-  if (!window.Pi || !piReady) {
-    showToast('Pi Browser required', 'error');
-    return;
-  }
-
-  const refreshed = await fetch('/api/auth/refresh', {
-  method:      'POST',
-  credentials: 'include',
-  headers:     { 'Content-Type': 'application/json' },
-}).then(r => r.ok).catch(() => false);
-
-  if (!refreshed) {
-    showToast('Session expired — please reopen the app', 'error');
-    return;
-  }
-
-  showToast('Preparing payment...', 'success');
-
-  try {
-    const internalId = await createPaymentRecord(
-      listing.price,
-      listing.id,
-      `Buy ${listing.title} — TEC Assets`,
-    );
-    if (!internalId) { showToast('Payment init failed', 'error'); return; }
-
-    const result = await createU2APayment(
-      listing.price,
-      `Buy ${listing.title} — TEC Assets`,
-      { source: 'assets', listing_id: listing.id },
-      internalId,
-    );
-
-    if (result.success) {
-      await fetch('/api/bff/marketplace/buy', {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-        body:        JSON.stringify({
-          listing_id: listing.id,
-          payment_id: internalId,
-          txid:       result.txid ?? '',
-        }),
-      }).catch(() => {});
-
-      showToast('Purchase successful! 🎉');
-      setActiveTab('purchases');
-      fetchPurchases();
-      fetchData();
-    } else if (result.status === 'cancelled') {
-      showToast('Payment cancelled', 'error');
-    } else {
-      showToast(`Payment failed: ${result.message ?? 'unknown'}`, 'error');
-    }
-  } catch (err) {
-    showToast('Payment error — please try again', 'error');
-    console.error('[handleBuy]', err);
-  }
-}, [piReady, showToast, fetchData, fetchPurchases]);
-
-  const handleCancelConfirm = useCallback(async () => {
-    if (!cancellingListing) return;
-    setCancelLoading(true);
-    try {
-      const res = await fetch('/api/bff/marketplace/cancel', {
-        method: 'PATCH', credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': getCsrfToken(),
-        },
-        body: JSON.stringify({ listingId: cancellingListing.id }),
-      });
-      if (res.ok) { fetchListings(); fetchData(); }
-    } catch { /* silent */ }
-    finally { setCancelLoading(false); setCancellingListing(null); }
-  }, [cancellingListing, fetchListings, fetchData]);
-
-const handleTransfer = useCallback((asset: Asset) => {
-  setTransferringAsset(asset);
-}, []);
-
-const handleTransferSuccess = useCallback(() => {
-  setTransferringAsset(null);
-  showToast('Asset transferred! ↗');
-  fetchData();
-}, [fetchData, showToast]);
-  
-  const handleCancelFromAssets = useCallback((listingId: string) => {
-    setCancellingListing({
-      id: listingId, asset_id: '', seller_id: '', price: 0,
-      currency: 'PI', status: 'ACTIVE', title: 'this listing',
-      description: '', category: '', created_at: '',
-    });
-  }, []);
-
-  useEffect(() => { fetchData(); },      [fetchData]);
-  useEffect(() => { fetchListings(); },  [fetchListings]);
-  useEffect(() => { fetchPurchases(); }, [fetchPurchases]);
+  const s = useAssetsPage();
 
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
-  if (isLoading || (!isAuthenticated && !token)) return <Skeleton />;
+  if (s.isLoading || (!s.isAuthenticated && !token)) return <Skeleton />;
 
-  const filtered   = assetFilter === 'all' ? assets : assets.filter(a =>
-    a.asset_type === (assetFilter === 'domains' ? 'domain' : 'nft'));
-  const totalValue = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
-  const displayBalance = settings.hideBalance ? '****' : wallet ? `${Number(wallet.balance).toFixed(2)} π` : '—';
-  const displayTotal   = settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
+  const filtered      = s.assetFilter === 'all' ? s.assets : s.assets.filter(a =>
+    a.asset_type === (s.assetFilter === 'domains' ? 'domain' : 'nft'));
+  const totalValue    = s.assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
+  const displayBalance = s.settings.hideBalance ? '****'
+    : s.wallet ? `${Number(s.wallet.balance).toFixed(2)} π` : '—';
+  const displayTotal  = s.settings.hideBalance ? '****' : `${totalValue.toFixed(2)}`;
 
   return (
     <div style={{
@@ -398,51 +47,56 @@ const handleTransferSuccess = useCallback(() => {
         ::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {toast && (
+      {s.toast && (
         <div style={{
           position: 'fixed', top: 70, left: 16, right: 16, zIndex: 999,
-          background: toast.type === 'success' ? '#051a0a' : '#1a0505',
-          border: `1px solid ${toast.type === 'success' ? '#7ee7c040' : '#e74c3c40'}`,
+          background: s.toast.type === 'success' ? '#051a0a' : '#1a0505',
+          border: `1px solid ${s.toast.type === 'success' ? '#7ee7c040' : '#e74c3c40'}`,
           borderRadius: 14, padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: 10,
           animation: 'toastIn 0.3s ease', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         }}>
-          <span style={{ fontSize: 16 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+          <span style={{ fontSize: 16 }}>{s.toast.type === 'success' ? '✅' : '❌'}</span>
           <span style={{ fontSize: 13, fontWeight: 600,
-            color: toast.type === 'success' ? '#7ee7c0' : '#e74c3c' }}>
-            {toast.msg}
+            color: s.toast.type === 'success' ? '#7ee7c0' : '#e74c3c' }}>
+            {s.toast.msg}
           </span>
         </div>
       )}
-      
-      {mintingNFT && <NFTUploadModal onClose={() => setMintingNFT(false)} />}
 
-      {(listingAsset || editingListing) && (
+      {s.mintingNFT && (
+        <NFTUploadModal
+          onClose={() => s.setMintingNFT(false)}
+          onSuccess={() => { s.setMintingNFT(false); s.fetchData(); }}
+        />
+      )}
+
+      {(s.listingAsset || s.editingListing) && (
         <ListForSaleModal
-          asset={listingAsset ?? undefined}
-          listing={editingListing ?? undefined}
-          onClose={() => { setListingAsset(null); setEditingListing(null); }}
-          onSuccess={() => { fetchListings(); fetchData(); }}
+          asset={s.listingAsset ?? undefined}
+          listing={s.editingListing ?? undefined}
+          onClose={() => { s.setListingAsset(null); s.setEditingListing(null); }}
+          onSuccess={() => { s.fetchListings(); s.fetchData(); }}
         />
       )}
 
-      {cancellingListing && (
+      {s.cancellingListing && (
         <CancelConfirmModal
-          listing={cancellingListing}
-          onClose={() => setCancellingListing(null)}
-          onConfirm={handleCancelConfirm}
-          loading={cancelLoading}
+          listing={s.cancellingListing}
+          onClose={() => s.setCancellingListing(null)}
+          onConfirm={s.handleCancelConfirm}
+          loading={s.cancelLoading}
         />
       )}
 
-{transferringAsset && (
-  <TransferModal
-    asset={transferringAsset}
-    onClose={() => setTransferringAsset(null)}
-    onSuccess={handleTransferSuccess}
-  />
-)}
-      
+      {s.transferringAsset && (
+        <TransferModal
+          asset={s.transferringAsset}
+          onClose={() => s.setTransferringAsset(null)}
+          onSuccess={s.handleTransferSuccess}
+        />
+      )}
+
       <header style={{
         padding: '14px 20px',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -454,13 +108,10 @@ const handleTransferSuccess = useCallback(() => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button className="btn" onClick={() => goToTEC('HUB')} style={{
-            background: 'rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12, padding: '6px 10px',
-            color: '#d4af37', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', gap: 2,
+            background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
+            padding: '6px 10px', color: '#d4af37', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           }}>
             <span style={{ fontSize: 16 }}>🔷</span>
             <span style={{ fontSize: 8, color: '#4a4a5a', letterSpacing: 1 }}>HUB</span>
@@ -472,21 +123,17 @@ const handleTransferSuccess = useCallback(() => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 12, color: '#d4af37' }}>
-            {user?.piUsername ? `@${user.piUsername}` : ''}
+            {s.user?.piUsername ? `@${s.user.piUsername}` : ''}
           </div>
-          <button className="btn" onClick={() => router.push('/app/settings')} style={{
-            background: 'rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12, padding: '8px 12px',
-            color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
-          }}>
-            ⚙️
-          </button>
+          <button className="btn" onClick={() => s.router.push('/app/settings')} style={{
+            background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
+            padding: '8px 12px', color: '#6b6b7a', fontSize: 14, cursor: 'pointer',
+          }}>⚙️</button>
         </div>
       </header>
 
-      {activeTab !== 'portfolio' && (
+      {s.activeTab !== 'portfolio' && (
         <div style={{ padding: '16px 16px 0' }} className="fade-in">
           <div style={{
             borderRadius: 24, padding: '22px 24px',
@@ -498,25 +145,24 @@ const handleTransferSuccess = useCallback(() => {
               textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
-                {dataLoading ? '—' : displayTotal}
+                {s.dataLoading ? '—' : displayTotal}
               </span>
               <span style={{ fontSize: 20, color: 'rgba(212,175,55,0.5)' }}>
-                {settings.hideBalance ? '' : 'π'}
+                {s.settings.hideBalance ? '' : 'π'}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {[
                 { label: 'Balance',   value: displayBalance },
-                { label: 'Assets',    value: assets.length.toString() },
-                { label: 'Purchases', value: purchases.length.toString() },
-              ].map(s => (
-                <div key={s.label} style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  backdropFilter: 'blur(10px)',
+                { label: 'Assets',    value: s.assets.length.toString() },
+                { label: 'Purchases', value: s.purchases.length.toString() },
+              ].map(st => (
+                <div key={st.label} style={{
+                  background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)',
                   borderRadius: 12, padding: '10px 12px',
                 }}>
-                  <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: '#4a4a5a', marginBottom: 4 }}>{st.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{st.value}</div>
                 </div>
               ))}
             </div>
@@ -531,92 +177,85 @@ const handleTransferSuccess = useCallback(() => {
           { key: 'purchases',   label: '🧾 History'     },
           { key: 'portfolio',   label: '📊 Portfolio'   },
         ] as const).map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+          <button key={tab.key} onClick={() => s.setActiveTab(tab.key as MainTab)} style={{
             padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
             fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-            background: activeTab === tab.key ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.04)',
+            background: s.activeTab === tab.key ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.04)',
             backdropFilter: 'blur(10px)',
-            color:  activeTab === tab.key ? '#d4af37' : '#4a4a5a',
-            border: activeTab === tab.key ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
+            color:  s.activeTab === tab.key ? '#d4af37' : '#4a4a5a',
+            border: s.activeTab === tab.key ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
             transition: 'all 0.2s',
-          }}>
-            {tab.label}
-          </button>
+          }}>{tab.label}</button>
         ))}
       </div>
 
-      {activeTab === 'assets' && (
+      {s.activeTab === 'assets' && (
         <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8, alignItems: 'center' }}>
           {(['all', 'domains', 'nfts'] as const).map(tab => (
-            <button key={tab} onClick={() => setAssetFilter(tab)} style={{
+            <button key={tab} onClick={() => s.setAssetFilter(tab)} style={{
               padding: '6px 14px', borderRadius: 20, cursor: 'pointer',
               fontSize: 11, fontWeight: 600, letterSpacing: 1,
               textTransform: 'uppercase' as const,
-              background: assetFilter === tab ? 'rgba(255,255,255,0.08)' : 'none',
-              color:      assetFilter === tab ? '#fff' : '#3a3a4a',
-              border:     assetFilter === tab ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+              background: s.assetFilter === tab ? 'rgba(255,255,255,0.08)' : 'none',
+              color:      s.assetFilter === tab ? '#fff' : '#3a3a4a',
+              border:     s.assetFilter === tab ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
               transition: 'all 0.2s',
             }}>
               {tab === 'all' ? 'All' : tab === 'domains' ? '🌐 Domains' : '🎨 NFTs'}
             </button>
           ))}
-          <button onClick={() => setMintingNFT(true)} style={{
+          <button onClick={() => s.setMintingNFT(true)} style={{
             marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
             background: 'rgba(123,107,200,0.08)',
             border: '1px solid rgba(123,107,200,0.25)',
             color: '#b39ddb', fontSize: 11, fontWeight: 700,
             cursor: 'pointer', whiteSpace: 'nowrap',
-          }}>
-            + NFT
-          </button>
+          }}>+ NFT</button>
         </div>
       )}
 
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {activeTab === 'assets' && (
+        {s.activeTab === 'assets' && (
           <AssetsTab
-            assets={assets}
-            filtered={filtered}
-            dataLoading={dataLoading}
-            showValues={settings.showValues}
-            onListForSale={setListingAsset}
-            onCancelListing={handleCancelFromAssets}
-            onMintNFT={() => setMintingNFT(true)}
-            onGoMarketplace={() => setActiveTab('marketplace')}
-            onTransfer={handleTransfer}
-            onRefresh={fetchData}
+            assets={s.assets} filtered={filtered}
+            dataLoading={s.dataLoading} showValues={s.settings.showValues}
+            onListForSale={s.setListingAsset}
+            onCancelListing={s.handleCancelFromAssets}
+            onMintNFT={() => s.setMintingNFT(true)}
+            onGoMarketplace={() => s.setActiveTab('marketplace')}
+            onTransfer={s.handleTransfer}
+            onRefresh={s.fetchData}
           />
         )}
-        {activeTab === 'marketplace' && (
+        {s.activeTab === 'marketplace' && (
           <MarketplaceTab
-            listings={listings}
-            currentUserId={user?.id ?? ''}
-            onBuy={handleBuy}
-            onEditPrice={setEditingListing}
-            onCancel={setCancellingListing}
-            onGoAssets={() => setActiveTab('assets')}
+            listings={s.listings}
+            currentUserId={s.user?.id ?? ''}
+            onBuy={s.handleBuy}
+            onEditPrice={s.setEditingListing}
+            onCancel={s.setCancellingListing}
+            onGoAssets={() => s.setActiveTab('assets')}
           />
         )}
-        {activeTab === 'purchases' && (
+        {s.activeTab === 'purchases' && (
           <PurchasesTab
-            purchases={purchases}
-            onGoMarketplace={() => setActiveTab('marketplace')}
+            purchases={s.purchases}
+            onGoMarketplace={() => s.setActiveTab('marketplace')}
           />
         )}
-        {activeTab === 'portfolio' && (
+        {s.activeTab === 'portfolio' && (
           <PortfolioTab
-            assets={assets}
-            wallet={wallet}
-            showValues={settings.showValues}
-            hideBalance={settings.hideBalance}
+            assets={s.assets} wallet={s.wallet}
+            showValues={s.settings.showValues}
+            hideBalance={s.settings.hideBalance}
           />
         )}
       </div>
 
       <BottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        setAssetFilter={setAssetFilter}
+        activeTab={s.activeTab}
+        setActiveTab={s.setActiveTab}
+        setAssetFilter={s.setAssetFilter}
       />
     </div>
   );
@@ -624,4 +263,4 @@ const handleTransferSuccess = useCallback(() => {
 
 export default function AssetsPage() {
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
-                }
+}
