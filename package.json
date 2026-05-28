@@ -16,7 +16,7 @@
   "dependencies": {
     "@sentry/nextjs":      "^8.0.0",
     "@yasser172/tec-sdk":  "^1.2.2",
-    "@yasser172/tec-ui":   "^1.0.0",
+    "@yasser172/tec-ui":   "^1.2.0",
     "axios":               "^1.13.5",
     "jose":                "^5.9.6",
     "next":                "15.5.12",
