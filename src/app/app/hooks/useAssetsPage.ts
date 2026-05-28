@@ -5,6 +5,11 @@ import { useRouter }                        from 'next/navigation';
 import { usePiAuth }                        from '@/lib-client/hooks/usePiAuth';
 import { useSettings }                      from '@/lib/hooks/useSettings';
 import { Asset, Listing, WalletData, MainTab, Purchase } from '../types';
+import {
+  createPaymentRecord,
+  createU2APayment,
+  handleBuy as hubHandleBuy,
+} from '@yasser172/tec-ui/payment';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -157,17 +162,43 @@ export function useAssetsPage() {
 
   // ── Handlers ──────────────────────────────────────────────
   const handleBuy = useCallback(async (listing: Listing) => {
-    const url = `${HUB_URL}/hub?pay=1`
-      + `&amount=${listing.price}`
-      + `&memo=${encodeURIComponent(`Buy ${listing.title} — TEC Assets`)}`
-      + `&product_id=${listing.id}`
-      + `&return_url=${encodeURIComponent(`${ASSETS_URL}/app`)}`
-      + `&source=assets`;
-    if (window.Pi) {
-      await window.Pi.authenticate(['username'], () => {}).catch(() => {});
+    if ((window as any).__TEC_PI_FOREIGN_SESSION || !window.__TEC_PI_READY) {
+      hubHandleBuy({
+        amount:    listing.price,
+        memo:      `Buy ${listing.title} — TEC Assets`,
+        productId: listing.id,
+        returnUrl: `${ASSETS_URL}/app`,
+        source:    'assets',
+      });
+      return;
     }
-    window.location.href = url;
-  }, []);
+
+    try {
+      const internalId = await createPaymentRecord(
+        listing.price,
+        listing.id,
+        `Buy ${listing.title} — TEC Assets`,
+        'assets',
+      );
+      if (!internalId) { showToast('Payment init failed — try again'); return; }
+
+      const result = await createU2APayment(
+        listing.price,
+        `Buy ${listing.title} — TEC Assets`,
+        { source: 'assets', listing_id: listing.id },
+        internalId,
+      );
+
+      if (result.success) {
+        showToast('Purchase successful! ✓');
+        fetchData(); fetchListings(); fetchPurchases();
+      } else if (result.status === 'cancelled') {
+        showToast('Purchase cancelled');
+      } else {
+        showToast(`Purchase failed: ${result.message ?? 'unknown'}`);
+      }
+    } catch { showToast('Payment error — try again'); }
+  }, [showToast, fetchData, fetchListings, fetchPurchases]);
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
