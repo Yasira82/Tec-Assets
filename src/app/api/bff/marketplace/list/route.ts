@@ -29,7 +29,17 @@ export const POST = createHandler({
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log('[marketplace/list] status:', res.status, JSON.stringify(data));
+
+    // ✅ Diagnostic log — هيظهر في Vercel
+    console.error('[marketplace/list] FULL RESPONSE:', {
+      status:   res.status,
+      headers:  Object.fromEntries(res.headers.entries()),
+      body:     JSON.stringify(data),
+      assetId:  body.assetId,
+      sellerId: ctx.userId,
+      url:      `${GATEWAY_URL}/api/assets/marketplace/list`,
+    });
+
     return Response.json(data, { status: res.ok ? 200 : res.status });
   },
 });
