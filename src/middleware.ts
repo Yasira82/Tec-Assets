@@ -7,6 +7,8 @@ const CSRF_PROTECTED    = [
   '/api/auth/refresh',
   '/api/bff/assets/',
   '/api/bff/marketplace/',
+   '/api/bff/marketplace/list',         
+  '/api/bff/marketplace/update-price', 
 ];
 
 // ✅ نفس pattern بتاع Commerce
