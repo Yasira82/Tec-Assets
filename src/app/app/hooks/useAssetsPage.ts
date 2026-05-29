@@ -133,7 +133,8 @@ export function useAssetsPage() {
             imageUrl:    nftMeta.u,
             key:         nftMeta.k,
             mimeType:    nftMeta.m,
-            paymentId,   txid,
+            paymentId,
+txid: txid || crypto.randomUUID(),
           }),
         })
           .then(async res => {
