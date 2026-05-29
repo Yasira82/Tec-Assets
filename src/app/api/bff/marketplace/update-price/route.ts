@@ -6,19 +6,23 @@ export const PATCH = createHandler({
     const token = req.cookies.get('tec_access_token')?.value ?? '';
     const body  = await req.json() as { listingId: string; price: number };
 
-    const res = await fetch(`${GATEWAY_URL}/api/marketplace/listings/${body.listingId}/price`, {
-      method: 'PATCH',
-      cache:  'no-store',
-      headers: {
-        'Content-Type':   'application/json',
-        Authorization:    `Bearer ${token}`,
-        'x-request-id':   ctx.requestId,
+    const res = await fetch(
+      `${GATEWAY_URL}/api/assets/marketplace/${body.listingId}/price`,
+      {
+        method: 'PATCH',
+        cache:  'no-store',
+        headers: {
+          'Content-Type':   'application/json',
+          Authorization:    `Bearer ${token}`,
+          'x-request-id':   ctx.requestId,
+          'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+        },
+        body: JSON.stringify({
+          sellerId: ctx.userId,
+          price:    body.price,
+        }),
       },
-      body: JSON.stringify({
-        price:     body.price,
-        seller_id: ctx.userId,
-      }),
-    });
+    );
 
     const data = await res.json().catch(() => ({}));
     console.log('[marketplace/update-price] status:', res.status, JSON.stringify(data));
