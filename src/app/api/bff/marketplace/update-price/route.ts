@@ -12,10 +12,9 @@ export const PATCH = createHandler({
         method: 'PATCH',
         cache:  'no-store',
         headers: {
-          'Content-Type':   'application/json',
-          Authorization:    `Bearer ${token}`,
-          'x-request-id':   ctx.requestId,
-          'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+          'Content-Type':  'application/json',
+          Authorization:   `Bearer ${token}`,
+          'x-request-id':  ctx.requestId,
         },
         body: JSON.stringify({
           sellerId: ctx.userId,
