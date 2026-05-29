@@ -15,8 +15,11 @@ const assetColors: Record<string, { border: string; status: string }> = {
   default:       { border: '#d4af3720', status: '#6b6b7a' },
 };
 
-const getCsrf = (): string =>
-  document.cookie.split('; ').find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+const getCsrf = (): string => {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(/(?:^|;\s*)tec_csrf=([^;]*)/);
+  return match ? match[1] : '';
+};
 
 const handleShare = async (assetName: string, price?: number | null) => {
   const text = price
