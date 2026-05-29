@@ -130,11 +130,11 @@ export function NFTUploadModal({
       if (!internalId) { setError('Payment init failed'); return; }
 
       const result = await createU2APayment(
-        MINT_FEE,
-        `Mint NFT: ${name}`,
-        { source: 'assets', type: 'nft_mint' },
-        internalId,
-      );
+  MINT_FEE,
+  `Mint NFT: ${name}`,
+  { source: 'assets', type: 'nft_mint' },
+  internalId!,
+);
 
       if (result.success) {
         const res = await fetch('/api/bff/nft/register', {
