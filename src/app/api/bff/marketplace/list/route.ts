@@ -11,19 +11,19 @@ export const POST = createHandler({
       description: string;
     };
 
-    const res = await fetch(`${GATEWAY_URL}/api/marketplace/list`, {
+    const res = await fetch(`${GATEWAY_URL}/api/assets/marketplace/list`, {
       method: 'POST',
       cache:  'no-store',
       headers: {
         'Content-Type':   'application/json',
         Authorization:    `Bearer ${token}`,
         'x-request-id':   ctx.requestId,
+        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
       },
       body: JSON.stringify({
-        asset_id:    body.assetId,
-        seller_id:   ctx.userId,
+        assetId:     body.assetId,
+        sellerId:    ctx.userId,
         price:       body.price,
-        currency:    'PI',
         title:       body.title,
         description: body.description,
       }),
