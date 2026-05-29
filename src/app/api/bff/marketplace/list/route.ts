@@ -18,7 +18,6 @@ export const POST = createHandler({
         'Content-Type':   'application/json',
         Authorization:    `Bearer ${token}`,
         'x-request-id':   ctx.requestId,
-        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
       },
       body: JSON.stringify({
         asset_id:    body.assetId,
