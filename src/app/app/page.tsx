@@ -76,7 +76,7 @@ function AssetsPageInner() {
           asset={s.listingAsset ?? undefined}
           listing={s.editingListing ?? undefined}
           onClose={() => { s.setListingAsset(null); s.setEditingListing(null); }}
-          onSuccess={() => { s.fetchListings(); s.fetchData(); }}
+         onSuccess={() => { setTimeout(() => { s.fetchListings(); s.fetchData(); }, 1500); }} 
         />
       )}
 
