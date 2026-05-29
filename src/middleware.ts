@@ -14,7 +14,8 @@ const CSRF_EXCLUDED = [
   '/api/bff/nft/upload',
   '/api/bff/nft/register',
   '/api/bff/marketplace/buy',      // ✅ بيتعمل بعد Hub redirect — JWT بيحميه
-  '/api/bff/marketplace/cancel',   // ✅ نفس السبب
+  '/api/bff/marketplace/cancel',  
+  '/api/bff/assets/delete', 
 ];
 
 export function middleware(req: NextRequest) {
