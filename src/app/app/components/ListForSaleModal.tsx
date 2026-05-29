@@ -3,8 +3,11 @@
 import { useState }        from 'react';
 import { Asset, Listing }  from '../types';
 
-const getCsrf = (): string =>
-  document.cookie.split('; ').find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+const getCsrf = (): string => {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(/(?:^|;\s*)tec_csrf=([^;]*)/);
+  return match ? match[1] : '';
+};
 
 export function ListForSaleModal({
   asset, listing, onClose, onSuccess,
