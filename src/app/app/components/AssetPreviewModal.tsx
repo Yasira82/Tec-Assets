@@ -15,6 +15,9 @@ const assetColors: Record<string, { border: string; status: string }> = {
   default:       { border: '#d4af3720', status: '#6b6b7a' },
 };
 
+const getCsrf = (): string =>
+  document.cookie.split('; ').find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+
 const handleShare = async (assetName: string, price?: number | null) => {
   const text = price
     ? `Check out "${assetName}" on TEC Assets — listed for ${price}π! 🎨`
@@ -48,8 +51,11 @@ export function AssetPreviewModal({
   const hasTraits = Object.keys(metadata).some(k => !['imageUrl', 'piPaymentId', 'name'].includes(k));
   const isDomain  = asset.asset_type === 'domain';
 
-  const startY        = useRef<number | null>(null);
-  const [dragY, setDragY] = useState(0);
+  const startY            = useRef<number | null>(null);
+  const [dragY,           setDragY]           = useState(0);
+  const [confirmDelete,   setConfirmDelete]   = useState(false);
+  const [deleting,        setDeleting]        = useState(false);
+  const [deleteError,     setDeleteError]     = useState('');
 
   const onTouchStart = (e: React.TouchEvent) => { startY.current = e.touches[0].clientY; };
   const onTouchMove  = (e: React.TouchEvent) => {
@@ -61,6 +67,41 @@ export function AssetPreviewModal({
     if (dragY > 120) onClose();
     setDragY(0);
     startY.current = null;
+  };
+
+  // ✅ حذف الـ NFT نهائياً
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      setTimeout(() => setConfirmDelete(false), 4000); // reset بعد 4 ثواني
+      return;
+    }
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch(
+        `/api/bff/assets/delete?assetId=${asset.id}`,
+        {
+          method:      'DELETE',
+          credentials: 'include',
+          headers:     { 'x-csrf-token': getCsrf() },
+        },
+      );
+      if (res.ok) {
+        navigator.vibrate?.(50);
+        onClose();
+        setTimeout(() => onRefresh?.(), 500);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setDeleteError(data.error ?? 'Delete failed');
+        setConfirmDelete(false);
+      }
+    } catch {
+      setDeleteError('Network error — try again');
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -102,7 +143,6 @@ export function AssetPreviewModal({
 
         {/* ── Scrollable content ── */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px' }}>
-
           {nftImageUrl && (
             <div
               onClick={onExpandImage}
@@ -172,7 +212,6 @@ export function AssetPreviewModal({
 
           {hasTraits && <NFTTraits metadata={metadata} colors={colors} />}
           {allAssets.length > 1 && <SimilarAssets asset={asset} allAssets={allAssets} colors={colors} />}
-
         </div>
 
         {/* ── Sticky Actions ── */}
@@ -182,59 +221,96 @@ export function AssetPreviewModal({
           borderTop: '1px solid rgba(255,255,255,0.06)',
           background: 'rgba(13,13,20,0.98)',
           backdropFilter: 'blur(20px)',
-          display: 'flex', gap: 10,
+          display: 'flex', flexDirection: 'column', gap: 10,
         }}>
-          {isDomain && asset.status === 'active' && (
-            <MintAsNftButton
-              asset={asset}
-              onClose={onClose}
-              onSuccess={() => onRefresh?.()}
-            />
+          {/* Error message */}
+          {deleteError && (
+            <div style={{ fontSize: 12, color: '#e74c3c', textAlign: 'center' }}>
+              {deleteError}
+            </div>
           )}
 
-          {!isDomain && asset.status === 'active' && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {isDomain && asset.status === 'active' && (
+              <MintAsNftButton
+                asset={asset}
+                onClose={onClose}
+                onSuccess={() => onRefresh?.()}
+              />
+            )}
+
+            {!isDomain && asset.status === 'active' && (
+              <button
+                onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
+                style={{
+                  flex: 1, padding: '16px',
+                  background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                  border: 'none', borderRadius: 16,
+                  color: '#0a0800', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                }}
+              >
+                🏷️ List for Sale
+              </button>
+            )}
+
+            {asset.status === 'on_sale' && asset.listing_id && (
+              <button
+                onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
+                style={{
+                  flex: 1, padding: '16px',
+                  background: 'rgba(231,76,60,0.08)',
+                  border: '1px solid rgba(231,76,60,0.3)',
+                  borderRadius: 16, color: '#e74c3c',
+                  fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Cancel Listing
+              </button>
+            )}
+
             <button
-              onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
+              onClick={onClose}
               style={{
-                flex: 1, padding: '16px',
-                background: 'linear-gradient(135deg,#d4af37,#b8882a)',
-                border: 'none', borderRadius: 16,
-                color: '#0a0800', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                padding: '16px 20px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 16, color: '#6b6b7a',
+                fontSize: 14, cursor: 'pointer',
               }}
             >
-              🏷️ List for Sale
+              ✕
             </button>
-          )}
+          </div>
 
-          {asset.status === 'on_sale' && asset.listing_id && (
+          {/* ✅ Delete button — NFT فقط — مش on_sale */}
+          {!isDomain && asset.status !== 'on_sale' && (
             <button
-              onClick={() => { navigator.vibrate?.(10); onClose(); onCancelListing(asset.listing_id!); }}
+              onClick={handleDelete}
+              disabled={deleting}
               style={{
-                flex: 1, padding: '16px',
-                background: 'rgba(231,76,60,0.08)',
-                border: '1px solid rgba(231,76,60,0.3)',
-                borderRadius: 16, color: '#e74c3c',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                width: '100%', padding: '14px',
+                background: confirmDelete
+                  ? 'rgba(231,76,60,0.2)'
+                  : 'rgba(255,255,255,0.03)',
+                border: confirmDelete
+                  ? '1px solid rgba(231,76,60,0.6)'
+                  : '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 16,
+                color: confirmDelete ? '#e74c3c' : '#3a3a4a',
+                fontSize: 13, fontWeight: confirmDelete ? 700 : 400,
+                cursor: deleting ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
               }}
             >
-              Cancel Listing
+              {deleting
+                ? 'Deleting...'
+                : confirmDelete
+                  ? '⚠️ Tap again to confirm delete'
+                  : '🗑️ Delete NFT'}
             </button>
           )}
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: '16px 20px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16, color: '#6b6b7a',
-              fontSize: 14, cursor: 'pointer',
-            }}
-          >
-            ✕
-          </button>
         </div>
       </div>
     </div>
   );
-            }
+                }
