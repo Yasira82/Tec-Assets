@@ -137,7 +137,7 @@ export function useAssetsPage() {
           }),
         })
           .then(async res => {
-            if (res.ok) fetchData();
+            if (res.ok) setTimeout(() => fetchData(), 2000);
             else {
               const d = await res.json().catch(() => ({})) as { error?: string };
               showToast(`Register failed: ${d.error ?? res.status}`, 'error');
