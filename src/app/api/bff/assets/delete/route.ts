@@ -17,9 +17,12 @@ export const DELETE = createHandler({
     const res = await fetch(`${GATEWAY_URL}/api/assets/${assetId}`, {
       method: 'DELETE',
       headers: {
+        'Content-Type':   'application/json',
         Authorization:    `Bearer ${token}`,
         'x-request-id':   ctx.requestId,
+        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
       },
+      body: JSON.stringify({ userId: ctx.userId }),
     });
 
     const data = await res.json().catch(() => ({}));
