@@ -1,14 +1,17 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 
 interface RegisterBody {
-  name:        string;
+  name:         string;
   description?: string;
-  imageUrl:    string;
-  key?:        string;
-  mimeType?:   string;
-  paymentId:   string;
-  txid?:       string;
+  imageUrl:     string;
+  key?:         string;
+  mimeType?:    string;
+  paymentId:    string;
+  txid?:        string;
 }
+
+const isUUID = (s: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
 export const POST = createHandler({
   requireAuth: true,
@@ -38,10 +41,14 @@ export const POST = createHandler({
           size:     0,
           metadata: { type: 'nft', userId: ctx.userId },
         }),
-      }).catch(() => {}); // مش blocking
+      }).catch(() => {});
     }
 
-    // ✅ سجل الـ NFT كـ asset
+    // ✅ transactionId لازم UUID — لو paymentId مش UUID نولّد واحد جديد
+    const transactionId = isUUID(body.paymentId)
+      ? body.paymentId
+      : crypto.randomUUID();
+
     const slug = `nft-${ctx.userId.slice(0, 8)}-${Date.now()}`;
 
     const res = await fetch(`${GATEWAY_URL}/api/assets/provision`, {
@@ -53,9 +60,9 @@ export const POST = createHandler({
         'x-request-id':   ctx.requestId,
       },
       body: JSON.stringify({
-        transactionId: body.paymentId,
-        userId:        ctx.userId,
-        category:      'NFT',
+        transactionId,
+        userId:   ctx.userId,
+        category: 'NFT',
         slug,
         metadata: {
           name:        body.name,
@@ -64,6 +71,7 @@ export const POST = createHandler({
           key:         body.key ?? '',
           mimeType:    body.mimeType ?? 'image/jpeg',
           txid:        body.txid ?? '',
+          paymentId:   body.paymentId,
         },
       }),
     });
