@@ -93,7 +93,7 @@ export function AssetPreviewModal({
       if (res.ok) {
         navigator.vibrate?.(50);
         onClose();
-        setTimeout(() => onRefresh?.(), 500);
+        setTimeout(() => onRefresh?.(), 2000);
       } else {
         const data = await res.json().catch(() => ({})) as { error?: string };
         setDeleteError(data.error ?? 'Delete failed');
