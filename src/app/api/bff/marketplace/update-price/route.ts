@@ -13,7 +13,6 @@ export const PATCH = createHandler({
         'Content-Type':   'application/json',
         Authorization:    `Bearer ${token}`,
         'x-request-id':   ctx.requestId,
-        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
       },
       body: JSON.stringify({
         price:     body.price,
