@@ -2,28 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const PROTECTED_ROUTES  = ['/app', '/dashboard', '/profile', '/settings'];
 const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const CSRF_PROTECTED    = [
+
+const CSRF_PROTECTED = [
   '/api/auth/logout',
   '/api/auth/refresh',
   '/api/bff/assets/',
   '/api/bff/marketplace/',
-   '/api/bff/marketplace/list',         
-  '/api/bff/marketplace/update-price', 
 ];
 
-// ✅ نفس pattern بتاع Commerce
 const CSRF_EXCLUDED = [
   '/api/bff/nft/upload',
   '/api/bff/nft/register',
-  '/api/bff/marketplace/buy',      // ✅ بيتعمل بعد Hub redirect — JWT بيحميه
-  '/api/bff/marketplace/cancel',  
-  '/api/bff/assets/delete', 
+  '/api/bff/marketplace/buy',
+  '/api/bff/marketplace/cancel',
+  '/api/bff/assets/delete',
+  '/api/bff/marketplace/list',
+  '/api/bff/marketplace/update-price',
 ];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method       = req.method.toUpperCase();
 
+  // ── Auth guard ────────────────────────────────────────
   const isProtected = PROTECTED_ROUTES.some(r => pathname.startsWith(r));
   if (isProtected) {
     const token = req.cookies.get('tec_access_token')?.value;
@@ -34,6 +35,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
+  // ── CSRF guard ────────────────────────────────────────
   if (!CSRF_SAFE_METHODS.has(method)) {
     const isExcluded      = CSRF_EXCLUDED.some(r => pathname.startsWith(r));
     const isCsrfProtected = !isExcluded && CSRF_PROTECTED.some(r => pathname.startsWith(r));
