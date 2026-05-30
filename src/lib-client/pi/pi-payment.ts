@@ -28,7 +28,10 @@ export const createU2APayment = (
       return;
     }
 
-    // ✅ Authenticate first — ensures Pi session has payments scope
+    // ✅ انتظر Pi Browser يخلص processing بعد Pi.init()
+    await new Promise(r => setTimeout(r, 2500));
+
+    // ✅ Authenticate
     try {
       await window.Pi.authenticate(
         ['username', 'payments'],
@@ -46,8 +49,7 @@ export const createU2APayment = (
       );
     } catch (authErr) {
       resolve({
-        success: false,
-        status:  'failed',
+        success: false, status: 'failed',
         message: 'Pi auth failed: ' + (authErr instanceof Error ? authErr.message : String(authErr)),
       });
       return;
@@ -60,12 +62,8 @@ export const createU2APayment = (
       onReadyForServerApproval: async (paymentId: string) => {
         try {
           const res = await fetch('/api/payment/approve', {
-            method:      'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-csrf-token': getCsrfToken(),
-            },
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
             body: JSON.stringify({ paymentId, pi_payment_id: paymentId }),
           });
           if (!res.ok) { console.error('[Payment] Approve failed:', res.status); return; }
@@ -78,12 +76,8 @@ export const createU2APayment = (
         try {
           const dbPaymentId = (getW().__tec_payment_id as string) ?? paymentId;
           const res = await fetch('/api/payment/complete', {
-            method:      'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-csrf-token': getCsrfToken(),
-            },
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
             body: JSON.stringify({ paymentId: dbPaymentId, txid }),
           });
           if (res.ok) {
