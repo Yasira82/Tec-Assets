@@ -1,7 +1,33 @@
 'use client';
 
 import { useState }                                  from 'react';
-import { createPaymentRecord, createU2APayment }     from '@/lib/pi-payment';
+// غيّر الـ import
+import { createU2APayment } from '@/lib-client/pi/pi-payment';
+
+// في handleMint — Mode 2:
+const result = await createU2APayment(
+  MINT_FEE,
+  `Mint NFT: ${name}`,
+  { source: 'assets', type: 'nft_mint', n: name, u: uploadedUrl },
+);
+
+if (result.success) {
+  await fetch('/api/bff/nft/register', {
+    method:      'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+    body: JSON.stringify({
+      name, description,
+      imageUrl:  uploadedUrl,
+      key:       uploadedKey ?? '',
+      mimeType:  file?.type ?? 'image/jpeg',
+      paymentId: result.paymentId ?? '',
+      txid:      result.txid ?? '',
+    }),
+  });
+  onSuccess?.();
+  onClose();
+}
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
