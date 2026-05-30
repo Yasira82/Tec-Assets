@@ -1,33 +1,7 @@
 'use client';
 
-import { useState }                                  from 'react';
-// غيّر الـ import
-import { createU2APayment } from '@/lib-client/pi/pi-payment';
-
-// في handleMint — Mode 2:
-const result = await createU2APayment(
-  MINT_FEE,
-  `Mint NFT: ${name}`,
-  { source: 'assets', type: 'nft_mint', n: name, u: uploadedUrl },
-);
-
-if (result.success) {
-  await fetch('/api/bff/nft/register', {
-    method:      'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-    body: JSON.stringify({
-      name, description,
-      imageUrl:  uploadedUrl,
-      key:       uploadedKey ?? '',
-      mimeType:  file?.type ?? 'image/jpeg',
-      paymentId: result.paymentId ?? '',
-      txid:      result.txid ?? '',
-    }),
-  });
-  onSuccess?.();
-  onClose();
-}
+import { useState }              from 'react';
+import { createU2APayment }      from '@/lib-client/pi/pi-payment';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -35,8 +9,8 @@ const MINT_FEE   = 2;
 
 const getCsrfToken = (): string => {
   if (typeof document === 'undefined') return '';
-  return document.cookie.split('; ')
-    .find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+  const match = document.cookie.match(/(?:^|;\s*)tec_csrf=([^;]*)/);
+  return match ? match[1] : '';
 };
 
 const toBase64 = (file: File): Promise<string> =>
@@ -123,7 +97,7 @@ export function NFTUploadModal({
       m: file?.type ?? 'image/jpeg',
     }));
 
-    // ── Mode 1: جاي من Hub أو Pi SDK مش جاهز → Hub redirect ──
+    // ── Mode 1: Hub redirect ──────────────────────────────
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
       const params = new URLSearchParams({
         pay:        '1',
@@ -137,30 +111,16 @@ export function NFTUploadModal({
       return;
     }
 
-    // ── Mode 2: Assets مباشرة → direct payment ────────────────
+    // ── Mode 2: Direct payment ────────────────────────────
     setLoading(true);
     setError('');
 
-    await fetch('/api/auth/refresh', {
-  method:      'POST',
-  credentials: 'include',
-  headers:     { 'Content-Type': 'application/json' },
-}).catch(() => {});
-    
     try {
-      const internalId = await createPaymentRecord(
-        MINT_FEE,
-        `nft:${nftMeta}`,
-        `Mint NFT: ${name}`,
-      );
-      if (!internalId) { setError('Payment init failed'); return; }
-
       const result = await createU2APayment(
-  MINT_FEE,
-  `Mint NFT: ${name}`,
-  { source: 'assets', type: 'nft_mint' },
-  internalId!,
-);
+        MINT_FEE,
+        `Mint NFT: ${name}`,
+        { source: 'assets', type: 'nft_mint', product_id: `nft:${nftMeta}` },
+      );
 
       if (result.success) {
         const res = await fetch('/api/bff/nft/register', {
@@ -172,8 +132,8 @@ export function NFTUploadModal({
             imageUrl:  uploadedUrl,
             key:       uploadedKey ?? '',
             mimeType:  file?.type ?? 'image/jpeg',
-            paymentId: internalId,
-            txid:      result.txid ?? '',
+            paymentId: result.paymentId ?? '',
+            txid:      result.txid     ?? '',
           }),
         });
         if (res.ok || res.status === 409) {
@@ -356,4 +316,4 @@ export function NFTUploadModal({
       </div>
     </>
   );
-            }
+      }
