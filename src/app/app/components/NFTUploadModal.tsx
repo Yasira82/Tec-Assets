@@ -1,7 +1,7 @@
 'use client';
 
-import { useState }              from 'react';
-import { createU2APayment }      from '@/lib-client/pi/pi-payment';
+import { useState }         from 'react';
+import { createU2APayment } from '@/lib-client/pi/pi-payment';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -43,8 +43,7 @@ export function NFTUploadModal({
     if (!f) return;
     if (f.size > 4 * 1024 * 1024) { setError('File too large (max 4MB)'); return; }
     if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(f.type)) {
-      setError('Only JPEG, PNG, GIF, WEBP allowed');
-      return;
+      setError('Only JPEG, PNG, GIF, WEBP allowed'); return;
     }
     setFile(f);
     setError('');
@@ -97,17 +96,16 @@ export function NFTUploadModal({
       m: file?.type ?? 'image/jpeg',
     }));
 
-    // ── Mode 1: Hub redirect ──────────────────────────────
+    // ── Mode 1: Hub /hub/pay (FOREIGN_SESSION أو Pi مش جاهز) ──
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
       const params = new URLSearchParams({
-        pay:        '1',
         amount:     MINT_FEE.toString(),
         memo:       `Mint NFT: ${name}`,
         product_id: `nft:${nftMeta}`,
         return_url: `${ASSETS_URL}/app`,
         source:     'assets',
       });
-      window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+      window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
       return;
     }
 
@@ -316,4 +314,4 @@ export function NFTUploadModal({
       </div>
     </>
   );
-      }
+            }
