@@ -1,58 +1,91 @@
-import type { Metadata }        from 'next';
-import { LocaleProvider }       from '@/lib/i18n';
-import { BackendOfflineBanner } from '@/components/BackendOfflineBanner';
+import type { Metadata } from 'next';
+import Script from 'next/script';
+
+import './globals.css';
 
 export const metadata: Metadata = {
-  title:       'TEC Assets — Digital Ownership',
-  description: 'Manage your Pi Network digital assets — domains, NFTs, portfolio',
+  title: 'TEC Assets',
+  description: 'TEC Assets Platform',
 };
 
-const piSandbox = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true';
-const piAppId   = process.env.NEXT_PUBLIC_PI_APP_ID ?? '';
+const piInitScript = `
+(function () {
+  if (typeof window === 'undefined') return;
 
-const piScript = `(function(){
-  var tries=0;
-  function setReady(){window.__TEC_PI_READY=true;window.dispatchEvent(new Event('tec-pi-ready'));}
-  function initPi(){
-    if(tries++>=40)return;
-    if(typeof window.Pi==='undefined'){setTimeout(initPi,150);return;}
-    try{
-      window.Pi.init({version:'2.0',sandbox:${piSandbox},appId:'${piAppId}'});
-      sessionStorage.removeItem('__tec_pi_reload');
-      setTimeout(setReady,1500);
-    }catch(e){
-      var msg=String(e).toLowerCase();
-      if(msg.includes('already')||msg.includes('initialized')){
-        window.__TEC_PI_FOREIGN_SESSION=true;
-        setReady();
-        if(!sessionStorage.getItem('__tec_pi_reload')){
-          sessionStorage.setItem('__tec_pi_reload','1');
-          window.location.reload();
-        }
-      }else{setTimeout(initPi,150);}
+  window.__TEC_PI_READY = false;
+
+  function bootPi() {
+    try {
+      if (!window.Pi) {
+        return false;
+      }
+
+      if (window.__TEC_PI_INITIALIZED) {
+        window.__TEC_PI_READY = true;
+        return true;
+      }
+
+      window.Pi.init({
+        version: '2.0',
+        sandbox: false,
+      });
+
+      window.__TEC_PI_INITIALIZED = true;
+      window.__TEC_PI_READY = true;
+
+      console.log('[TEC][Pi] SDK initialized');
+
+      return true;
+    } catch (error) {
+      console.error(
+        '[TEC][Pi] init failed',
+        error,
+      );
+
+      return false;
     }
   }
-  initPi();
-})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+  if (bootPi()) {
+    return;
+  }
+
+  let attempts = 0;
+
+  const interval = setInterval(() => {
+    attempts++;
+
+    const ok = bootPi();
+
+    if (ok || attempts >= 40) {
+      clearInterval(interval);
+    }
+  }, 250);
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" style={{ height: '100%' }}>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-        <style>{`
-          *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { height: 100%; width: 100%; background: #020205; }
-          body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
-        `}</style>
-        <script src="https://sdk.minepi.com/pi-sdk.js" />
-        <script dangerouslySetInnerHTML={{ __html: piScript }} />
-      </head>
+    <html lang="en">
       <body>
-        <LocaleProvider>
-          <BackendOfflineBanner />
-          {children}
-        </LocaleProvider>
+        <Script
+          src="https://sdk.minepi.com/pi-sdk.js"
+          strategy="beforeInteractive"
+        />
+
+        <Script
+          id="tec-pi-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: piInitScript,
+          }}
+        />
+
+        {children}
       </body>
     </html>
   );
