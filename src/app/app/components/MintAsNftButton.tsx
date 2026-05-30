@@ -1,14 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState }         from 'react';
 import { createU2APayment } from '@/lib-client/pi/pi-payment';
-
-// في handleMint — Mode 2:
-const result = await createU2APayment(
-  MINT_FEE,
-  `Mint Domain as NFT: ${asset.name}`,
-  { source: 'assets', type: 'domain_nft', asset_id: asset.id },
-);
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -48,7 +41,7 @@ export function MintAsNftButton({
     setError('');
     navigator.vibrate?.(10);
 
-    // ── Mode 1: Hub redirect (لما Pi مش جاهز على Assets domain) ──
+    // ── Mode 1: Hub redirect ──────────────────────────────
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
       const params = new URLSearchParams({
         pay:        '1',
@@ -62,20 +55,12 @@ export function MintAsNftButton({
       return;
     }
 
-    // ── Mode 2: Direct payment on Assets domain ────────────────
+    // ── Mode 2: Direct payment ────────────────────────────
     try {
-      const internalId = await createPaymentRecord(
-        MINT_FEE,
-        `domain-nft:${asset.id}`,
-        `Mint Domain as NFT: ${asset.name}`,
-      );
-      if (!internalId) { setError('Payment init failed'); setLoading(false); return; }
-
       const result = await createU2APayment(
         MINT_FEE,
         `Mint Domain as NFT: ${asset.name}`,
         { source: 'assets', type: 'domain_nft', asset_id: asset.id },
-        internalId,
       );
 
       if (!result.success) {
@@ -88,7 +73,10 @@ export function MintAsNftButton({
         method:      'POST',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrf() },
-        body: JSON.stringify({ asset_id: asset.id, transactionId: internalId }),
+        body: JSON.stringify({
+          asset_id:      asset.id,
+          transactionId: result.paymentId ?? '',
+        }),
       });
 
       if (res.ok || res.status === 409) {
