@@ -17,18 +17,43 @@ const getCsrfToken = (): string => {
 const getW = (): Record<string, unknown> =>
   window as unknown as Record<string, unknown>;
 
-// ✅ مباشرة Pi.createPayment — بدون Pi.authenticate جوه
 export const createU2APayment = (
   amount:   number,
   memo:     string,
   metadata: Record<string, unknown> = {},
 ): Promise<PaymentResult> => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     if (!window.Pi) {
       resolve({ success: false, status: 'failed', message: 'Open in Pi Browser' });
       return;
     }
 
+    // ✅ Authenticate first — ensures Pi session has payments scope
+    try {
+      await window.Pi.authenticate(
+        ['username', 'payments'],
+        async (incomplete: unknown) => {
+          const p = incomplete as { identifier?: string } | null;
+          if (!p?.identifier) return;
+          try {
+            await fetch('/api/bff/payment/resolve-incomplete', {
+              method: 'POST', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pi_payment_id: p.identifier }),
+            });
+          } catch {}
+        },
+      );
+    } catch (authErr) {
+      resolve({
+        success: false,
+        status:  'failed',
+        message: 'Pi auth failed: ' + (authErr instanceof Error ? authErr.message : String(authErr)),
+      });
+      return;
+    }
+
+    // ✅ Create payment
     const paymentData: PiPaymentData = { amount, memo, metadata };
 
     const callbacks: PiPaymentCallbacks = {
@@ -65,7 +90,7 @@ export const createU2APayment = (
             resolve({ success: true, status: 'completed', txid, paymentId: dbPaymentId });
           } else {
             const data = await res.json().catch(() => ({}));
-            resolve({ success: false, status: 'failed', message: data?.message ?? 'Completion failed' });
+            resolve({ success: false, status: 'failed', message: (data as any)?.message ?? 'Completion failed' });
           }
         } catch {
           resolve({ success: false, status: 'failed', message: 'Network error' });
@@ -73,12 +98,17 @@ export const createU2APayment = (
       },
 
       onCancel: () => resolve({ success: false, status: 'cancelled' }),
-      onError:  (error: unknown) => {
-        const msg = error instanceof Error ? error.message : 'Payment error';
+
+      onError: (error: unknown) => {
+        const msg = error instanceof Error ? error.message : String(error);
         resolve({ success: false, status: 'failed', message: msg });
       },
     };
 
-    window.Pi.createPayment(paymentData, callbacks);
+    try {
+      window.Pi.createPayment(paymentData, callbacks);
+    } catch (err) {
+      resolve({ success: false, status: 'failed', message: String(err) });
+    }
   });
 };
