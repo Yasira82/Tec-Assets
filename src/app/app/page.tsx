@@ -37,7 +37,6 @@ function AssetsPageInner() {
     }}>
       <PiDebugPanel />
       <style>{`
-      <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
         @keyframes spin    { to{transform:rotate(360deg)} }
