@@ -98,7 +98,7 @@ export function NFTUploadModal({
     }));
 
     // ── Mode 1: جاي من Hub أو Pi SDK مش جاهز → Hub redirect ──
-    if (true) {
+    if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
       const params = new URLSearchParams({
         pay:        '1',
         amount:     MINT_FEE.toString(),
