@@ -1,9 +1,11 @@
 'use client';
 
-import { useState }                              from 'react';
+import { useState } from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
 
-const MINT_FEE = 1;
+const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
+const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
+const MINT_FEE   = 1;
 
 const getCsrf = (): string => {
   if (typeof document === 'undefined') return '';
@@ -39,8 +41,22 @@ export function MintAsNftButton({
     setError('');
     navigator.vibrate?.(10);
 
+    // ── Mode 1: Hub redirect (لما Pi مش جاهز على Assets domain) ──
+    if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
+      const params = new URLSearchParams({
+        pay:        '1',
+        amount:     MINT_FEE.toString(),
+        memo:       `Mint Domain as NFT: ${asset.name}`,
+        product_id: `domain-nft:${asset.id}:${encodeURIComponent(asset.name)}`,
+        return_url: `${ASSETS_URL}/app`,
+        source:     'assets',
+      });
+      window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+      return;
+    }
+
+    // ── Mode 2: Direct payment on Assets domain ────────────────
     try {
-      // Step 1: create payment record
       const internalId = await createPaymentRecord(
         MINT_FEE,
         `domain-nft:${asset.id}`,
@@ -48,7 +64,6 @@ export function MintAsNftButton({
       );
       if (!internalId) { setError('Payment init failed'); setLoading(false); return; }
 
-      // Step 2: Pi payment
       const result = await createU2APayment(
         MINT_FEE,
         `Mint Domain as NFT: ${asset.name}`,
@@ -62,15 +77,11 @@ export function MintAsNftButton({
         return;
       }
 
-      // Step 3: mint domain as NFT
       const res = await fetch('/api/bff/assets/mint-as-nft', {
         method:      'POST',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrf() },
-        body: JSON.stringify({
-          asset_id:      asset.id,
-          transactionId: internalId,
-        }),
+        body: JSON.stringify({ asset_id: asset.id, transactionId: internalId }),
       });
 
       if (res.ok || res.status === 409) {
@@ -112,16 +123,12 @@ export function MintAsNftButton({
         disabled={loading}
         style={{
           flex: 1, padding: '16px',
-          background: loading
-            ? '#ffffff10'
-            : 'linear-gradient(135deg,#1a0f3d,#0a2040)',
-          border: '1px solid #7b6bc850',
-          borderRadius: 16,
+          background: loading ? '#ffffff10' : 'linear-gradient(135deg,#1a0f3d,#0a2040)',
+          border: '1px solid #7b6bc850', borderRadius: 16,
           color: loading ? '#4a4a5a' : '#b39ddb',
           fontSize: 15, fontWeight: 800,
           cursor: loading ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}
       >
         {loading ? 'Processing...' : `🎨 Mint as NFT — ${MINT_FEE}π`}
