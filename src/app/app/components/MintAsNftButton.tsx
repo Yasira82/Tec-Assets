@@ -1,14 +1,26 @@
 'use client';
 
-import { Asset } from '../types';
+import { useState }                              from 'react';
+import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
 
 const MINT_FEE = 1;
 
-export function MintAsNftButton({ asset }: {
-  asset:     Asset;
+const getCsrf = (): string => {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(/(?:^|;\s*)tec_csrf=([^;]*)/);
+  return match ? match[1] : '';
+};
+
+export function MintAsNftButton({
+  asset, onClose, onSuccess,
+}: {
+  asset:     { id: string; name: string };
   onClose:   () => void;
   onSuccess: () => void;
 }) {
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+
   const domainName = asset.name.replace('.pi', '').replace(/\./g, '');
   const tier = domainName.length <= 2 ? 'Legendary'
              : domainName.length <= 3 ? 'Ultra Rare'
@@ -22,16 +34,57 @@ export function MintAsNftButton({ asset }: {
                   : tier === 'Uncommon'   ? '#7ee7c0'
                   : '#d4af37';
 
-  const handleMint = () => {
+  const handleMint = async () => {
+    setLoading(true);
+    setError('');
     navigator.vibrate?.(10);
-    const params = new URLSearchParams({
-      action:     'mint-domain',
-      asset_id:   asset.id,
-      name:       asset.name,
-      tier,
-      return_url: 'https://assets.tecosystem.app/app',
-    });
-    window.location.href = `https://hub.tecosystem.app/mint?${params.toString()}`;
+
+    try {
+      // Step 1: create payment record
+      const internalId = await createPaymentRecord(
+        MINT_FEE,
+        `domain-nft:${asset.id}`,
+        `Mint Domain as NFT: ${asset.name}`,
+      );
+      if (!internalId) { setError('Payment init failed'); setLoading(false); return; }
+
+      // Step 2: Pi payment
+      const result = await createU2APayment(
+        MINT_FEE,
+        `Mint Domain as NFT: ${asset.name}`,
+        { source: 'assets', type: 'domain_nft', asset_id: asset.id },
+        internalId,
+      );
+
+      if (!result.success) {
+        setError(result.status === 'cancelled' ? 'Cancelled' : result.message ?? 'Payment failed');
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: mint domain as NFT
+      const res = await fetch('/api/bff/assets/mint-as-nft', {
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrf() },
+        body: JSON.stringify({
+          asset_id:      asset.id,
+          transactionId: internalId,
+        }),
+      });
+
+      if (res.ok || res.status === 409) {
+        onSuccess();
+        onClose();
+      } else {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        setError(d.error ?? 'Minting failed');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error — try again');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,20 +101,30 @@ export function MintAsNftButton({ asset }: {
         </span>
       </div>
 
+      {error && (
+        <div style={{ fontSize: 11, color: '#e74c3c', textAlign: 'center' }}>
+          {error}
+        </div>
+      )}
+
       <button
         onClick={handleMint}
+        disabled={loading}
         style={{
           flex: 1, padding: '16px',
-          background: 'linear-gradient(135deg,#1a0f3d,#0a2040)',
+          background: loading
+            ? '#ffffff10'
+            : 'linear-gradient(135deg,#1a0f3d,#0a2040)',
           border: '1px solid #7b6bc850',
           borderRadius: 16,
-          color: '#b39ddb',
-          fontSize: 15, fontWeight: 800, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          transition: 'all 0.2s',
+          color: loading ? '#4a4a5a' : '#b39ddb',
+          fontSize: 15, fontWeight: 800,
+          cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 8,
         }}
       >
-        🎨 Mint as NFT — {MINT_FEE}π
+        {loading ? 'Processing...' : `🎨 Mint as NFT — ${MINT_FEE}π`}
       </button>
     </div>
   );
