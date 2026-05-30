@@ -23,24 +23,48 @@ export const createU2APayment = (
   memo:     string,
   metadata: Record<string, unknown> = {},
 ): Promise<PaymentResult> => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     if (!window.Pi) {
       resolve({ success: false, status: 'failed', message: 'Open in Pi Browser' });
       return;
     }
 
+    // ✅ لو usePiAuth لسه مخلصش — authenticate دلوقتي
+    if (!(window as any).__TEC_PI_AUTHENTICATED) {
+      try {
+        await window.Pi.authenticate(
+          ['username', 'payments'],
+          async (incomplete: unknown) => {
+            const p = incomplete as { identifier?: string } | null;
+            if (!p?.identifier) return;
+            try {
+              await fetch('/api/bff/payment/resolve-incomplete', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pi_payment_id: p.identifier }),
+              });
+            } catch {}
+          },
+        );
+        (window as any).__TEC_PI_AUTHENTICATED = true;
+      } catch (authErr) {
+        resolve({
+          success: false, status: 'failed',
+          message: 'Pi auth failed: ' + (authErr instanceof Error ? authErr.message : String(authErr)),
+        });
+        return;
+      }
+    }
+
+    // ✅ Pi.createPayment مباشرة
     const paymentData: PiPaymentData = { amount, memo, metadata };
 
     const callbacks: PiPaymentCallbacks = {
       onReadyForServerApproval: async (paymentId: string) => {
         try {
           const res = await fetch('/api/payment/approve', {
-            method:      'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-csrf-token': getCsrfToken(),
-            },
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
             body: JSON.stringify({ paymentId, pi_payment_id: paymentId }),
           });
           if (!res.ok) { console.error('[Payment] Approve failed:', res.status); return; }
@@ -53,12 +77,8 @@ export const createU2APayment = (
         try {
           const dbPaymentId = (getW().__tec_payment_id as string) ?? paymentId;
           const res = await fetch('/api/payment/complete', {
-            method:      'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-csrf-token': getCsrfToken(),
-            },
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
             body: JSON.stringify({ paymentId: dbPaymentId, txid }),
           });
           if (res.ok) {
@@ -80,6 +100,10 @@ export const createU2APayment = (
       },
     };
 
-    window.Pi.createPayment(paymentData, callbacks);
+    try {
+      window.Pi.createPayment(paymentData, callbacks);
+    } catch (err) {
+      resolve({ success: false, status: 'failed', message: String(err) });
+    }
   });
 };
