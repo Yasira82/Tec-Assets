@@ -1,7 +1,9 @@
+import './globals.css';
+
 import type { Metadata } from 'next';
 import Script from 'next/script';
 
-import './globals.css';
+import { LocaleProvider } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'TEC Assets',
@@ -85,7 +87,9 @@ export default function RootLayout({
           }}
         />
 
-        {children}
+        <LocaleProvider>
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );
