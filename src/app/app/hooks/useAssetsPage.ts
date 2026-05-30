@@ -118,6 +118,22 @@ export function useAssetsPage() {
     const paymentId = params.get('payment_id') ?? '';
     const productId = params.get('product_id') ?? '';
 
+if (productId.startsWith('domain-nft:')) {
+  const parts  = productId.split(':');
+  const assetId = parts[1] ?? '';
+  showToast('Domain minted as NFT! 🎨');
+  setActiveTab('assets');
+  fetch('/api/bff/assets/mint-as-nft', {
+    method:      'POST',
+    credentials: 'include',
+    headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+    body: JSON.stringify({ asset_id: assetId, transactionId: paymentId }),
+  }).then(() => setTimeout(() => fetchData(), 2000))
+    .catch(() => {});
+  window.history.replaceState({}, '', '/app');
+  return;
+}
+    
     if (productId.startsWith('nft:')) {
       try {
         const nftMeta = JSON.parse(atob(productId.slice(4)));
