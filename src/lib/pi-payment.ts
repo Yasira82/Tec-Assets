@@ -1,10 +1,10 @@
 const getCsrfToken = (): string =>
   typeof document === 'undefined' ? '' :
-  document.cookie.split('; ').find(r => r.startsWith('tec_csrf='))?.split('=')?.[1] ?? '';
+  document.cookie.match(/(?:^|;\s*)tec_csrf=([^;]*)/)?.[1] ?? '';
 
 const getToken = (): string | null =>
   typeof document === 'undefined' ? null :
-  document.cookie.split('; ').find(r => r.startsWith('tec_access_token='))?.split('=')?.[1] ?? null;
+  document.cookie.match(/(?:^|;\s*)tec_access_token=([^;]*)/)?.[1] ?? null;
 
 export interface PaymentResult {
   status:     'completed' | 'cancelled' | 'error';
@@ -41,7 +41,10 @@ export const createU2APayment = async (
   internalId: string,
 ): Promise<PaymentResult> => {
   return new Promise(async (resolve) => {
-    if (!window.Pi) { resolve({ status: 'error', success: false, message: 'Pi SDK not ready' }); return; }
+    if (!window.Pi) {
+      resolve({ status: 'error', success: false, message: 'Pi SDK not ready' });
+      return;
+    }
 
     let settled = false;
     const done = (result: PaymentResult) => {
@@ -52,10 +55,10 @@ export const createU2APayment = async (
     };
 
     const timer = setTimeout(() => {
-      done({ status: 'error', success: false, message: 'Payment timed out — please try again.' });
+      done({ status: 'error', success: false, message: 'Payment timed out' });
     }, 90_000);
 
-    const token = getToken();
+    const token   = getToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -74,7 +77,11 @@ export const createU2APayment = async (
         },
       );
     } catch (authErr) {
-      done({ status: 'error', success: false, message: 'Pi auth failed: ' + (authErr instanceof Error ? authErr.message : String(authErr)) });
+      done({
+        status:  'error',
+        success: false,
+        message: 'Pi auth failed: ' + (authErr instanceof Error ? authErr.message : String(authErr)),
+      });
       return;
     }
 
@@ -92,7 +99,9 @@ export const createU2APayment = async (
                 const err = await res.json().catch(() => ({}));
                 done({ status: 'error', success: false, message: (err as any)?.error?.message ?? 'Approve failed' });
               }
-            } catch (err) { done({ status: 'error', success: false, message: String(err) }); }
+            } catch (err) {
+              done({ status: 'error', success: false, message: String(err) });
+            }
           },
           onReadyForServerCompletion: async (piPaymentId: string, txid: string) => {
             try {
@@ -104,14 +113,16 @@ export const createU2APayment = async (
               done(res.ok
                 ? { status: 'completed', success: true, paymentId: internalId, txid }
                 : { status: 'error', success: false, message: (data as any)?.error?.message ?? 'Complete failed' });
-            } catch (err) { done({ status: 'error', success: false, message: String(err) }); }
+            } catch (err) {
+              done({ status: 'error', success: false, message: String(err) });
+            }
           },
           onCancel: () => done({ status: 'cancelled', success: false }),
           onError:  (err: Error) => done({ status: 'error', success: false, message: err.message }),
         },
       );
     } catch (err) {
-      done({ status: 'error', success: false, message: err instanceof Error ? err.message : 'Pi payment error' });
+      done({ status: 'error', success: false, message: String(err) });
     }
   });
 };
