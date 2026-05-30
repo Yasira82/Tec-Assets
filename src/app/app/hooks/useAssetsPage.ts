@@ -163,43 +163,66 @@ txid: txid || crypto.randomUUID(),
 
   // ── Handlers ──────────────────────────────────────────────
   const handleBuy = useCallback(async (listing: Listing) => {
-    if ((window as any).__TEC_PI_FOREIGN_SESSION || !window.__TEC_PI_READY) {
-      hubHandleBuy({
-        amount:    listing.price,
-        memo:      `Buy ${listing.title} — TEC Assets`,
-        productId: listing.id,
-        returnUrl: `${ASSETS_URL}/app`,
-        source:    'assets',
-      });
-      return;
+  if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
+    hubHandleBuy({
+      amount:    listing.price,
+      memo:      `Buy ${listing.title} — TEC Assets`,
+      productId: listing.id,
+      returnUrl: `${ASSETS_URL}/app`,
+      source:    'assets',
+    });
+    return;
+  }
+
+  try {
+    const internalId = await createPaymentRecord(
+      listing.price,
+      listing.id,
+      `Buy ${listing.title} — TEC Assets`,
+      'assets',
+    );
+    if (!internalId) { showToast('Payment init failed — try again', 'error'); return; }
+
+    const result = await createU2APayment(
+      listing.price,
+      `Buy ${listing.title} — TEC Assets`,
+      { source: 'assets', listing_id: listing.id },
+      internalId,
+    );
+
+    if (result.success) {
+      // ✅ سجّل الـ purchase في الـ DB
+      try {
+        await fetch('/api/bff/marketplace/buy', {
+          method:      'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken(),
+          },
+          body: JSON.stringify({
+            listing_id: listing.id,
+            payment_id: result.paymentId,
+            txid:       result.txid,
+          }),
+        });
+      } catch { /* webhook هيعوض لو فشل */ }
+
+      showToast('Purchase successful! 🎉');
+      setActiveTab('purchases');
+      fetchData();
+      fetchListings();
+      fetchPurchases();
+
+    } else if (result.status === 'cancelled') {
+      showToast('Purchase cancelled', 'error');
+    } else {
+      showToast(`Purchase failed: ${result.message ?? 'unknown'}`, 'error');
     }
-
-    try {
-      const internalId = await createPaymentRecord(
-        listing.price,
-        listing.id,
-        `Buy ${listing.title} — TEC Assets`,
-        'assets',
-      );
-      if (!internalId) { showToast('Payment init failed — try again'); return; }
-
-      const result = await createU2APayment(
-        listing.price,
-        `Buy ${listing.title} — TEC Assets`,
-        { source: 'assets', listing_id: listing.id },
-        internalId,
-      );
-
-      if (result.success) {
-        showToast('Purchase successful! ✓');
-        fetchData(); fetchListings(); fetchPurchases();
-      } else if (result.status === 'cancelled') {
-        showToast('Purchase cancelled');
-      } else {
-        showToast(`Purchase failed: ${result.message ?? 'unknown'}`);
-      }
-    } catch { showToast('Payment error — try again'); }
-  }, [showToast, fetchData, fetchListings, fetchPurchases]);
+  } catch {
+    showToast('Payment error — try again', 'error');
+  }
+}, [showToast, fetchData, fetchListings, fetchPurchases, setActiveTab]);
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingListing) return;
