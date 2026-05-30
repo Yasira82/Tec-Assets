@@ -24,36 +24,13 @@ export const createU2APayment = (
   metadata: Record<string, unknown> = {},
 ): Promise<PaymentResult> => {
   return new Promise(async (resolve) => {
-    if (!window.Pi) {
-      resolve({ success: false, status: 'failed', message: 'Open in Pi Browser' });
-      return;
-    }
-
-    // ✅ لو usePiAuth لسه مخلصش — authenticate دلوقتي
-    if (!(window as any).__TEC_PI_AUTHENTICATED) {
-      try {
-        await window.Pi.authenticate(
-          ['username', 'payments'],
-          async (incomplete: unknown) => {
-            const p = incomplete as { identifier?: string } | null;
-            if (!p?.identifier) return;
-            try {
-              await fetch('/api/bff/payment/resolve-incomplete', {
-                method: 'POST', credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pi_payment_id: p.identifier }),
-              });
-            } catch {}
-          },
-        );
-        (window as any).__TEC_PI_AUTHENTICATED = true;
-      } catch (authErr) {
-        resolve({
-          success: false, status: 'failed',
-          message: 'Pi auth failed: ' + (authErr instanceof Error ? authErr.message : String(authErr)),
-        });
-        return;
-      }
+    if (!window.Pi || !(window as any).__TEC_PI_READY) {
+  resolve({
+    success: false,
+    status: 'failed',
+    message: 'Pi SDK not ready',
+  });
+  return;
     }
 
     // ✅ Pi.createPayment مباشرة
