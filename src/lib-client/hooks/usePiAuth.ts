@@ -36,12 +36,13 @@ export const usePiAuth = () => {
     // We must call authenticate() so Pi SDK can accept createPayment()
     if (!stored) return;
 
-    const doSilentAuth = async () => {
-      try {
-        if (typeof window === 'undefined' || !window.Pi) return;
-        await window.Pi.authenticate(['username', 'payments'], () => {});
-      } catch { /* silent — user already authenticated via SSO */ }
-    };
+   const doSilentAuth = async () => {
+  try {
+    if (typeof window === 'undefined' || !window.Pi) return;
+    await window.Pi.authenticate(['username', 'payments'], () => {});
+    (window as any).__TEC_PI_AUTHENTICATED = true; 
+  } catch { /* silent */ }
+}; 
 
     if (window.__TEC_PI_READY) {
       doSilentAuth();
