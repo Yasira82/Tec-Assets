@@ -40,9 +40,15 @@ export const usePiAuth = () => {
   try {
     if (typeof window === 'undefined' || !window.Pi) return;
     await window.Pi.authenticate(['username', 'payments'], () => {});
-    (window as any).__TEC_PI_AUTHENTICATED = true; 
-  } catch { /* silent */ }
-}; 
+    (window as any).__TEC_PI_AUTHENTICATED = true;
+  } catch (e) {
+    // ✅ Pi.init() نجح لكن Pi Browser مش متفعل → force FOREIGN_SESSION
+    const msg = String(e).toLowerCase();
+    if (msg.includes('not initialized') || msg.includes('init()')) {
+      (window as any).__TEC_PI_FOREIGN_SESSION = true;
+    }
+  }
+};
 
     if (window.__TEC_PI_READY) {
       doSilentAuth();
