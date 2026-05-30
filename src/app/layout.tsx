@@ -18,12 +18,17 @@ const piScript = `(function(){
     if(typeof window.Pi==='undefined'){setTimeout(initPi,150);return;}
     try{
       window.Pi.init({version:'2.0',sandbox:${piSandbox},appId:'${piAppId}'});
+      sessionStorage.removeItem('__tec_pi_reload');
       setReady();
     }catch(e){
       var msg=String(e).toLowerCase();
       if(msg.includes('already')||msg.includes('initialized')){
         window.__TEC_PI_FOREIGN_SESSION=true;
         setReady();
+        if(!sessionStorage.getItem('__tec_pi_reload')){
+          sessionStorage.setItem('__tec_pi_reload','1');
+          window.location.reload();
+        }
       }else{setTimeout(initPi,150);}
     }
   }
