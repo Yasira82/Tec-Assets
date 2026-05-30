@@ -8,7 +8,7 @@ export function PiDebugPanel() {
 
   const addLog = (msg: string) => {
     const ts = new Date().toLocaleTimeString();
-    setLog(prev => [`[${ts}] ${msg}`, ...prev].slice(0, 30));
+    setLog(prev => [`[${ts}] ${msg}`, ...prev].slice(0, 40));
   };
 
   useEffect(() => {
@@ -19,10 +19,8 @@ export function PiDebugPanel() {
         PI_READY:        String(!!w.__TEC_PI_READY),
         FOREIGN_SESSION: String(!!w.__TEC_PI_FOREIGN_SESSION),
         AUTHENTICATED:   String(!!w.__TEC_PI_AUTHENTICATED),
-        'window.Pi':     String(typeof w.Pi !== 'undefined'),
-        domain:          window.location.hostname,
-        path:            window.location.pathname,
-        referrer:        document.referrer?.split('/')[2] ?? 'none',
+        domain:          location.hostname,
+        referrer:        document.referrer?.split('/')[2] ?? 'direct',
       });
     };
 
@@ -30,63 +28,56 @@ export function PiDebugPanel() {
     const timer = setInterval(check, 500);
 
     const run = async () => {
-      addLog('── START FULL DIAGNOSTIC ──');
+      addLog('── v3 DIAGNOSTIC ──');
+      if (!w.Pi) { addLog('❌ No Pi SDK'); return; }
 
-      // 1. Check Pi SDK loaded
-      addLog(`window.Pi = ${typeof w.Pi}`);
-      if (!w.Pi) { addLog('❌ Pi SDK not loaded — STOP'); return; }
-
-      // 2. Check Pi.init state
-      addLog(`__TEC_PI_READY = ${w.__TEC_PI_READY}`);
-      addLog(`__TEC_PI_FOREIGN_SESSION = ${w.__TEC_PI_FOREIGN_SESSION}`);
-
-      // 3. Wait for ready
+      // Wait ready
       if (!w.__TEC_PI_READY) {
-        addLog('Waiting for tec-pi-ready...');
+        addLog('Waiting tec-pi-ready...');
         await new Promise<void>(r => {
           w.addEventListener('tec-pi-ready', () => r(), { once: true });
           setTimeout(r, 8000);
         });
-        addLog(`After wait: READY=${w.__TEC_PI_READY} FOREIGN=${w.__TEC_PI_FOREIGN_SESSION}`);
       }
+      addLog(`READY=${w.__TEC_PI_READY} FOREIGN=${w.__TEC_PI_FOREIGN_SESSION}`);
 
-      // 4. Try Pi.init() again
-      addLog('── TEST: Pi.init() again ──');
+      // Auth test 1: username only
+      addLog('── TEST: auth [username] ──');
       try {
-        w.Pi.init({ version: '2.0', sandbox: false });
-        addLog('✅ Pi.init() succeeded (no error)');
+        const r1 = await w.Pi.authenticate(['username'], () => {});
+        addLog(`✅ [username] OK uid=${r1?.user?.uid?.slice(0,8)}`);
       } catch (e: any) {
-        addLog(`⚠️ Pi.init() threw: ${e?.message ?? String(e)}`);
+        addLog(`❌ [username] FAIL: ${e?.message ?? e}`);
       }
 
-      // 5. Try authenticate
-      addLog('── TEST: Pi.authenticate ──');
+      // Auth test 2: username + payments
+      addLog('── TEST: auth [username, payments] ──');
       try {
-        const r = await w.Pi.authenticate(['username', 'payments'], () => {});
-        addLog(`✅ auth OK uid=${r?.user?.uid?.slice(0,8)} app=${r?.user?.app_id?.slice(0,8)}`);
+        const r2 = await w.Pi.authenticate(['username', 'payments'], () => {});
+        addLog(`✅ [username,payments] OK uid=${r2?.user?.uid?.slice(0,8)}`);
         w.__TEC_PI_AUTHENTICATED = true;
       } catch (e: any) {
-        addLog(`❌ auth FAIL: ${e?.message ?? String(e)}`);
+        addLog(`❌ [username,payments] FAIL: ${e?.message ?? e}`);
       }
 
-      // 6. Try createPayment
-      addLog('── TEST: Pi.createPayment ──');
+      // createPayment test
+      addLog('── TEST: createPayment ──');
       try {
         w.Pi.createPayment(
-          { amount: 0.001, memo: 'diag', metadata: { test: true } },
+          { amount: 0.001, memo: 'diag-v3', metadata: { t: 1 } },
           {
-            onReadyForServerApproval: (id: string) => addLog(`📞 approve id=${id.slice(0,8)}`),
+            onReadyForServerApproval: (id: string) => addLog(`📞 approve ${id.slice(0,8)}`),
             onReadyForServerCompletion: () => addLog('📞 complete'),
-            onCancel: () => addLog('⚠️ cancelled'),
-            onError: (e: any) => addLog(`📞 onError: ${e?.message ?? String(e)}`),
+            onCancel: () => addLog('⚠️ cancel'),
+            onError: (e: any) => addLog(`📞 onError: ${e?.message ?? e}`),
           },
         );
-        addLog('✅ createPayment did not throw');
+        addLog('✅ createPayment no throw');
       } catch (e: any) {
-        addLog(`❌ createPayment THREW: ${e?.message ?? String(e)}`);
+        addLog(`❌ createPayment THREW: ${e?.message ?? e}`);
       }
 
-      addLog('── END DIAGNOSTIC ──');
+      addLog('── END v3 ──');
     };
 
     run();
@@ -110,35 +101,26 @@ export function PiDebugPanel() {
       overflow: 'auto', WebkitOverflowScrolling: 'touch',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <b>Pi Debug v2</b>
+        <b>Pi Debug v3</b>
         <button onClick={() => setShow(false)} style={{
           background: 'none', border: 'none', color: '#f00', fontSize: 14,
         }}>✕</button>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, marginBottom: 8 }}>
         {Object.entries(state).map(([k, v]) => (
-          <div key={k} style={{
-            color: v === 'true' ? '#0f0' : v === 'false' ? '#f44' : '#ff0',
-          }}>
+          <div key={k} style={{ color: v === 'true' ? '#0f0' : v === 'false' ? '#f44' : '#ff0' }}>
             {k}: <b>{v}</b>
           </div>
         ))}
       </div>
-
       <div style={{ borderTop: '1px solid #333', paddingTop: 4 }}>
         {log.map((l, i) => (
           <div key={i} style={{
-            color: l.includes('✅') ? '#0f0'
-                 : l.includes('❌') ? '#f44'
-                 : l.includes('──') ? '#ff0'
-                 : '#aaa',
+            color: l.includes('✅') ? '#0f0' : l.includes('❌') ? '#f44' : l.includes('──') ? '#ff0' : '#aaa',
             marginBottom: 2,
-          }}>
-            {l}
-          </div>
+          }}>{l}</div>
         ))}
       </div>
     </div>
   );
-}
+      }
