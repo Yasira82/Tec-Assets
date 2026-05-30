@@ -65,7 +65,7 @@ export function useAssetsPage() {
   // ── Establish Pi session ──────────────────────────────────
   useEffect(() => {
     if (!piReady || (window as any).__TEC_PI_FOREIGN_SESSION) return;
-    window.Pi?.authenticate(['username'], () => {}).catch(() => {});
+    window.Pi?.authenticate(['username', 'payments'], () => {}).catch(() => {});
   }, [piReady]);
 
   // ── Default tab from settings ─────────────────────────────
