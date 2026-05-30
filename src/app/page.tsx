@@ -3,11 +3,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// ✅ URLs محدثة
-const TEC_APP_URL = 'https://tec-app-frontend.vercel.app';
-const TEC_SSO_URL =
-  `${TEC_APP_URL}/api/auth/sso?target=` +
-  encodeURIComponent('https://tec-assets-app.vercel.app');
+const HUB_URL    = 'https://hub.tecosystem.app';
+const ASSETS_URL = 'https://assets.tecosystem.app';
+const SSO_URL    = `${HUB_URL}/api/auth/sso?target=${encodeURIComponent(ASSETS_URL)}`;
 
 const getTokenFromCookie = (): string | null => {
   if (typeof document === 'undefined') return null;
@@ -25,7 +23,7 @@ export default function HomePage() {
     if (token) {
       router.replace('/app');
     } else {
-      window.location.href = TEC_SSO_URL;
+      window.location.href = SSO_URL;
     }
   }, [router]);
 
