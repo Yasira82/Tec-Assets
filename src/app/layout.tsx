@@ -1,4 +1,5 @@
-import type { Metadata }        from 'next';
+import type { Metadata } from 'next';
+import Script            from 'next/script';
 import { LocaleProvider }       from '@/lib/i18n';
 import { BackendOfflineBanner } from '@/components/BackendOfflineBanner';
 
@@ -18,17 +19,12 @@ const piScript = `(function(){
     if(typeof window.Pi==='undefined'){setTimeout(initPi,150);return;}
     try{
       window.Pi.init({version:'2.0',sandbox:${piSandbox},appId:'${piAppId}'});
-      sessionStorage.removeItem('__tec_pi_reload');
-      setTimeout(setReady,1500);
+      setReady();
     }catch(e){
       var msg=String(e).toLowerCase();
       if(msg.includes('already')||msg.includes('initialized')){
         window.__TEC_PI_FOREIGN_SESSION=true;
         setReady();
-        if(!sessionStorage.getItem('__tec_pi_reload')){
-          sessionStorage.setItem('__tec_pi_reload','1');
-          window.location.reload();
-        }
       }else{setTimeout(initPi,150);}
     }
   }
@@ -45,10 +41,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           html, body { height: 100%; width: 100%; background: #020205; }
           body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
         `}</style>
-        <script src="https://sdk.minepi.com/pi-sdk.js" />
-        <script dangerouslySetInnerHTML={{ __html: piScript }} />
       </head>
       <body>
+        <Script
+          src="https://sdk.minepi.com/pi-sdk.js"
+          strategy="beforeInteractive"
+        />
+        <Script
+          id="pi-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{ __html: piScript }}
+        />
         <LocaleProvider>
           <BackendOfflineBanner />
           {children}
