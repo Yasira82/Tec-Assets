@@ -1,7 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
+import { createU2APayment } from '@/lib-client/pi/pi-payment';
+
+// في handleMint — Mode 2:
+const result = await createU2APayment(
+  MINT_FEE,
+  `Mint Domain as NFT: ${asset.name}`,
+  { source: 'assets', type: 'domain_nft', asset_id: asset.id },
+);
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
