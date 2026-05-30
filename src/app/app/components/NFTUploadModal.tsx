@@ -96,16 +96,21 @@ export function NFTUploadModal({
       m: file?.type ?? 'image/jpeg',
     }));
 
-    // ── Mode 1: Hub /hub/pay (FOREIGN_SESSION أو Pi مش جاهز) ──
+    // ── FOREIGN_SESSION: Pi Browser limitation ──
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
-      const params = new URLSearchParams({
-        amount:     MINT_FEE.toString(),
-        memo:       `Mint NFT: ${name}`,
-        product_id: `nft:${nftMeta}`,
-        return_url: `${ASSETS_URL}/app`,
-        source:     'assets',
-      });
-      window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+      setError('');
+      setLoading(false);
+      const link = `${ASSETS_URL}/app`;
+      if (confirm(
+        'Payment requires opening Assets directly.\n\n' +
+        'Tap OK to open Assets in a new window.'
+      )) {
+        // Save intent
+        try { sessionStorage.setItem('__tec_mint_pending', JSON.stringify({
+          name, description, uploadedUrl, uploadedKey, mimeType: file?.type ?? 'image/jpeg',
+        })); } catch {}
+        window.open(link, '_blank') || (window.location.href = link);
+      }
       return;
     }
 
