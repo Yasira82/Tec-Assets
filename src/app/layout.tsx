@@ -19,7 +19,7 @@ const piScript = `(function(){
     try{
       window.Pi.init({version:'2.0',sandbox:${piSandbox},appId:'${piAppId}'});
       sessionStorage.removeItem('__tec_pi_reload');
-      setReady();
+      setTimeout(setReady,1500);
     }catch(e){
       var msg=String(e).toLowerCase();
       if(msg.includes('already')||msg.includes('initialized')){
