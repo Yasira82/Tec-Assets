@@ -41,18 +41,17 @@ export function MintAsNftButton({
     setError('');
     navigator.vibrate?.(10);
 
-    // ── Mode 1: Hub /hub/pay (FOREIGN_SESSION أو Pi مش جاهز) ──
+   // ── FOREIGN_SESSION: Pi Browser limitation ──
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
-      const params = new URLSearchParams({
-        amount:     MINT_FEE.toString(),
-        memo:       `Mint Domain as NFT: ${asset.name}`,
-        product_id: `domain-nft:${asset.id}:${encodeURIComponent(asset.name)}`,
-        return_url: `${ASSETS_URL}/app`,
-        source:     'assets',
-      });
-      window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+      setLoading(false);
+      if (confirm(
+        'Payment requires opening Assets directly.\n\n' +
+        'Tap OK to open Assets.'
+      )) {
+        window.open(`${ASSETS_URL}/app`, '_blank') || (window.location.href = `${ASSETS_URL}/app`);
+      }
       return;
-    }
+    } 
 
     // ── Mode 2: Direct payment ────────────────────────────
     try {
