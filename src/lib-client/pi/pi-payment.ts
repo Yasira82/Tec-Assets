@@ -43,6 +43,8 @@ export const createU2APayment = (
             body: JSON.stringify({
               paymentId,
               pi_payment_id: paymentId,
+              source: metadata.source ?? 'assets',
+              amount,
             }),
           });
           if (!res.ok) {
