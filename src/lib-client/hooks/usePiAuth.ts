@@ -36,24 +36,8 @@ export const usePiAuth = () => {
     const doSilentAuth = async () => {
       try {
         if (typeof window === 'undefined' || !window.Pi) return;
-        await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-          if (!payment?.identifier) return;
-          try {
-            await fetch('/api/bff/payment/resolve-incomplete', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pi_payment_id: payment.identifier }),
-            });
-          } catch {}
-        });
-        (window as any).__TEC_PI_AUTHENTICATED = true;
-      } catch (e) {
-        const msg = String(e).toLowerCase();
-        if (msg.includes('not initialized') || msg.includes('init()')) {
-          (window as any).__TEC_PI_FOREIGN_SESSION = true;
-        }
-      }
+        await window.Pi.authenticate(['username', 'payments'], () => {});
+      } catch { /* silent */ }
     };
 
     if (window.__TEC_PI_READY) {
