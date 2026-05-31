@@ -3,9 +3,7 @@
 import { useState }         from 'react';
 import { createU2APayment } from '@/lib-client/pi/pi-payment';
 
-const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
-const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
-const MINT_FEE   = 1;
+const MINT_FEE = 1;
 
 const getCsrf = (): string => {
   if (typeof document === 'undefined') return '';
@@ -41,20 +39,6 @@ export function MintAsNftButton({
     setError('');
     navigator.vibrate?.(10);
 
-   // ── FOREIGN_SESSION: Pi Browser limitation ──
-    if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
-      const params = new URLSearchParams({
-        amount:     MINT_FEE.toString(),
-        memo:       `Mint Domain as NFT: ${asset.name}`,
-        product_id: `domain-nft:${asset.id}:${encodeURIComponent(asset.name)}`,
-        return_url: `${ASSETS_URL}/app`,
-        source:     'assets',
-      });
-      window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
-      return;
-    }
-
-    // ── Mode 2: Direct payment ────────────────────────────
     try {
       const result = await createU2APayment(
         MINT_FEE,
