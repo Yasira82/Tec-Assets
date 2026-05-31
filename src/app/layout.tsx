@@ -1,4 +1,5 @@
-import type { Metadata }        from 'next';
+import type { Metadata } from 'next';
+import Script                   from 'next/script';
 import { LocaleProvider }       from '@/lib/i18n';
 import { BackendOfflineBanner } from '@/components/BackendOfflineBanner';
 
@@ -9,8 +10,7 @@ export const metadata: Metadata = {
 
 const piSandbox = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true';
 const piAppId   = process.env.NEXT_PUBLIC_PI_APP_ID ?? '';
-
-const piScript = `(function(){
+const piScript  = `(function(){
   var tries=0;
   function setReady(){window.__TEC_PI_READY=true;window.dispatchEvent(new Event('tec-pi-ready'));}
   function initPi(){
@@ -40,10 +40,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           html, body { height: 100%; width: 100%; background: #020205; }
           body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
         `}</style>
-        <script src="https://sdk.minepi.com/pi-sdk.js" />
-        <script dangerouslySetInnerHTML={{ __html: piScript }} />
       </head>
       <body>
+        <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
+        <Script id="pi-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: piScript }} />
         <LocaleProvider>
           <BackendOfflineBanner />
           {children}
