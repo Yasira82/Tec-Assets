@@ -43,11 +43,14 @@ export function MintAsNftButton({
 
    // ── FOREIGN_SESSION: Pi Browser limitation ──
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
-      setError(
-        '⚠️ To make a payment, open Assets directly: ' +
-        'Close Pi Browser → Reopen → Go to assets.tecosystem.app'
-      );
-      setLoading(false);
+      const params = new URLSearchParams({
+        amount:     MINT_FEE.toString(),
+        memo:       `Mint Domain as NFT: ${asset.name}`,
+        product_id: `domain-nft:${asset.id}:${encodeURIComponent(asset.name)}`,
+        return_url: `${ASSETS_URL}/app`,
+        source:     'assets',
+      });
+      window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
       return;
     }
 
