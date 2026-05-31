@@ -14,7 +14,6 @@ import { PurchasesTab }   from './components/PurchasesTab';
 import { PortfolioTab }   from './components/PortfolioTab';
 import { BottomNav }      from './components/BottomNav';
 import { MainTab }        from './types';
-import { PiDebugPanel }       from './components/PiDebugPanel';
 
 function AssetsPageInner() {
   const s = useAssetsPage();
