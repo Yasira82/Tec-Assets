@@ -43,15 +43,13 @@ export function MintAsNftButton({
 
    // ── FOREIGN_SESSION: Pi Browser limitation ──
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
+      setError(
+        '⚠️ To make a payment, open Assets directly: ' +
+        'Close Pi Browser → Reopen → Go to assets.tecosystem.app'
+      );
       setLoading(false);
-      if (confirm(
-        'Payment requires opening Assets directly.\n\n' +
-        'Tap OK to open Assets.'
-      )) {
-        window.open(`${ASSETS_URL}/app`, '_blank') || (window.location.href = `${ASSETS_URL}/app`);
-      }
       return;
-    } 
+    }
 
     // ── Mode 2: Direct payment ────────────────────────────
     try {
