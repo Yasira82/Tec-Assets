@@ -3,7 +3,9 @@
 import { useState }         from 'react';
 import { createU2APayment } from '@/lib-client/pi/pi-payment';
 
-const MINT_FEE = 2;
+const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
+const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
+const MINT_FEE   = 2;
 
 const getCsrfToken = (): string => {
   if (typeof document === 'undefined') return '';
@@ -88,6 +90,32 @@ export function NFTUploadModal({
   const handleMint = async () => {
     if (!name || !uploadedUrl) return;
 
+    const nftMeta = btoa(JSON.stringify({
+      n: name, d: description,
+      u: uploadedUrl, k: uploadedKey ?? '',
+      m: file?.type ?? 'image/jpeg',
+    }));
+
+    // ✅ تحقق من auth وقت الدفع — مش وقت الـ load
+    if (!(window as any).__TEC_PI_AUTHENTICATED) {
+      try {
+        await window.Pi.authenticate(['username', 'payments'], () => {});
+        (window as any).__TEC_PI_AUTHENTICATED = true;
+      } catch {
+        // Auth فشل → Hub /hub/pay redirect
+        const params = new URLSearchParams({
+          amount:     MINT_FEE.toString(),
+          memo:       `Mint NFT: ${name}`,
+          product_id: `nft:${nftMeta}`,
+          return_url: `${ASSETS_URL}/app`,
+          source:     'assets',
+        });
+        window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+        return;
+      }
+    }
+
+    // ── Mode 2: Direct payment ──
     setLoading(true);
     setError('');
 
@@ -95,7 +123,7 @@ export function NFTUploadModal({
       const result = await createU2APayment(
         MINT_FEE,
         `Mint NFT: ${name}`,
-        { source: 'assets', type: 'nft_mint' },
+        { source: 'assets', type: 'nft_mint', product_id: `nft:${nftMeta}` },
       );
 
       if (result.success) {
@@ -292,4 +320,4 @@ export function NFTUploadModal({
       </div>
     </>
   );
-}
+      }
