@@ -14,6 +14,7 @@ import { PurchasesTab }   from './components/PurchasesTab';
 import { PortfolioTab }   from './components/PortfolioTab';
 import { BottomNav }      from './components/BottomNav';
 import { MainTab }        from './types';
+import { PiDebugPanel } from './components/PiDebugPanel';
 
 function AssetsPageInner() {
   const s = useAssetsPage();
@@ -34,6 +35,7 @@ function AssetsPageInner() {
       fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
       paddingBottom: 80,
     }}>
+      <PiDebugPanel />
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
