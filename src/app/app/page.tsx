@@ -34,7 +34,6 @@ function AssetsPageInner() {
       fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
       paddingBottom: 80,
     }}>
-      <PiDebugPanel />
       <style>{`
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
         @keyframes shimmer { 0%,100%{opacity:.3}50%{opacity:.7} }
