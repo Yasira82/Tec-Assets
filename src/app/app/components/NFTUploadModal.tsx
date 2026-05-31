@@ -96,23 +96,16 @@ export function NFTUploadModal({
       m: file?.type ?? 'image/jpeg',
     }));
 
-    // ── FOREIGN_SESSION: Pi Browser limitation ──
+    /// ── FOREIGN_SESSION: Pi Browser limitation ──
     if ((window as any).__TEC_PI_FOREIGN_SESSION || !(window as any).__TEC_PI_READY) {
-      setError('');
+      setError(
+        '⚠️ To make a payment, open Assets directly: ' +
+        'Close Pi Browser → Reopen → Go to assets.tecosystem.app'
+      );
       setLoading(false);
-      const link = `${ASSETS_URL}/app`;
-      if (confirm(
-        'Payment requires opening Assets directly.\n\n' +
-        'Tap OK to open Assets in a new window.'
-      )) {
-        // Save intent
-        try { sessionStorage.setItem('__tec_mint_pending', JSON.stringify({
-          name, description, uploadedUrl, uploadedKey, mimeType: file?.type ?? 'image/jpeg',
-        })); } catch {}
-        window.open(link, '_blank') || (window.location.href = link);
-      }
       return;
     }
+    
 
     // ── Mode 2: Direct payment ────────────────────────────
     setLoading(true);
