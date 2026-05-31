@@ -48,7 +48,12 @@ export const usePiAuth = () => {
           } catch {}
         });
         (window as any).__TEC_PI_AUTHENTICATED = true;
-      } catch { /* silent */ }
+      } catch (e) {
+        const msg = String(e).toLowerCase();
+        if (msg.includes('not initialized') || msg.includes('init()')) {
+          (window as any).__TEC_PI_FOREIGN_SESSION = true;
+        }
+      }
     };
 
     if (window.__TEC_PI_READY) {
