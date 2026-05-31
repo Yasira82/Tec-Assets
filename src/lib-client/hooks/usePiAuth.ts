@@ -31,24 +31,15 @@ export const usePiAuth = () => {
       error:           null,
     });
 
-    // ✅ Silent Pi authenticate — required for createPayment
-    // Tec-Assets uses SSO cookies — Pi SDK doesn't know the user
-    // We must call authenticate() so Pi SDK can accept createPayment()
     if (!stored) return;
 
-   const doSilentAuth = async () => {
-  try {
-    if (typeof window === 'undefined' || !window.Pi) return;
-    await window.Pi.authenticate(['username', 'payments'], () => {});
-    (window as any).__TEC_PI_AUTHENTICATED = true;
-  } catch (e) {
-    // ✅ Pi.init() نجح لكن Pi Browser مش متفعل → force FOREIGN_SESSION
-    const msg = String(e).toLowerCase();
-    if (msg.includes('not initialized') || msg.includes('init()')) {
-      (window as any).__TEC_PI_FOREIGN_SESSION = true;
-    }
-  }
-};
+    const doSilentAuth = async () => {
+      try {
+        if (typeof window === 'undefined' || !window.Pi) return;
+        await window.Pi.authenticate(['username', 'payments'], () => {});
+        (window as any).__TEC_PI_AUTHENTICATED = true;
+      } catch { /* silent */ }
+    };
 
     if (window.__TEC_PI_READY) {
       doSilentAuth();
