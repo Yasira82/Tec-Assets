@@ -21,6 +21,25 @@ const toBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
+/** Hub → Assets = Pi ownership drift → force Mode 1 */
+const isHubNavigation = (): boolean => {
+  if (typeof document === 'undefined') return false;
+  return document.referrer.toLowerCase().includes('hub.tecosystem.app');
+};
+
+/** Mode 1: redirect to Hub PaymentModal (original — same as Commerce) */
+const redirectToHubPayment = (name: string, nftMeta: string) => {
+  const params = new URLSearchParams({
+    pay:        '1',
+    amount:     MINT_FEE.toString(),
+    memo:       `Mint NFT: ${name}`,
+    product_id: `nft:${nftMeta}`,
+    return_url: `${ASSETS_URL}/app`,
+    source:     'assets',
+  });
+  window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+};
+
 export function NFTUploadModal({
   onClose,
   onSuccess,
@@ -96,26 +115,25 @@ export function NFTUploadModal({
       m: file?.type ?? 'image/jpeg',
     }));
 
-    // ✅ تحقق من auth وقت الدفع — مش وقت الـ load
+    // ✅ Hub → Assets = FORCE Mode 1 (Pi ownership drift)
+    if (isHubNavigation()) {
+      redirectToHubPayment(name, nftMeta);
+      return;
+    }
+
+    // ✅ Direct Assets: authenticate at mint-time
     if (!(window as any).__TEC_PI_AUTHENTICATED) {
       try {
         await window.Pi.authenticate(['username', 'payments'], () => {});
         (window as any).__TEC_PI_AUTHENTICATED = true;
       } catch {
-        // Auth فشل → Hub /hub/pay redirect
-        const params = new URLSearchParams({
-          amount:     MINT_FEE.toString(),
-          memo:       `Mint NFT: ${name}`,
-          product_id: `nft:${nftMeta}`,
-          return_url: `${ASSETS_URL}/app`,
-          source:     'assets',
-        });
-        window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+        // Auth failed → Mode 1 fallback
+        redirectToHubPayment(name, nftMeta);
         return;
       }
     }
 
-    // ── Mode 2: Direct payment ──
+    // ── Mode 2: Direct payment (only for direct Assets entry) ──
     setLoading(true);
     setError('');
 
@@ -320,4 +338,4 @@ export function NFTUploadModal({
       </div>
     </>
   );
-      }
+}
