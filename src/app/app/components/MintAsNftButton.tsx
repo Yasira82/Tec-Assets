@@ -13,6 +13,11 @@ const getCsrf = (): string => {
   return match ? match[1] : '';
 };
 
+const isHubNavigation = (): boolean => {
+  if (typeof document === 'undefined') return false;
+  return document.referrer.toLowerCase().includes('hub.tecosystem.app');
+};
+
 export function MintAsNftButton({
   asset, onClose, onSuccess,
 }: {
@@ -36,30 +41,41 @@ export function MintAsNftButton({
                   : tier === 'Uncommon'   ? '#7ee7c0'
                   : '#d4af37';
 
+  const redirectToHub = () => {
+    const params = new URLSearchParams({
+      pay:        '1',
+      amount:     MINT_FEE.toString(),
+      memo:       `Mint Domain as NFT: ${asset.name}`,
+      product_id: `domain-nft:${asset.id}:${encodeURIComponent(asset.name)}`,
+      return_url: `${ASSETS_URL}/app`,
+      source:     'assets',
+    });
+    window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+  };
+
   const handleMint = async () => {
     setLoading(true);
     setError('');
     navigator.vibrate?.(10);
 
-    // ✅ تحقق من auth وقت الدفع
+    // ✅ Hub → Assets = FORCE Mode 1
+    if (isHubNavigation()) {
+      redirectToHub();
+      return;
+    }
+
+    // ✅ Direct Assets: authenticate at mint-time
     if (!(window as any).__TEC_PI_AUTHENTICATED) {
       try {
         await window.Pi.authenticate(['username', 'payments'], () => {});
         (window as any).__TEC_PI_AUTHENTICATED = true;
       } catch {
-        const params = new URLSearchParams({
-          amount:     MINT_FEE.toString(),
-          memo:       `Mint Domain as NFT: ${asset.name}`,
-          product_id: `domain-nft:${asset.id}:${encodeURIComponent(asset.name)}`,
-          return_url: `${ASSETS_URL}/app`,
-          source:     'assets',
-        });
-        window.location.href = `${HUB_URL}/hub/pay?${params.toString()}`;
+        redirectToHub();
         return;
       }
     }
 
-    // ── Mode 2: Direct payment ──
+    // ── Mode 2: Direct payment (only for direct Assets entry) ──
     try {
       const result = await createU2APayment(
         MINT_FEE,
