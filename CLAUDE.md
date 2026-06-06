@@ -85,6 +85,8 @@ npx playwright test # E2E tests
 - Do NOT add `NEXT_PUBLIC_*` env vars for internal service URLs
 - Do NOT add new features during Phase 0
 - Do NOT derive asset ownership client-side (always from tec-asset-service)
+- Do NOT derive asset ownership client-side — always from tec-asset-service
+- Do NOT write payment tests without mocking the backend create endpoint first (C-76 backend-first flow)
 
 ---
 
@@ -102,11 +104,19 @@ style(assets):  UI polish
 ## Phase 0 Items (C-41 — Before Mainnet)
 
 ```
-□ Write Vitest tests — target ≥ 60%
+□ Write Vitest tests — target ≥ 60%    ← NEXT priority
 □ Document Pi App ID + domain (tec-assets → tecosystem.app/assets)
 □ Upgrade to @yasser172/tec-ui PaymentModal when v1.2.0 publishes
 □ PI_SANDBOX=false verified in production
 ```
+
+### Test Coverage Targets (Phase 0 gate — target ≥ 60%)
+| File | Priority | Scenarios |
+|------|----------|-----------|
+| Payment handler (ADR-007 guard) | HIGH | isHubNavigation true, piReady false, success |
+| SSO redirect helper | HIGH | with/without return_url, hub navigation detection |
+| Asset ownership display | MEDIUM | correct owner, unknown owner, loading state |
+| BFF routes | MEDIUM | auth fail (401), gateway error (503), success |
 
 ---
 
@@ -123,6 +133,38 @@ style(assets):  UI polish
 - ADR-007 compliance: every payment button has `isHubNavigation()` guard
 - Tests coverage ≥ 60% before Phase 1
 - Asset attribution: creator identity tied to Pi username (tec_user cookie)
+
+---
+
+## Common Debug Patterns
+
+### "Payment modal opens but Pi Wallet doesn't appear"
+```
+Symptom: PaymentModal shows but Pi Browser payment dialog never opens.
+Cause A: isHubNavigation() returned true — Pi SDK in foreign session.
+         App navigated from hub.tecosystem.app → Pi.authenticate() throws.
+Cause B: piReady = false — Pi.init() not yet complete.
+Fix:     if (isHubNavigation() || !piReady) → redirect to Hub modal. DO NOT REMOVE.
+         Check window.__TEC_PI_FOREIGN_SESSION — if true, never call Pi.createPayment.
+```
+
+### "Asset ownership shows wrong owner after transfer"
+```
+Symptom: Asset displays wrong owner or 'Unknown' after ownership transfer.
+Cause:   Ownership derived from local state instead of tec-asset-service response.
+Fix:     NEVER derive asset ownership client-side.
+         Always fetch from tec-asset-service — single source of truth.
+         Invariant: Asset owner always resolves to ONE principal (P6 Fail Closed).
+```
+
+### "SSO redirect loop — user can't access app"
+```
+Symptom: User sent to Hub login, completes login, bounced back to same screen.
+Cause:   return_url not preserved in ssoRedirect() call.
+         Or: tec_access_token cookie not set (Hub domain mismatch).
+Fix:     Call ssoRedirect(window.location.href) — pass current URL as return_url.
+         Verify Hub sets cookies on correct domain in DevTools after login.
+```
 
 ---
 
