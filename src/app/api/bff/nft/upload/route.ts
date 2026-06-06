@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify }                 from 'jose';
 
-const GATEWAY_URL   = process.env.API_GATEWAY_URL
-  ?? process.env.API_GATEWAY_URL
-  ?? 'https://api-gateway-production-6a68.up.railway.app';
+const GATEWAY_URL   = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
 const R2_PUBLIC_URL = 'https://pub-fe60d4ae820b4c5cb91064081595e666.r2.dev';
 
