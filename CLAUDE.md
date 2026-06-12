@@ -173,3 +173,49 @@ Full platform context, ADR system, and engineering roadmap:
 → `TEC_Ecosystem_AI_Key.prompt.yml` in yasira82/tec-app
 → C-47 Kernel Spec — P6 Fail Closed, Asset ownership invariants
 → C-41 Engineering Roadmap — Phase 0 assets items
+
+---
+
+## Dynamic Orchestration
+
+### Ecosystem Role
+**Ownership Layer** — digital asset management and Pi-native NFT trading. Follows patterns established in tec-commerce (reference implementation).
+
+### Dependency Map
+
+| Direction | Repos / Services |
+|-----------|----------------|
+| Upstream | `@yasser172/tec-auth` · `@yasser172/tec-ui` · `@yasser172/tec-sdk` · `tec-core-backend` (tec-asset-service:4006) |
+| Downstream | None — end-user-facing app |
+
+### Cross-Repo Workflow Triggers
+
+| Event | Coordinate With | Required Action |
+|-------|----------------|----------------|
+| Payment pattern issue | tec-commerce (reference impl) | Check commerce first — it sets the pattern |
+| Hub → Assets navigation fix | tec-app (Hub) | ADR-007 hub navigation = shared concern |
+| `@yasser172/tec-ui` version bump | tec-app, tec-commerce, tec-ecommerce | Coordinate simultaneous deploy with all 4 apps |
+| Asset ownership transfer pattern | tec-core-backend | Verify `tec-asset-service` owns the state transition |
+| New auth behavior | tec-auth (npm package) | tec-auth change = platform-wide, test all 4 apps |
+
+### Release Chain Position
+
+```
+tec-core-backend (deploy)
+  → tec-sdk (npm publish)
+    → tec-auth (npm publish)
+      → tec-ui (npm publish)
+        → tec-app + tec-ecommerce + tec-assets + tec-commerce  ← HERE (simultaneous)
+```
+
+### Orchestration Rules
+- Asset ownership = `tec-asset-service` authority — never derive client-side
+- Payment pattern: follow tec-commerce (reference impl) — always check commerce first
+- Hub navigation (isHubNavigation()) = shared ADR-007 concern — any change affects all 4 apps
+
+### Knowledge Base Reference
+→ `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`)
+→ Master index: `knowledge-base/C-57___MASTER_CONTENTS_INDEX.md`
+→ Domain ownership: `knowledge-base/C-68___DOMAIN_OWNERSHIP_MATRIX.md`
+→ Payment ownership (ADR-007): `knowledge-base/C-76___ADR-007.md`
+→ Financial integrity spec: `knowledge-base/C-71___FINANCIAL_INTEGRITY_SPEC.md`
