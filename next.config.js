@@ -1,6 +1,6 @@
 const path = require('path');
 
-// ✅ PI_SANDBOX build-time guard — Mainnet checklist
+// PI_SANDBOX build-time guard — Mainnet checklist
 // Blocks the production build if sandbox mode is active.
 // Set NEXT_PUBLIC_PI_SANDBOX=false on Vercel before Mainnet deploy.
 if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_PI_SANDBOX !== 'false') {

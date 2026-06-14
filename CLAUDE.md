@@ -1,4 +1,4 @@
-> ⚡ **SESSION START — أول حاجة:** اقرأ `knowledge-base/C-02___CURRENT_STATE_.md` من `yasira82/tec-knowledge-base` (branch: `main`) — ده مصدر الحقيقة للوضع الحالي. لا تعتمد على الذاكرة أو الملخص.
+> ⚡ **SESSION START — أول حاجة:** اقرأ `knowledge-base/C-02___CURRENT_STATE_.md` من `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`) — ده مصدر الحقيقة للوضع الحالي. لا تعتمد على الذاكرة أو الملخص.
 
 ---
 
@@ -103,18 +103,10 @@ style(assets):  UI polish
 
 ---
 
-## Pi App Identity
-
-| App | Pi App ID | Domain |
-|-----|-----------|--------|
-| Tec-Assets | `assets-app-af2fb490e7b03db7` | `https://assets.tecosystem.app` |
-
----
-
 ## Risk Register
 
 | # | Risk | Severity | Mitigation |
-|---|------|----------|------------|
+|---|------|----------|-----------|
 | R1 | Hub→Assets payment_not_found (C-76) | P0 | `isHubNavigation()` → Mode 1 — DO NOT REMOVE |
 | R2 | Railway URL in client bundle | P1 | server-only `API_GATEWAY_URL` |
 | R3 | Auth token in localStorage | P1 | HttpOnly cookies ONLY |
@@ -136,8 +128,7 @@ ADR-007 check: grep any modified payment handler for `isHubNavigation()`.
 ---
 
 ## Knowledge Base Reference
-
-→ `yasira82/tec-knowledge-base` (branch: `main`)
+→ `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`)
 → **Current State: `knowledge-base/C-02___CURRENT_STATE_.md`** — اقرأه أول كل session
 → Master index: `knowledge-base/C-57___MASTER_CONTENTS_INDEX.md`
 → Domain ownership: `knowledge-base/C-68___DOMAIN_OWNERSHIP_MATRIX.md`
