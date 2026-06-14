@@ -1,3 +1,7 @@
+> ⚡ **SESSION START — أول حاجة:** اقرأ `knowledge-base/C-02___CURRENT_STATE_.md` من `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`) — ده مصدر الحقيقة للوضع الحالي. لا تعتمد على الذاكرة أو الملخص.
+
+---
+
 # TEC Assets — Claude Code Instructions
 
 ## What This App Is
@@ -99,55 +103,14 @@ style(assets):  UI polish
 
 ---
 
-## Phase 0 Items (C-41 — Before Mainnet)
-
-```
-□ Write Vitest tests — target ≥ 60%
-□ Document Pi App ID + domain (tec-assets → tecosystem.app/assets)
-□ Upgrade to @yasser172/tec-ui PaymentModal when v1.2.0 publishes
-□ PI_SANDBOX=false verified in production
-```
-
----
-
-## Platform Orchestra — This Repo
-
-**Role:** Ownership Layer — digital assets, NFTs, creator reputation, peer-to-peer trading
-**Upstream:** @yasser172/tec-auth · @yasser172/tec-ui · @yasser172/tec-sdk · tec-asset-service (4006)
-**Layer:** Phase 0 hardening
-
----
-
-## Commercial Targets
-
-- ADR-007 compliance: every payment button has `isHubNavigation()` guard
-- Tests coverage ≥ 60% before Phase 1
-- Asset attribution: creator identity tied to Pi username (tec_user cookie)
-
----
-
 ## Risk Register
 
 | # | Risk | Severity | Mitigation |
-|---|------|----------|-----------|
+|---|------|----------|----------|
 | R1 | Hub→Assets payment_not_found (C-76) | P0 | `isHubNavigation()` → Mode 1 — DO NOT REMOVE |
 | R2 | Railway URL in client bundle | P1 | server-only `API_GATEWAY_URL` |
 | R3 | Auth token in localStorage | P1 | HttpOnly cookies ONLY |
 | R4 | Asset ownership derived client-side | P0 | Always from tec-asset-service |
-
----
-
-## Platform Governance
-
-### SHARED
-- Payment: ADR-007 guard on every payment button
-- Auth: Hub SSO cookies — never custom auth
-- Asset ownership: tec-asset-service is the authority
-
-### SOVEREIGN
-- Asset UI/UX, portfolio layout
-- Creator profile design
-- NFT display and trading flow UI
 
 ---
 
@@ -158,68 +121,18 @@ npm run type-check    # 0 errors
 npm run lint          # 0 errors
 npx vitest            # all pass
 git status            # clean
-git fetch origin claude/ecommerce-engineering-review-EuiQO
-git rebase origin/claude/ecommerce-engineering-review-EuiQO
 ```
 
 ADR-007 check: grep any modified payment handler for `isHubNavigation()`.
 
 ---
 
-## Platform Context
-
-Full platform context, ADR system, and engineering roadmap:
-→ `TEC_MODELS_PAT.prompt.yml` in yasira82/tec-app (branch: claude/ecommerce-engineering-review-EuiQO)
-→ `TEC_Ecosystem_AI_Key.prompt.yml` in yasira82/tec-app
-→ C-47 Kernel Spec — P6 Fail Closed, Asset ownership invariants
-→ C-41 Engineering Roadmap — Phase 0 assets items
-
----
-
-## Dynamic Orchestration
-
-### Ecosystem Role
-**Ownership Layer** — digital asset management and Pi-native NFT trading. Follows patterns established in tec-commerce (reference implementation).
-
-### Dependency Map
-
-| Direction | Repos / Services |
-|-----------|----------------|
-| Upstream | `@yasser172/tec-auth` · `@yasser172/tec-ui` · `@yasser172/tec-sdk` · `tec-core-backend` (tec-asset-service:4006) |
-| Downstream | None — end-user-facing app |
-
-### Cross-Repo Workflow Triggers
-
-| Event | Coordinate With | Required Action |
-|-------|----------------|----------------|
-| Payment pattern issue | tec-commerce (reference impl) | Check commerce first — it sets the pattern |
-| Hub → Assets navigation fix | tec-app (Hub) | ADR-007 hub navigation = shared concern |
-| `@yasser172/tec-ui` version bump | tec-app, tec-commerce, tec-ecommerce | Coordinate simultaneous deploy with all 4 apps |
-| Asset ownership transfer pattern | tec-core-backend | Verify `tec-asset-service` owns the state transition |
-| New auth behavior | tec-auth (npm package) | tec-auth change = platform-wide, test all 4 apps |
-
-### Release Chain Position
-
-```
-tec-core-backend (deploy)
-  → tec-sdk (npm publish)
-    → tec-auth (npm publish)
-      → tec-ui (npm publish)
-        → tec-app + tec-ecommerce + tec-assets + tec-commerce  ← HERE (simultaneous)
-```
-
-### Orchestration Rules
-- Asset ownership = `tec-asset-service` authority — never derive client-side
-- Payment pattern: follow tec-commerce (reference impl) — always check commerce first
-- Hub navigation (isHubNavigation()) = shared ADR-007 concern — any change affects all 4 apps
-
-### Knowledge Base Reference
+## Knowledge Base Reference
 → `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`)
+→ **Current State: `knowledge-base/C-02___CURRENT_STATE_.md`** — اقرأه أول كل session
 → Master index: `knowledge-base/C-57___MASTER_CONTENTS_INDEX.md`
 → Domain ownership: `knowledge-base/C-68___DOMAIN_OWNERSHIP_MATRIX.md`
 → Payment ownership (ADR-007): `knowledge-base/C-76___ADR-007.md`
-→ Financial integrity spec: `knowledge-base/C-71___FINANCIAL_INTEGRITY_SPEC.md`
-
 
 ---
 
