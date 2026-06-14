@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
-const GW = process.env.API_GATEWAY_URL
-        ?? 'https://api-gateway-production-6a68.up.railway.app';
+const GW = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? '';
+
+const ResolveSchema = z.object({
+  pi_payment_id: z.string().min(1),
+});
 
 export async function POST(req: NextRequest) {
+  if (!GW) return NextResponse.json({ error: 'Gateway not configured' }, { status: 503 });
+
   const token = req.cookies.get('tec_access_token')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
+  const raw    = await req.json().catch(() => ({}));
+  const parsed = ResolveSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 });
+  }
 
   const res = await fetch(`${GW}/api/payment/resolve-incomplete`, {
     method:  'POST',
     headers: {
-      'Content-Type': 'application/json',
-      Authorization:  `Bearer ${token}`,
+      'Content-Type':   'application/json',
+      Authorization:    `Bearer ${token}`,
+      'x-internal-key': process.env.INTERNAL_SECRET ?? '',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ pi_payment_id: parsed.data.pi_payment_id }),
   });
 
   const data = await res.json().catch(() => ({}));
