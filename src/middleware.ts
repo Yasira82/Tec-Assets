@@ -6,19 +6,21 @@ const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const CSRF_PROTECTED = [
   '/api/auth/logout',
   '/api/auth/refresh',
-  '/api/bff/assets/',
-  '/api/bff/marketplace/',
+  '/api/bff/assets',
+  '/api/bff/marketplace',
+  '/api/bff/nft',
+  '/api/bff/domains',
+  '/api/bff/payment',
 ];
 
-const CSRF_EXCLUDED = [
-  '/api/bff/nft/upload',
-  '/api/bff/nft/register',
-  '/api/bff/marketplace/buy',
-  '/api/bff/marketplace/cancel',
-  '/api/bff/assets/delete',
-  '/api/bff/marketplace/list',
-  '/api/bff/marketplace/update-price',
-];
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) diff |= aBytes[i] ^ bBytes[i];
+  return diff === 0;
+}
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -37,13 +39,12 @@ export function middleware(req: NextRequest) {
 
   // ── CSRF guard ────────────────────────────────────────
   if (!CSRF_SAFE_METHODS.has(method)) {
-    const isExcluded      = CSRF_EXCLUDED.some(r => pathname.startsWith(r));
-    const isCsrfProtected = !isExcluded && CSRF_PROTECTED.some(r => pathname.startsWith(r));
+    const isCsrfProtected = CSRF_PROTECTED.some(r => pathname.startsWith(r));
 
     if (isCsrfProtected) {
       const csrfCookie = req.cookies.get('tec_csrf')?.value;
       const csrfHeader = req.headers.get('x-csrf-token');
-      if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+      if (!csrfCookie || !csrfHeader || !timingSafeStringEqual(csrfCookie, csrfHeader)) {
         return NextResponse.json(
           { error: 'Invalid CSRF token', code: 'CSRF_INVALID' },
           { status: 403 },
