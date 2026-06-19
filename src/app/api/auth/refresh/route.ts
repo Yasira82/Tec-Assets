@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       method:  'POST',
       headers: {
         'Content-Type':   'application/json',
-        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+        ...(process.env.INTERNAL_SECRET && { 'x-internal-key': process.env.INTERNAL_SECRET }),
       },
       body: JSON.stringify({ refreshToken }),
     });
