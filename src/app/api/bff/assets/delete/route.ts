@@ -20,7 +20,7 @@ export const DELETE = createHandler({
         'Content-Type':   'application/json',
         Authorization:    `Bearer ${token}`,
         'x-request-id':   ctx.requestId,
-        'x-internal-key': process.env.INTERNAL_SECRET ?? '',
+        ...(process.env.INTERNAL_SECRET && { 'x-internal-key': process.env.INTERNAL_SECRET }),
       },
       body: JSON.stringify({ userId: ctx.userId }),
     });

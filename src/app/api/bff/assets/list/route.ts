@@ -34,12 +34,10 @@ export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
     const token       = req.cookies.get('tec_access_token')?.value ?? '';
-    const internalKey = process.env.INTERNAL_SECRET ?? '';
-
     const headers = {
       Authorization:    `Bearer ${token}`,
       'x-request-id':   ctx.requestId,
-      'x-internal-key': internalKey,
+      ...(process.env.INTERNAL_SECRET && { 'x-internal-key': process.env.INTERNAL_SECRET }),
     };
 
     console.log('[BFF assets/list] userId:', ctx.userId);
