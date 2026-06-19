@@ -24,6 +24,7 @@ export const createPaymentRecord = async (
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'x-csrf-token': getCsrfToken(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ amount, product_id: productId, memo, source: 'assets' }),
@@ -59,7 +60,7 @@ export const createU2APayment = async (
     }, 90_000);
 
     const token   = getToken();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     try {

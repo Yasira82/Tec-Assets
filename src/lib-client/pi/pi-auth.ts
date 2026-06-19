@@ -87,6 +87,7 @@ export const refreshAccessToken = async (): Promise<string | null> => {
     const res = await fetch('/api/auth/refresh', {
       method:      'POST',
       credentials: 'include',
+      headers: { 'x-csrf-token': getCsrfToken() },
     });
     if (!res.ok) {
       await logout();
@@ -113,18 +114,29 @@ export const fetchWithAuth = async (
   url: string,
   options: RequestInit = {}
 ): Promise<Response> => {
+  const method = (options.method ?? 'GET').toUpperCase();
+  const needsCsrf = method === 'POST' || method === 'PUT' || method === 'DELETE' || method === 'PATCH';
   const res = await fetch(url, {
     ...options,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(needsCsrf ? { 'x-csrf-token': getCsrfToken() } : {}),
       ...(options.headers as Record<string, string> ?? {}),
     },
   });
   if (res.status === 401) {
     const newToken = await refreshAccessToken();
     if (!newToken) return res;
-    return fetch(url, { ...options, credentials: 'include' });
+    return fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(needsCsrf ? { 'x-csrf-token': getCsrfToken() } : {}),
+        ...(options.headers as Record<string, string> ?? {}),
+      },
+    });
   }
   return res;
 };
@@ -270,7 +282,7 @@ export const loginWithPi = async (): Promise<TecAuthResponse> => {
   const piAuth = await authenticateWithTimeout();
   const res = await fetch('/api/auth/pi-login', {
     method: 'POST', credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
     body: JSON.stringify({ accessToken: piAuth.accessToken }),
   });
   if (!res.ok) throw new Error(ERRORS.SAVE_FAILED);
