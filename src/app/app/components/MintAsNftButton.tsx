@@ -1,7 +1,7 @@
 'use client';
 
 import { useState }         from 'react';
-import { createU2APayment } from '@/lib-client/pi/pi-payment';
+import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -77,10 +77,24 @@ export function MintAsNftButton({
 
     // ── Mode 2: Direct payment (only for direct Assets entry) ──
     try {
+      // ✅ canonical flow: pre-create the backend record with the REAL fee,
+      //    then drive Pi against that internalId (ADR-009 unified contract).
+      const internalId = await createPaymentRecord(
+        MINT_FEE,
+        `domain-nft:${asset.id}`,
+        `Mint Domain as NFT: ${asset.name}`,
+      );
+      if (!internalId) {
+        setError('Payment init failed — try again');
+        setLoading(false);
+        return;
+      }
+
       const result = await createU2APayment(
         MINT_FEE,
         `Mint Domain as NFT: ${asset.name}`,
         { source: 'assets', type: 'domain_nft', asset_id: asset.id },
+        internalId,
       );
 
       if (!result.success) {
