@@ -1,7 +1,7 @@
 'use client';
 
 import { useState }         from 'react';
-import { createU2APayment } from '@/lib-client/pi/pi-payment';
+import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -138,10 +138,24 @@ export function NFTUploadModal({
     setError('');
 
     try {
+      // ✅ canonical flow: pre-create the backend record with the REAL fee,
+      //    then drive Pi against that internalId (ADR-009 unified contract).
+      const internalId = await createPaymentRecord(
+        MINT_FEE,
+        `nft:${nftMeta}`,
+        `Mint NFT: ${name}`,
+      );
+      if (!internalId) {
+        setError('Payment init failed — try again');
+        setLoading(false);
+        return;
+      }
+
       const result = await createU2APayment(
         MINT_FEE,
         `Mint NFT: ${name}`,
         { source: 'assets', type: 'nft_mint', product_id: `nft:${nftMeta}` },
+        internalId,
       );
 
       if (result.success) {
