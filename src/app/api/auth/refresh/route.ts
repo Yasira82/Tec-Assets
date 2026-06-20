@@ -7,12 +7,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gateway not configured' }, { status: 503 });
   }
 
-  const csrfCookie = req.cookies.get('tec_csrf')?.value;
-  const csrfHeader = req.headers.get('x-csrf-token');
-  if (!csrfCookie || csrfCookie !== csrfHeader) {
-    return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
-  }
-
   const refreshToken = req.cookies.get('tec_refresh_token')?.value;
   if (!refreshToken) {
     return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
