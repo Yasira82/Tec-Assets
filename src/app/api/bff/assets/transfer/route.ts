@@ -2,19 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const GATEWAY = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
-const getCsrfFromCookie = (req: NextRequest) =>
-  req.cookies.get('tec_csrf')?.value ?? '';
-
 const getToken = (req: NextRequest) =>
   req.cookies.get('tec_access_token')?.value ?? '';
 
 export async function POST(req: NextRequest) {
   try {
-    const csrf = req.headers.get('x-csrf-token') ?? '';
-    if (!csrf || csrf !== getCsrfFromCookie(req)) {
-      return NextResponse.json({ error: 'CSRF validation failed' }, { status: 403 });
-    }
-
     const body = await req.json();
     const { asset_id, recipient_username } = body;
 
