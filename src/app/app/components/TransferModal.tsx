@@ -49,7 +49,7 @@ export function TransferModal({ asset, onClose, onSuccess }: Props) {
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()}
       style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(2,2,5,0.9)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#0d0d14', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '20px 20px 16px 16px', padding: 24, width: '100%', maxWidth: 480 }}>
+      <div style={{ background: '#0B1020', border: '1px solid rgba(251,191,36,0.15)', borderRadius: '20px 20px 16px 16px', padding: 24, width: '100%', maxWidth: 480 }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -116,7 +116,7 @@ export function TransferModal({ asset, onClose, onSuccess }: Props) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, color: '#6b6b7a' }}>To</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#d4af37' }}>@{recipient}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#FBBF24' }}>@{recipient}</span>
               </div>
             </div>
 

@@ -30,7 +30,7 @@ export function SimilarAssets({ asset, allAssets, colors }: {
             }}>
               <div style={{
                 width: '100%', height: 70,
-                background: 'linear-gradient(135deg,#1a0f3d,#0d0d14)',
+                background: 'linear-gradient(135deg,#1a0f3d,#0B1020)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 22, overflow: 'hidden',
               }}>
@@ -46,7 +46,7 @@ export function SimilarAssets({ asset, allAssets, colors }: {
                   {name}
                 </div>
                 {a.listing_price && (
-                  <div style={{ fontSize: 11, color: '#d4af37', fontWeight: 800, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#FBBF24', fontWeight: 800, marginTop: 2 }}>
                     {a.listing_price}π
                   </div>
                 )}

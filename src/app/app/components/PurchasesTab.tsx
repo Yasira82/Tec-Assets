@@ -4,7 +4,7 @@ import { Purchase } from '../types';
 
 const PurchaseCard = ({ p }: { p: Purchase & { isMint?: boolean } }) => (
   <div style={{
-    background: '#0d0d14',
+    background: '#0B1020',
     border: `1px solid ${p.isMint ? '#7b6bc840' : '#7ee7c020'}`,
     borderRadius: 18, padding: '16px 20px',
     display: 'flex', alignItems: 'center', gap: 14,
@@ -73,7 +73,7 @@ export function PurchasesTab({
       </div>
       <button onClick={onGoMarketplace} style={{
         marginTop: 20, padding: '12px 24px',
-        background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+        background: 'linear-gradient(135deg,#FBBF24,#F59E0B)',
         border: 'none', borderRadius: 14,
         color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
       }}>

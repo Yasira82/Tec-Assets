@@ -22,7 +22,7 @@ export function CancelConfirmModal({
       }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
-        background: '#0d0d14', borderTop: '1px solid #e74c3c30',
+        background: '#0B1020', borderTop: '1px solid #e74c3c30',
         borderRadius: '24px 24px 0 0', padding: '24px 20px 40px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>

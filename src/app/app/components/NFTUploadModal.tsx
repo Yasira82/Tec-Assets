@@ -200,7 +200,7 @@ export function NFTUploadModal({
       }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
-        background: '#0d0d14', borderTop: '1px solid #7b6bc820',
+        background: '#0B1020', borderTop: '1px solid #7b6bc820',
         borderRadius: '24px 24px 0 0', padding: '24px 20px 40px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
@@ -310,7 +310,7 @@ export function NFTUploadModal({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 13, color: '#6b6b7a' }}>Minting Fee</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#d4af37' }}>{MINT_FEE}π</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#FBBF24' }}>{MINT_FEE}π</span>
               </div>
             </div>
 

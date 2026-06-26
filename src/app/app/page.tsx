@@ -30,7 +30,7 @@ function AssetsPageInner() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#020205', color: '#fff',
+      minHeight: '100vh', background: '#050816', color: '#fff',
       fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
       paddingBottom: 80,
     }}>
@@ -110,19 +110,19 @@ function AssetsPageInner() {
           <button className="btn" onClick={() => goToTEC('HUB')} style={{
             background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
-            padding: '6px 10px', color: '#d4af37', cursor: 'pointer',
+            padding: '6px 10px', color: '#FBBF24', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           }}>
             <span style={{ fontSize: 16 }}>🔷</span>
             <span style={{ fontSize: 8, color: '#4a4a5a', letterSpacing: 1 }}>HUB</span>
           </button>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#d4af37', lineHeight: 1 }}>Assets</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#FBBF24', lineHeight: 1 }}>Assets</div>
             <div style={{ fontSize: 9, color: '#3a3a4a', letterSpacing: 2 }}>TEC ECOSYSTEM</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 12, color: '#d4af37' }}>
+          <div style={{ fontSize: 12, color: '#FBBF24' }}>
             {s.user?.piUsername ? `@${s.user.piUsername}` : ''}
           </div>
           <button className="btn" onClick={() => s.router.push('/app/settings')} style={{
@@ -139,15 +139,15 @@ function AssetsPageInner() {
             borderRadius: 24, padding: '22px 24px',
             background: 'linear-gradient(135deg,rgba(26,18,8,0.9) 0%,rgba(15,15,26,0.9) 60%,rgba(10,15,31,0.9) 100%)',
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(212,175,55,0.15)',
+            border: '1px solid rgba(251,191,36,0.15)',
           }}>
             <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3,
               textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 36, fontWeight: 900, color: '#d4af37', letterSpacing: -1 }}>
+              <span style={{ fontSize: 36, fontWeight: 900, color: '#FBBF24', letterSpacing: -1 }}>
                 {s.dataLoading ? '—' : displayTotal}
               </span>
-              <span style={{ fontSize: 20, color: 'rgba(212,175,55,0.5)' }}>
+              <span style={{ fontSize: 20, color: 'rgba(251,191,36,0.5)' }}>
                 {s.settings.hideBalance ? '' : 'π'}
               </span>
             </div>
@@ -180,10 +180,10 @@ function AssetsPageInner() {
           <button key={tab.key} onClick={() => s.setActiveTab(tab.key as MainTab)} style={{
             padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
             fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-            background: s.activeTab === tab.key ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.04)',
+            background: s.activeTab === tab.key ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.04)',
             backdropFilter: 'blur(10px)',
-            color:  s.activeTab === tab.key ? '#d4af37' : '#4a4a5a',
-            border: s.activeTab === tab.key ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
+            color:  s.activeTab === tab.key ? '#FBBF24' : '#4a4a5a',
+            border: s.activeTab === tab.key ? '1px solid rgba(251,191,36,0.3)' : '1px solid transparent',
             transition: 'all 0.2s',
           }}>{tab.label}</button>
         ))}

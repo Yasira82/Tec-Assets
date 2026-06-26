@@ -4,7 +4,7 @@ import { Asset }     from '../types';
 import { AssetCard } from './AssetCard';
 
 const SkeletonCard = () => (
-  <div style={{ background: '#0d0d14', borderRadius: 18, border: '1px solid #ffffff08', animation: 'shimmer 1.4s ease infinite', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px' }}>
+  <div style={{ background: '#0B1020', borderRadius: 18, border: '1px solid #ffffff08', animation: 'shimmer 1.4s ease infinite', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px' }}>
     <div style={{ width: 52, height: 52, borderRadius: 14, background: '#ffffff08', flexShrink: 0 }} />
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ width: '55%', height: 14, borderRadius: 6, background: '#ffffff08' }} />
@@ -45,7 +45,7 @@ export function AssetsTab({
           🎨 Mint NFT
         </button>
         <button onClick={onGoMarketplace}
-          style={{ padding: '12px 20px', background: 'linear-gradient(135deg,#d4af37,#b8882a)', border: 'none', borderRadius: 14, color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          style={{ padding: '12px 20px', background: 'linear-gradient(135deg,#FBBF24,#F59E0B)', border: 'none', borderRadius: 14, color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
           🛒 Marketplace
         </button>
       </div>

@@ -22,7 +22,7 @@ export function MarketplaceTab({
       </div>
       <button onClick={onGoAssets} style={{
         marginTop: 20, padding: '12px 24px',
-        background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+        background: 'linear-gradient(135deg,#FBBF24,#F59E0B)',
         border: 'none', borderRadius: 14,
         color: '#0a0800', fontSize: 13, fontWeight: 700, cursor: 'pointer',
       }}>
