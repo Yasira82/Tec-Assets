@@ -1,5 +1,6 @@
 'use client';
 
+import { CountUp }         from '@yasser172/tec-ui';
 import { useAssetsPage, getTokenFromCookie } from './hooks/useAssetsPage';
 import { ErrorBoundary }   from '@/components/ErrorBoundary';
 import { goToTEC }         from '@/lib/tec-navigation';
@@ -144,9 +145,14 @@ function AssetsPageInner() {
             <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3,
               textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 36, fontWeight: 900, color: '#FBBF24', letterSpacing: -1 }}>
-                {s.dataLoading ? '—' : displayTotal}
-              </span>
+              {s.dataLoading ? (
+                <span style={{ fontSize: 36, fontWeight: 900, color: '#FBBF24', letterSpacing: -1 }}>—</span>
+              ) : s.settings.hideBalance ? (
+                <span style={{ fontSize: 36, fontWeight: 900, color: '#FBBF24', letterSpacing: -1 }}>****</span>
+              ) : (
+                <CountUp value={totalValue} decimals={2}
+                  style={{ fontSize: 36, fontWeight: 900, color: '#FBBF24', letterSpacing: -1, fontVariantNumeric: 'tabular-nums' }} />
+              )}
               <span style={{ fontSize: 20, color: 'rgba(251,191,36,0.5)' }}>
                 {s.settings.hideBalance ? '' : 'π'}
               </span>
