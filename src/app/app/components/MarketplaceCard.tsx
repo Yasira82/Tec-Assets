@@ -9,12 +9,12 @@ const typeEmoji: Record<string, string> = {
 };
 
 const categoryColors: Record<string, { border: string; bg: string; accent: string }> = {
-  nft:           { border: '#7b6bc840', bg: 'linear-gradient(135deg,#1a0f3d,#0d0d14)', accent: '#b39ddb' },
-  domain:        { border: '#7eb8f740', bg: 'linear-gradient(135deg,#0a2040,#0d0d14)', accent: '#7eb8f7' },
-  token:         { border: '#d4af3740', bg: 'linear-gradient(135deg,#1a1208,#0d0d14)', accent: '#d4af37' },
-  badge:         { border: '#7ee7c040', bg: 'linear-gradient(135deg,#0d2e14,#0d0d14)', accent: '#7ee7c0' },
-  digital_asset: { border: '#d4af3720', bg: 'linear-gradient(135deg,#0d0d14,#0d0d14)', accent: '#6b6b7a' },
-  default:       { border: '#d4af3720', bg: 'linear-gradient(135deg,#0d0d14,#0d0d14)', accent: '#d4af37' },
+  nft:           { border: '#7b6bc840', bg: 'linear-gradient(135deg,#1a0f3d,#0B1020)', accent: '#b39ddb' },
+  domain:        { border: '#7eb8f740', bg: 'linear-gradient(135deg,#0a2040,#0B1020)', accent: '#7eb8f7' },
+  token:         { border: '#FBBF2440', bg: 'linear-gradient(135deg,#1a1208,#0B1020)', accent: '#FBBF24' },
+  badge:         { border: '#7ee7c040', bg: 'linear-gradient(135deg,#0d2e14,#0B1020)', accent: '#7ee7c0' },
+  digital_asset: { border: '#FBBF2420', bg: 'linear-gradient(135deg,#0B1020,#0B1020)', accent: '#6b6b7a' },
+  default:       { border: '#FBBF2420', bg: 'linear-gradient(135deg,#0B1020,#0B1020)', accent: '#FBBF24' },
 };
 
 export function MarketplaceCard({
@@ -58,7 +58,7 @@ export function MarketplaceCard({
         e.currentTarget.style.boxShadow   = 'none';
       }}
       style={{
-        background:  '#0d0d14',
+        background:  '#0B1020',
         border:      `1px solid ${colors.border}`,
         borderRadius: 18,
         padding:     '16px 20px',
@@ -111,7 +111,7 @@ export function MarketplaceCard({
 
       {/* Price + Action */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: '#d4af37' }}>
+        <div style={{ fontSize: 16, fontWeight: 900, color: '#FBBF24' }}>
           {listing.price}π
         </div>
 
@@ -119,8 +119,8 @@ export function MarketplaceCard({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <button onClick={() => onEditPrice(listing)} style={{
               padding: '5px 12px', borderRadius: 10,
-              background: '#d4af3715', border: '1px solid #d4af3740',
-              color: '#d4af37', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              background: '#FBBF2415', border: '1px solid #FBBF2440',
+              color: '#FBBF24', fontSize: 11, fontWeight: 700, cursor: 'pointer',
             }}>
               ✏️ Edit
             </button>

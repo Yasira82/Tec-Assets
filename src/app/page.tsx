@@ -30,7 +30,7 @@ export default function HomePage() {
   return (
     <div style={{
       minHeight:      '100vh',
-      background:     '#020205',
+      background:     '#050816',
       display:        'flex',
       alignItems:     'center',
       justifyContent: 'center',
@@ -38,7 +38,7 @@ export default function HomePage() {
     }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 56, marginBottom: 20 }}>💎</div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: '#d4af37', marginBottom: 6 }}>
+        <div style={{ fontSize: 22, fontWeight: 900, color: '#FBBF24', marginBottom: 6 }}>
           Assets
         </div>
         <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 3, marginBottom: 32 }}>
@@ -47,7 +47,7 @@ export default function HomePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <div style={{
             width: 16, height: 16, borderRadius: '50%',
-            border: '2px solid #d4af3730', borderTop: '2px solid #d4af37',
+            border: '2px solid #FBBF2430', borderTop: '2px solid #FBBF24',
             animation: 'spin 0.8s linear infinite',
           }} />
           <span style={{ fontSize: 13, color: '#4a4a5a' }}>Connecting to TEC...</span>

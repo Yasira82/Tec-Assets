@@ -11,12 +11,12 @@ const typeEmoji: Record<string, string> = {
 };
 
 const assetColors: Record<string, { border: string; bg: string; status: string }> = {
-  nft:           { border: '#7b6bc840', bg: 'linear-gradient(135deg,#1a0f3d,#0d0d14)', status: '#b39ddb' },
-  domain:        { border: '#7eb8f740', bg: 'linear-gradient(135deg,#0a2040,#0d0d14)', status: '#7eb8f7' },
-  token:         { border: '#d4af3740', bg: 'linear-gradient(135deg,#1a1208,#0d0d14)', status: '#d4af37' },
-  badge:         { border: '#7ee7c040', bg: 'linear-gradient(135deg,#0d2e14,#0d0d14)', status: '#7ee7c0' },
-  digital_asset: { border: '#d4af3720', bg: 'linear-gradient(135deg,#0d0d14,#0d0d14)', status: '#6b6b7a' },
-  default:       { border: '#d4af3720', bg: 'linear-gradient(135deg,#0d0d14,#0d0d14)', status: '#6b6b7a' },
+  nft:           { border: '#7b6bc840', bg: 'linear-gradient(135deg,#1a0f3d,#0B1020)', status: '#b39ddb' },
+  domain:        { border: '#7eb8f740', bg: 'linear-gradient(135deg,#0a2040,#0B1020)', status: '#7eb8f7' },
+  token:         { border: '#FBBF2440', bg: 'linear-gradient(135deg,#1a1208,#0B1020)', status: '#FBBF24' },
+  badge:         { border: '#7ee7c040', bg: 'linear-gradient(135deg,#0d2e14,#0B1020)', status: '#7ee7c0' },
+  digital_asset: { border: '#FBBF2420', bg: 'linear-gradient(135deg,#0B1020,#0B1020)', status: '#6b6b7a' },
+  default:       { border: '#FBBF2420', bg: 'linear-gradient(135deg,#0B1020,#0B1020)', status: '#6b6b7a' },
 };
 
 export function AssetCard({
@@ -91,7 +91,7 @@ export function AssetCard({
           e.currentTarget.style.borderColor = colors.border;
         }}
         style={{
-          background: '#0d0d14',
+          background: '#0B1020',
           border: `1px solid ${colors.border}`,
           borderRadius: 18, padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: 14,
@@ -123,11 +123,11 @@ export function AssetCard({
 
         {/* Right Side */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#d4af37' : '#6b6b7a' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: asset.status === 'active' ? '#7ee7c0' : asset.status === 'on_sale' ? '#FBBF24' : '#6b6b7a' }}>
             {asset.status === 'on_sale' ? 'ON SALE' : asset.status.toUpperCase()}
           </div>
           {asset.listing_price && (
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#d4af37' }}>{asset.listing_price}π</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24' }}>{asset.listing_price}π</div>
           )}
 
           {/* Transfer Button — active assets only */}

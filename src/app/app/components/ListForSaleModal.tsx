@@ -75,7 +75,7 @@ export function ListForSaleModal({
       }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
-        background: '#0d0d14', borderTop: '1px solid #d4af3720',
+        background: '#0B1020', borderTop: '1px solid #FBBF2420',
         borderRadius: '24px 24px 0 0', padding: '24px 20px 40px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
@@ -94,10 +94,10 @@ export function ListForSaleModal({
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
-            background: '#0a0a12', border: '1px solid #d4af3740',
+            background: '#0a0a12', border: '1px solid #FBBF2440',
             borderRadius: 14, padding: '12px 16px',
           }}>
-            <span style={{ fontFamily: 'Georgia,serif', fontSize: 20, color: '#d4af37' }}>π</span>
+            <span style={{ fontFamily: 'Georgia,serif', fontSize: 20, color: '#FBBF24' }}>π</span>
             <input
               type="number" min="0.01" step="0.01"
               value={price}
@@ -136,7 +136,7 @@ export function ListForSaleModal({
 
         <button onClick={handleSubmit} disabled={loading || !price} style={{
           width: '100%', padding: '16px',
-          background: price ? 'linear-gradient(135deg,#d4af37,#b8882a)' : '#ffffff10',
+          background: price ? 'linear-gradient(135deg,#FBBF24,#F59E0B)' : '#ffffff10',
           border: 'none', borderRadius: 16,
           color: price ? '#0a0800' : '#4a4a5a',
           fontSize: 15, fontWeight: 800,

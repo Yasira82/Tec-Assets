@@ -39,7 +39,7 @@ export function MintAsNftButton({
                   : tier === 'Ultra Rare' ? '#b39ddb'
                   : tier === 'Rare'       ? '#7eb8f7'
                   : tier === 'Uncommon'   ? '#7ee7c0'
-                  : '#d4af37';
+                  : '#FBBF24';
 
   const redirectToHub = () => {
     const params = new URLSearchParams({

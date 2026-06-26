@@ -1,9 +1,9 @@
 export function Skeleton() {
   return (
-    <div style={{ minHeight: '100vh', background: '#020205', padding: '0 0 90px' }}>
+    <div style={{ minHeight: '100vh', background: '#050816', padding: '0 0 90px' }}>
       <style>{`
         @keyframes shimmer { 0%,100%{opacity:.4}50%{opacity:.8} }
-        .sk { animation: shimmer 1.4s ease infinite; background: #0d0d14; border-radius: 14px; }
+        .sk { animation: shimmer 1.4s ease infinite; background: #0B1020; border-radius: 14px; }
       `}</style>
       <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between' }}>
         <div className="sk" style={{ width: 80, height: 28 }} />

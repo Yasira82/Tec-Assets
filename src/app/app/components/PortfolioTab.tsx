@@ -29,13 +29,13 @@ export function PortfolioTab({
     <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{
         borderRadius: 20, padding: '20px',
-        background: 'linear-gradient(135deg,#1a1208,#0d0d14)',
-        border: '1px solid #d4af3720',
+        background: 'linear-gradient(135deg,#1a1208,#0B1020)',
+        border: '1px solid #FBBF2420',
       }}>
         <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 3, marginBottom: 8 }}>
           TOTAL PORTFOLIO
         </div>
-        <div style={{ fontSize: 32, fontWeight: 900, color: '#d4af37', marginBottom: 16 }}>
+        <div style={{ fontSize: 32, fontWeight: 900, color: '#FBBF24', marginBottom: 16 }}>
           {fmt(`${totalValue.toFixed(2)} π`)}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -52,7 +52,7 @@ export function PortfolioTab({
       </div>
 
       {breakdown.length > 0 && (
-        <div style={{ borderRadius: 20, padding: '20px', background: '#0d0d14', border: '1px solid #ffffff08' }}>
+        <div style={{ borderRadius: 20, padding: '20px', background: '#0B1020', border: '1px solid #ffffff08' }}>
           <div style={{ fontSize: 11, color: '#6b6b7a', letterSpacing: 2, marginBottom: 12 }}>
             ASSET BREAKDOWN
           </div>
@@ -62,7 +62,7 @@ export function PortfolioTab({
               padding: '10px 0', borderBottom: '1px solid #ffffff05',
             }}>
               <span style={{ fontSize: 13, color: '#fff' }}>{item.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#d4af37' }}>{item.count}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#FBBF24' }}>{item.count}</span>
             </div>
           ))}
         </div>
@@ -70,7 +70,7 @@ export function PortfolioTab({
 
       <button onClick={() => goToTEC('DASHBOARD')} style={{
         padding: '14px', borderRadius: 16,
-        background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+        background: 'linear-gradient(135deg,#FBBF24,#F59E0B)',
         border: 'none', color: '#0a0800',
         fontSize: 14, fontWeight: 700, cursor: 'pointer',
       }}>

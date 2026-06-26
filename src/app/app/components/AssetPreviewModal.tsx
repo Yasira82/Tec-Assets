@@ -9,10 +9,10 @@ import { MintAsNftButton }    from './MintAsNftButton';
 const assetColors: Record<string, { border: string; status: string }> = {
   nft:           { border: '#7b6bc840', status: '#b39ddb' },
   domain:        { border: '#7eb8f740', status: '#7eb8f7' },
-  token:         { border: '#d4af3740', status: '#d4af37' },
+  token:         { border: '#FBBF2440', status: '#FBBF24' },
   badge:         { border: '#7ee7c040', status: '#7ee7c0' },
-  digital_asset: { border: '#d4af3720', status: '#6b6b7a' },
-  default:       { border: '#d4af3720', status: '#6b6b7a' },
+  digital_asset: { border: '#FBBF2420', status: '#6b6b7a' },
+  default:       { border: '#FBBF2420', status: '#6b6b7a' },
 };
 
 const getCsrf = (): string => {
@@ -247,7 +247,7 @@ export function AssetPreviewModal({
                 onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
                 style={{
                   flex: 1, padding: '16px',
-                  background: 'linear-gradient(135deg,#d4af37,#b8882a)',
+                  background: 'linear-gradient(135deg,#FBBF24,#F59E0B)',
                   border: 'none', borderRadius: 16,
                   color: '#0a0800', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                 }}

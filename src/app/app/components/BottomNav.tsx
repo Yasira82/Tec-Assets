@@ -44,13 +44,13 @@ export function BottomNav({
             }}>{item.icon}</div>
             <div style={{
               fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-              color: isActive ? '#d4af37' : '#3a3a4a',
+              color: isActive ? '#FBBF24' : '#3a3a4a',
               transition: 'color 0.2s',
             }}>{item.label}</div>
             {isActive && (
               <div style={{
                 position: 'absolute', bottom: 0,
-                width: 20, height: 2, borderRadius: 1, background: '#d4af37',
+                width: 20, height: 2, borderRadius: 1, background: '#FBBF24',
               }} />
             )}
           </button>
