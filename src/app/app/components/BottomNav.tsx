@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon, type IconName } from '@yasser172/tec-ui';
 import { MainTab } from '../types';
 
 export function BottomNav({
@@ -9,12 +10,12 @@ export function BottomNav({
   setActiveTab:   (tab: MainTab) => void;
   setAssetFilter: (f: 'all' | 'domains' | 'nfts') => void;
 }) {
-  const items = [
-    { key: 'assets',      icon: '💎', label: 'Assets'    },
-    { key: 'marketplace', icon: '🛒', label: 'Market'    },
-    { key: 'purchases',   icon: '🧾', label: 'History'   },
-    { key: 'portfolio',   icon: '📊', label: 'Portfolio' },
-  ] as const;
+  const items: { key: MainTab; icon: IconName; label: string }[] = [
+    { key: 'assets',      icon: 'gem',     label: 'Assets'    },
+    { key: 'marketplace', icon: 'cart',    label: 'Market'    },
+    { key: 'purchases',   icon: 'receipt', label: 'History'   },
+    { key: 'portfolio',   icon: 'chart',   label: 'Portfolio' },
+  ];
 
   return (
     <div style={{
@@ -31,17 +32,18 @@ export function BottomNav({
             if (item.key === 'assets') setAssetFilter('all');
             setActiveTab(item.key);
           }} style={{
+            position: 'relative',
             flex: 1, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            gap: 4, padding: '10px 0 12px',
+            gap: 5, padding: '10px 0 12px',
             background: 'none', border: 'none', cursor: 'pointer',
           }}>
             <div style={{
-              fontSize: 20,
-              filter: isActive ? 'none' : 'grayscale(1) opacity(0.4)',
-              transform: isActive ? 'scale(1.15)' : 'scale(1)',
-              transition: 'filter 0.2s, transform 0.2s',
-            }}>{item.icon}</div>
+              transform: isActive ? 'scale(1.08)' : 'scale(1)',
+              transition: 'transform 0.2s',
+            }}>
+              <Icon name={item.icon} size={21} color={isActive ? '#FBBF24' : '#3a3a4a'} strokeWidth={isActive ? 2.2 : 1.9} />
+            </div>
             <div style={{
               fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
               color: isActive ? '#FBBF24' : '#3a3a4a',
