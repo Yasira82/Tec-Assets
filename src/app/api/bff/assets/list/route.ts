@@ -1,4 +1,4 @@
-import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { createHandler, GATEWAY_URL, gatewayGet } from '@/lib/bff/createHandler';
 
 interface RawAsset {
   id:        string;
@@ -43,10 +43,10 @@ export const GET = createHandler({
     console.log('[BFF assets/list] userId:', ctx.userId);
 
     const [assetsRes, listingsRes] = await Promise.all([
-      fetch(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`, {
+      gatewayGet(`${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`, {
         headers, cache: 'no-store',
       }),
-      fetch(`${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings`, {
+      gatewayGet(`${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/listings`, {
         headers, cache: 'no-store',
       }),
     ]);
