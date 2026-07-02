@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { CountUp }         from '@yasser172/tec-ui';
 import { useAssetsPage, getTokenFromCookie } from './hooks/useAssetsPage';
 import { ErrorBoundary }   from '@/components/ErrorBoundary';
@@ -268,5 +270,8 @@ function AssetsPageInner() {
 }
 
 export default function AssetsPage() {
+  // Fire-and-forget backend warmup (Railway cold starts — see /api/warmup).
+  useEffect(() => { fetch('/api/warmup').catch(() => {}); }, []);
+
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
 }
