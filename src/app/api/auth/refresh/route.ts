@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       httpOnly: false,   // intentional: Pi Browser WebView reads via document.cookie
       secure:   true,
       sameSite: 'none',
+      partitioned: true,
       maxAge:   60 * 60 * 24,
       domain:   '.tecosystem.app',
       path:     '/',
