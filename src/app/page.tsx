@@ -16,6 +16,9 @@ const getTokenFromCookie = (): string | null => {
 };
 
 export default function HomePage() {
+  // Fire-and-forget backend warmup (Railway cold starts — see /api/warmup).
+  useEffect(() => { fetch('/api/warmup').catch(() => {}); }, []);
+
   const router = useRouter();
 
   useEffect(() => {
