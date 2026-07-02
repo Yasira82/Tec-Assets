@@ -2,6 +2,7 @@
 
 import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
+import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -13,10 +14,6 @@ const getCsrf = (): string => {
   return match ? match[1] : '';
 };
 
-const isHubNavigation = (): boolean => {
-  if (typeof document === 'undefined') return false;
-  return document.referrer.toLowerCase().includes('hub.tecosystem.app');
-};
 
 export function MintAsNftButton({
   asset, onClose, onSuccess,

@@ -2,6 +2,7 @@
 
 import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
+import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -21,11 +22,7 @@ const toBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-/** Hub → Assets = Pi ownership drift → force Mode 1 */
-const isHubNavigation = (): boolean => {
-  if (typeof document === 'undefined') return false;
-  return document.referrer.toLowerCase().includes('hub.tecosystem.app');
-};
+/* Hub → Assets = Pi ownership drift → force Mode 1 — isHubNavigation (hub-entry.ts) */
 
 /** Mode 1: redirect to Hub PaymentModal (original — same as Commerce) */
 const redirectToHubPayment = (name: string, nftMeta: string) => {
