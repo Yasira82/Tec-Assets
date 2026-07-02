@@ -1,4 +1,4 @@
-import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { createHandler, GATEWAY_URL, gatewayGet } from '@/lib/bff/createHandler';
 
 interface RawListing {
   id:           string;
@@ -24,7 +24,7 @@ export const GET = createHandler({
     const { searchParams } = new URL(req.url);
     const query = searchParams.toString();
 
-    const res = await fetch(
+    const res = await gatewayGet(
       `${GATEWAY_URL}/api/assets/marketplace${query ? `?${query}` : ''}`,
       {
         cache: 'no-store',
