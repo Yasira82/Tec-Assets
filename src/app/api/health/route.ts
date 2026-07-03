@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const gatewayUrl = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+  // NEW-A: server-only — never NEXT_PUBLIC_* (would leak the URL to the client).
+  const gatewayUrl = process.env.API_GATEWAY_URL;
 
   if (!gatewayUrl) {
     return NextResponse.json({ online: false, error: 'not configured' });
