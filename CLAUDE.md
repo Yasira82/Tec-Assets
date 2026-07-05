@@ -1,4 +1,4 @@
-> ⚡ **SESSION START — أول حاجة:** اقرأ `knowledge-base/C-02___CURRENT_STATE_.md` من `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`) — ده مصدر الحقيقة للوضع الحالي. لا تعتمد على الذاكرة أو الملخص.
+> ⚡ **SESSION START — أول حاجة:** اقرأ `knowledge-base/C-02___CURRENT_STATE_.md` من `yasira82/tec-knowledge-base` (branch: `main`) — ده مصدر الحقيقة للوضع الحالي. لا تعتمد على الذاكرة أو الملخص.
 
 ---
 
@@ -128,7 +128,7 @@ ADR-007 check: grep any modified payment handler for `isHubNavigation()`.
 ---
 
 ## Knowledge Base Reference
-→ `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`)
+→ `yasira82/tec-knowledge-base` (branch: `main`)
 → **Current State: `knowledge-base/C-02___CURRENT_STATE_.md`** — اقرأه أول كل session
 → Master index: `knowledge-base/C-57___MASTER_CONTENTS_INDEX.md`
 → Domain ownership: `knowledge-base/C-68___DOMAIN_OWNERSHIP_MATRIX.md`
@@ -182,7 +182,7 @@ tec-core-backend (deploy)
 - Hub navigation (isHubNavigation()) = shared ADR-007 concern — any change affects all 4 apps
 
 ### Knowledge Base Reference
-→ `yasira82/tec-knowledge-base` (branch: `claude/gifted-knuth-1yhom3`)
+→ `yasira82/tec-knowledge-base` (branch: `main`)
 → Master index: `knowledge-base/C-57___MASTER_CONTENTS_INDEX.md`
 → Domain ownership: `knowledge-base/C-68___DOMAIN_OWNERSHIP_MATRIX.md`
 → Payment ownership (ADR-007): `knowledge-base/C-76___ADR-007.md`
