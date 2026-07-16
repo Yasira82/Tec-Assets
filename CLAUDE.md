@@ -137,7 +137,7 @@ ADR-007 check: grep any modified payment handler for `isHubNavigation()`.
 ## Platform Context
 
 Full platform context, ADR system, and engineering roadmap:
-→ `TEC_MODELS_PAT.prompt.yml` in yasira82/tec-app (branch: claude/ecommerce-engineering-review-EuiQO)
+→ `TEC_MODELS_PAT.prompt.yml` in yasira82/tec-app (branch: main)
 → `TEC_Ecosystem_AI_Key.prompt.yml` in yasira82/tec-app
 → C-47 Kernel Spec — P6 Fail Closed, Asset ownership invariants
 → C-41 Engineering Roadmap — Phase 0 assets items
