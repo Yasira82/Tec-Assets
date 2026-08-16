@@ -31,6 +31,23 @@ export const usePiAuth = () => {
       error:           null,
     });
 
+    // C-123 §3: Pi Browser stores the tec_user cookie so the SERVER sees it but
+    // hides it from client JS — getStoredUser() reads null and the real Pi username
+    // never appears. Resolve identity server-side via /api/auth/me and fill it in.
+    fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.authenticated && d.user) {
+          setState((prev) => ({
+            ...prev,
+            user:            (prev.user ?? (d.user as TecUser)),
+            isAuthenticated: true,
+            isLoading:       false,
+          }));
+        }
+      })
+      .catch(() => { /* fail closed — keep cookie-derived state */ });
+
     if (!stored) return;
 
     const doSilentAuth = async () => {
