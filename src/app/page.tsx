@@ -5,7 +5,20 @@ import { useRouter } from 'next/navigation';
 
 const HUB_URL    = 'https://hub.tecosystem.app';
 const ASSETS_URL = 'https://assets.tecosystem.app';
-const SSO_URL    = `${HUB_URL}/api/auth/sso?target=${encodeURIComponent(ASSETS_URL)}`;
+// The SSO return address must be the host the visitor is ACTUALLY on, read at
+// CLICK time. As a module constant it was frozen to the Mainnet host, so a
+// visitor on the paired Testnet host was handed to the Hub with the wrong
+// return address: the Hub logged them in correctly and returned them to the
+// OTHER origin, where the session then lived. The Testnet host stayed
+// "Unauthorized" with nothing in any log, because nothing failed.
+//
+// Nothing is weakened: this is the origin the page was SERVED from, which a
+// visitor cannot forge, and the Hub validates every target against its own
+// ALLOWED_TARGETS regardless.
+const ssoUrl = (): string => {
+  const back = typeof window === 'undefined' ? ASSETS_URL : window.location.origin;
+  return `${HUB_URL}/api/auth/sso?target=${encodeURIComponent(back)}`;
+};
 
 const getTokenFromCookie = (): string | null => {
   if (typeof document === 'undefined') return null;
@@ -26,7 +39,7 @@ export default function HomePage() {
     if (token) {
       router.replace('/app');
     } else {
-      window.location.href = SSO_URL;
+      window.location.href = ssoUrl();
     }
   }, [router]);
 
