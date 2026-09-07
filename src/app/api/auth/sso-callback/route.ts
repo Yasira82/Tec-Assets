@@ -120,9 +120,21 @@ export async function GET(req: NextRequest) {
       document.cookie = c.name + '=' + encodeURIComponent(c.value) +
         // NOTE: no backticks in this script — it lives inside a template
       // literal, and one would end the string mid-file.
-      // "partitioned" is required by C-123 LAW 3 in an embedded context;
-      // the server response already sets it, this fallback did not.
-      '; path=/; max-age=' + c.maxAge + '; secure; samesite=none; partitioned';
+      //
+      // "partitioned" is deliberately NOT set here, and that is a REVERSAL.
+      // C-123 LAW 3 wants it, and the server response above does set it — so
+      // adding it looked like making the fallback consistent. What it actually
+      // removed was the UNPARTITIONED duplicate this fallback had always
+      // written beside the server's partitioned one. In any context where the
+      // partitioned copy is not sent, that duplicate was the only cookie left,
+      // and dropping it is a coherent explanation for intermittent auth on
+      // Mainnet after the testnet work (upload and mint hanging, ~2 successes
+      // in 12) — the one change in that port with any Mainnet-visible effect.
+      //
+      // Not proven. Reverted because a return to known-good is cheaper than
+      // the argument, and because the Testnet host is carried by the SERVER
+      // cookie (host-only + partitioned), not by this fallback.
+      '; path=/; max-age=' + c.maxAge + '; secure; samesite=none';
     }
   }
   function sessionVisible(cb) {
