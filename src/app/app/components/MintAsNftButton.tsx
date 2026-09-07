@@ -4,6 +4,8 @@ import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
+import { hubPaymentOrigin } from '@/lib/pi-network';
+
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
 const MINT_FEE   = 1;
@@ -47,7 +49,7 @@ export function MintAsNftButton({
       return_url: `${ASSETS_URL}/app`,
       source:     'assets',
     });
-    window.location.href = `${HUB_URL}/hub?${params.toString()}`;
+    window.location.href = `${hubPaymentOrigin(HUB_URL)}/hub?${params.toString()}`;
   };
 
   const handleMint = async () => {
