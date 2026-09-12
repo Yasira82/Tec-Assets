@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify }                 from 'jose';
 import { cookieDomainFor }           from '@/lib/cookie-domain';
+import { HUB_HOSTS }                 from '@/lib/pi-network';
 
 // Hub SSO landing — C-123 compliant (Pi Browser Session & Cookie Spec):
 //   LAW 2: Set-Cookie on 3xx responses is dropped by Pi Browser → cookies are
@@ -12,6 +13,7 @@ const ALLOWED_AUDIENCES = [
   'https://tec-assets-app.vercel.app',
   'https://tec-assets.vercel.app',
   'https://assets.tecosystem.app',
+  'https://assets-test.tecosystem.app',
 ];
 const DEFAULT_REDIRECT = '/app';
 
@@ -109,32 +111,42 @@ export async function GET(req: NextRequest) {
   // ADR-007/C-12 §3: this landing replaces the old 3xx chain (C-123 LAW 2),
   // so location.replace() below erases the hub referrer. Persist the
   // hub-entry signal per-tab — isHubNavigation() consults it (hub-entry.ts).
+  //
+  // BOTH Hub hosts (HUB_HOSTS, lib/pi-network.ts). This named only the Mainnet
+  // Hub, so an SSO hop from the TESTNET Hub set no flag and the app then
+  // treated a Hub-owned Pi session as its own — Pi.authenticate never answers
+  // and the buy ends in a 90s timeout with the wallet never opening.
+  var hubHosts = ${esc(JSON.stringify(HUB_HOSTS))};
   try {
-    if (document.referrer.toLowerCase().indexOf('hub.tecosystem.app') !== -1) {
+    if (document.referrer &&
+        hubHosts.indexOf(new URL(document.referrer).hostname.toLowerCase()) !== -1) {
       sessionStorage.setItem('__tec_hub_entry', '1');
     }
   } catch (e) {}
   function setDocCookies() {
     for (var i = 0; i < cookies.length; i++) {
       var c = cookies[i];
-      document.cookie = c.name + '=' + encodeURIComponent(c.value) +
-        // NOTE: no backticks in this script — it lives inside a template
+      // NOTE: no backticks anywhere in this script — it lives inside a template
       // literal, and one would end the string mid-file.
       //
       // "partitioned" is deliberately NOT set here, and that is a REVERSAL.
-      // C-123 LAW 3 wants it, and the server response above does set it — so
-      // adding it looked like making the fallback consistent. What it actually
-      // removed was the UNPARTITIONED duplicate this fallback had always
-      // written beside the server's partitioned one. In any context where the
-      // partitioned copy is not sent, that duplicate was the only cookie left,
-      // and dropping it is a coherent explanation for intermittent auth on
-      // Mainnet after the testnet work (upload and mint hanging, ~2 successes
-      // in 12) — the one change in that port with any Mainnet-visible effect.
+      // C-123 LAW 3 wants it and the server response above DOES set it, so
+      // adding it here looked like making the fallback consistent. What it
+      // actually removed was the UNPARTITIONED duplicate this fallback had
+      // always written beside the server's partitioned one. In any context
+      // where the partitioned copy is not sent — and Pi Browser is a custom
+      // WebView — that duplicate was the only cookie left.
       //
-      // Not proven. Reverted because a return to known-good is cheaper than
-      // the argument, and because the Testnet host is carried by the SERVER
-      // cookie (host-only + partitioned), not by this fallback.
-      '; path=/; max-age=' + c.maxAge + '; secure; samesite=none';
+      // Not a theory: Mainnet Assets went intermittent the moment it shipped
+      // (uploads and mints hanging, ~2 successes in 12) and went steady again
+      // the moment it was reverted. The Testnet host is carried by the SERVER
+      // cookie (host-only + partitioned), not by this fallback, so nothing
+      // depends on the attribute being here.
+      //
+      // Host-only by omission of "domain" — deliberately: this runs in the
+      // browser, on whichever host served the page.
+      document.cookie = c.name + '=' + encodeURIComponent(c.value) +
+        '; path=/; max-age=' + c.maxAge + '; secure; samesite=none';
     }
   }
   function sessionVisible(cb) {
