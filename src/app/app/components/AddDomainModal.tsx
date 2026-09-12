@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 
 const TEC_PAY_URL = 'https://tec-app-frontend.vercel.app/pay';
 
+const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
+/** This origin at runtime — never a build constant; falls back only off-browser. */
+const appOrigin = (): string =>
+  typeof window === 'undefined' ? ASSETS_URL : window.location.origin;
+
 export function AddDomainModal({ onClose }: { onClose: () => void }) {
   const [slug,         setSlug]         = useState('');
   const [loading,      setLoading]      = useState(false);
@@ -48,7 +53,12 @@ export function AddDomainModal({ onClose }: { onClose: () => void }) {
       price:      fee.toString(),
       listing_id: `domain-reg-${Date.now()}`,
       asset_id:   `domain-${Date.now()}`,
-      return_url: 'https://tec-assets-app.vercel.app/app',
+      // Where the Hub sends the buyer back. This was the TESTNET host, hardcoded
+      // — so a Mainnet buyer finishing a domain registration was handed to the
+      // Testnet app. Its two siblings in this folder already derive it from the
+      // current origin; the constant is the same build-time-answers-a-request
+      // bug this session has now found six times.
+      return_url: `${appOrigin()}/app`,
     });
     window.location.href = `${TEC_PAY_URL}?${params.toString()}`;
   };

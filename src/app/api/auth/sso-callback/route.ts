@@ -13,6 +13,7 @@ const ALLOWED_AUDIENCES = [
   'https://tec-assets-app.vercel.app',
   'https://tec-assets.vercel.app',
   'https://assets.tecosystem.app',
+  'https://assets-test.tecosystem.app',
 ];
 const DEFAULT_REDIRECT = '/app';
 
