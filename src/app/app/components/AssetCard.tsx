@@ -20,13 +20,12 @@ const assetColors: Record<string, { border: string; bg: string; status: string }
 };
 
 export function AssetCard({
-  asset, showValues, onListForSale, onCancelListing, onTransfer, allAssets = [], onRefresh,
+  asset, showValues, onListForSale, onCancelListing, allAssets = [], onRefresh,
 }: {
   asset:           Asset;
   showValues:      boolean;
   onListForSale:   (asset: Asset) => void;
   onCancelListing: (listingId: string) => void;
-  onTransfer?:     (asset: Asset) => void;
   allAssets?:      Asset[];
   onRefresh?:      () => void;
 }) {
@@ -130,17 +129,10 @@ export function AssetCard({
             <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24' }}>{asset.listing_price}π</div>
           )}
 
-          {/* Transfer Button — active assets only */}
-          {onTransfer && asset.status === 'active' && (
-            <button
-              onClick={e => { e.stopPropagation(); onTransfer(asset); }}
-              data-testid={`transfer-${asset.id}`}
-              style={{ fontSize: 9, fontWeight: 700, color: '#6b6b7a', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', letterSpacing: 0.5 }}>
-              ↗ Transfer
-            </button>
-          )}
-
-          {!onTransfer && <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>}
+          {/* No Transfer button: asset-service has no transfer route and never had one.
+              An ownership transfer is a sensitive operation (C-47) — it comes back as a
+              designed feature, with an audit trail, not as a button that 404s. */}
+          <div style={{ fontSize: 10, color: '#4a4a5a' }}>Tap to preview</div>
         </div>
       </div>
     </>

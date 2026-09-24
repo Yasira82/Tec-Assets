@@ -19,7 +19,7 @@ const SkeletonCard = () => (
 
 export function AssetsTab({
   assets, filtered, dataLoading, showValues,
-  onListForSale, onCancelListing, onMintNFT, onGoMarketplace, onTransfer, onRefresh,
+  onListForSale, onCancelListing, onMintNFT, onGoMarketplace, onRefresh,
 }: {
   assets:          Asset[];
   filtered:        Asset[];
@@ -29,7 +29,6 @@ export function AssetsTab({
   onCancelListing: (listingId: string) => void;
   onMintNFT:       () => void;
   onGoMarketplace: () => void;
-  onTransfer:      (asset: Asset) => void;
   onRefresh?:      () => void;
 }) {
   if (dataLoading) return <>{[1,2,3].map(i => <SkeletonCard key={i} />)}</>;
@@ -61,7 +60,6 @@ export function AssetsTab({
           showValues={showValues}
           onListForSale={onListForSale}
           onCancelListing={onCancelListing}
-          onTransfer={onTransfer}
           allAssets={assets}
           onRefresh={onRefresh}
         />

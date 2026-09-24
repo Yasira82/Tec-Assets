@@ -10,7 +10,6 @@ import { Skeleton }        from './components/Skeleton';
 import { NFTUploadModal }  from './components/NFTUploadModal';
 import { ListForSaleModal }   from './components/ListForSaleModal';
 import { CancelConfirmModal } from './components/CancelConfirmModal';
-import { TransferModal }      from './components/TransferModal';
 import { AssetsTab }      from './components/AssetsTab';
 import { MarketplaceTab } from './components/MarketplaceTab';
 import { PurchasesTab }   from './components/PurchasesTab';
@@ -89,14 +88,6 @@ function AssetsPageInner() {
           onClose={() => s.setCancellingListing(null)}
           onConfirm={s.handleCancelConfirm}
           loading={s.cancelLoading}
-        />
-      )}
-
-      {s.transferringAsset && (
-        <TransferModal
-          asset={s.transferringAsset}
-          onClose={() => s.setTransferringAsset(null)}
-          onSuccess={s.handleTransferSuccess}
         />
       )}
 
@@ -231,7 +222,6 @@ function AssetsPageInner() {
             onCancelListing={s.handleCancelFromAssets}
             onMintNFT={() => s.setMintingNFT(true)}
             onGoMarketplace={() => s.setActiveTab('marketplace')}
-            onTransfer={s.handleTransfer}
             onRefresh={s.fetchData}
           />
         )}
