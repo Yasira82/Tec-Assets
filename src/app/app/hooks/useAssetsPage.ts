@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter }                        from 'next/navigation';
 import { usePiAuth }                        from '@/lib-client/hooks/usePiAuth';
 import { useSettings }                      from '@/lib/hooks/useSettings';
+import { readFollowUp, PENDING_MESSAGE }    from '@/lib/purchase-followup';
 import { Asset, Listing, WalletData, MainTab, Purchase } from '../types';
 import {
   createPaymentRecord,
@@ -125,61 +126,45 @@ export function useAssetsPage() {
     const paymentId = params.get('payment_id') ?? '';
     const productId = params.get('product_id') ?? '';
 
-if (productId.startsWith('domain-nft:')) {
-  const parts  = productId.split(':');
-  const assetId = parts[1] ?? '';
-  showToast('Domain minted as NFT! 🎨');
-  setActiveTab('assets');
-  fetch('/api/bff/assets/mint-as-nft', {
-    method:      'POST',
-    credentials: 'include',
-    headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-    body: JSON.stringify({ asset_id: assetId, transactionId: paymentId }),
-  }).then(() => setTimeout(() => fetchData(), 2000))
-    .catch(() => {});
-  window.history.replaceState({}, '', '/app');
-  return;
-}
-    
-    if (productId.startsWith('nft:')) {
-      try {
-        const nftMeta = JSON.parse(atob(productId.slice(4)));
-        showToast('NFT Minted! 🎨');
-        setActiveTab('assets');
-        fetch('/api/bff/nft/register', {
-          method:      'POST',
-          credentials: 'include',
-          headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-          body: JSON.stringify({
-            name:        nftMeta.n,
-            description: nftMeta.d ?? '',
-            imageUrl:    nftMeta.u,
-            key:         nftMeta.k,
-            mimeType:    nftMeta.m,
-            paymentId,
-txid: txid || crypto.randomUUID(),
-          }),
-        })
-          .then(async res => {
-            if (res.ok) setTimeout(() => fetchData(), 2000);
-            else {
-              const d = await res.json().catch(() => ({})) as { error?: string };
-              showToast(`Register failed: ${d.error ?? res.status}`, 'error');
-            }
-          })
-          .catch(() => showToast('Register failed', 'error'));
-      } catch { showToast('NFT data error', 'error'); }
-    } else {
-      showToast('Purchase successful! 🎉');
+    // Each follow-up is answered from the payment's own event (lib/purchase-followup):
+    // delivered, pending — the asset-service delivers it from payment.completed.v1
+    // shortly, whether or not this call succeeds — or refused, which is a refund.
+    const post = (url: string, body: unknown) => fetch(url, {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+      body:        JSON.stringify(body),
+    });
+    const settle = async (res: Response, doneMessage: string, refresh: () => void) => {
+      const f = await readFollowUp(res);
+      if (f.state === 'done') { showToast(doneMessage); refresh(); return; }
+      if (f.state === 'rejected') { showToast(f.message, 'error'); refresh(); return; }
+      showToast(PENDING_MESSAGE);
+      setTimeout(refresh, 4000);
+    };
+    const lost = (refresh: () => void) => () => { showToast(PENDING_MESSAGE); setTimeout(refresh, 4000); };
+
+    if (productId.startsWith('domain-nft:')) {
+      const assetId = productId.split(':')[1] ?? '';
+      setActiveTab('assets');
+      post('/api/bff/assets/mint-as-nft', { asset_id: assetId, transactionId: paymentId })
+        .then((res) => settle(res, 'Domain minted as NFT! 🎨', fetchData))
+        .catch(lost(fetchData));
+    } else if (productId.startsWith('nft:')) {
+      setActiveTab('assets');
+      // The NFT's name and image travel inside the payment's own product id; the
+      // asset-service reads them from there. What is sent here only files the upload in storage.
+      let meta: { n?: string; k?: string; m?: string } = {};
+      try { meta = JSON.parse(atob(productId.slice(4))); } catch { /* the payment still carries it */ }
+      post('/api/bff/nft/register', { paymentId, name: meta.n, key: meta.k, mimeType: meta.m })
+        .then((res) => settle(res, 'NFT Minted! 🎨', fetchData))
+        .catch(lost(fetchData));
+    } else if (productId && paymentId) {
       setActiveTab('purchases');
-      if (productId && paymentId) {
-        fetch('/api/bff/marketplace/buy', {
-          method:      'POST',
-          credentials: 'include',
-          headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
-          body: JSON.stringify({ listing_id: productId, payment_id: paymentId, txid }),
-        }).then(() => { fetchPurchases(); fetchData(); }).catch(() => {});
-      }
+      const refresh = () => { fetchPurchases(); fetchData(); };
+      post('/api/bff/marketplace/buy', { listing_id: productId, payment_id: paymentId, txid })
+        .then((res) => settle(res, 'Purchase successful! 🎉', refresh))
+        .catch(lost(refresh));
     }
     window.history.replaceState({}, '', '/app');
   }, [isLoading, isAuthenticated, showToast, fetchPurchases, fetchData]);
@@ -214,9 +199,10 @@ txid: txid || crypto.randomUUID(),
     );
 
     if (result.success) {
-      // ✅ سجّل الـ purchase في الـ DB
+      setActiveTab('purchases');
+      const refresh = () => { fetchData(); fetchListings(); fetchPurchases(); };
       try {
-        await fetch('/api/bff/marketplace/buy', {
+        const res = await fetch('/api/bff/marketplace/buy', {
           method:      'POST',
           credentials: 'include',
           headers: {
@@ -229,13 +215,17 @@ txid: txid || crypto.randomUUID(),
             txid:       result.txid,
           }),
         });
-      } catch { /* webhook هيعوض لو فشل */ }
-
-      showToast('Purchase successful! 🎉');
-      setActiveTab('purchases');
-      fetchData();
-      fetchListings();
-      fetchPurchases();
+        const f = await readFollowUp(res);
+        if (f.state === 'done')          showToast('Purchase successful! 🎉');
+        else if (f.state === 'rejected') showToast(f.message, 'error');
+        else { showToast(PENDING_MESSAGE); setTimeout(refresh, 4000); }
+      } catch {
+        // Not lost: the asset-service delivers the purchase from the payment's own
+        // payment.completed.v1 event, whether or not this call ever arrives.
+        showToast(PENDING_MESSAGE);
+        setTimeout(refresh, 4000);
+      }
+      refresh();
 
     } else if (result.status === 'cancelled') {
       showToast('Purchase cancelled', 'error');

@@ -115,3 +115,27 @@ describe('createHandler — no-auth mode', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// A handler may return a Response to choose its own status. createHandler used to
+// wrap it — Response.json(aResponse) serialises to `{}` with status 200 — so ten
+// routes lost every status and body they meant to send: domains/check answered `{}`
+// instead of `{ available }`, and a refused purchase looked like a success.
+describe('createHandler — a Response from the handler is returned as-is', () => {
+  it('keeps the handler\'s status and body', async () => {
+    const handler = createHandler({
+      requireAuth: false,
+      handler: async () => Response.json({ status: 'pending' }, { status: 202 }) as unknown as never,
+    });
+    const res = await handler(new Request('http://localhost/api/test') as any);
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ status: 'pending' });
+    expect(res.headers.get('X-Request-Id')).toBeTruthy();
+  });
+
+  it('still wraps a plain object as a 200 JSON body', async () => {
+    const handler = createHandler({ requireAuth: false, handler: async () => ({ ok: true }) });
+    const res = await handler(new Request('http://localhost/api/test') as any);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+});

@@ -99,6 +99,13 @@ export function createHandler<TInput = Record<string, never>, TOutput = unknown>
       }
 
       const result = await config.handler({ input, ctx, req });
+      // A handler that returns a Response has chosen its own status and body — pass it
+      // through. Wrapping it (`Response.json(aResponse)`) serialises to `{}` with 200,
+      // which is how ten routes silently lost every status and body they returned.
+      if (result instanceof Response) {
+        if (!result.headers.has('X-Request-Id')) result.headers.set('X-Request-Id', ctx.requestId);
+        return result;
+      }
       return Response.json(result, {
         headers: { 'X-Request-Id': ctx.requestId },
       });
