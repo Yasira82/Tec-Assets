@@ -2,6 +2,7 @@
 
 import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
+import { readFollowUp } from '@/lib/purchase-followup';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 import { hubPaymentOrigin } from '@/lib/pi-network';
@@ -112,12 +113,14 @@ export function MintAsNftButton({
         }),
       });
 
-      if (res.ok || res.status === 409) {
+      // 202 = paid, not confirmed yet — the asset-service mints it from the payment's
+      // own event. 409 is no longer "already done": it is a refused payment (refund).
+      const f = await readFollowUp(res);
+      if (f.state === 'done' || f.state === 'pending') {
         onSuccess();
         onClose();
       } else {
-        const d = await res.json().catch(() => ({})) as { error?: string };
-        setError(d.error ?? 'Minting failed');
+        setError(f.message);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error — try again');

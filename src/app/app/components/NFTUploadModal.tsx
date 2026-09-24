@@ -2,6 +2,7 @@
 
 import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
+import { readFollowUp } from '@/lib/purchase-followup';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 import { hubPaymentOrigin } from '@/lib/pi-network';
@@ -171,11 +172,16 @@ export function NFTUploadModal({
             txid:      result.txid     ?? '',
           }),
         });
-        if (res.ok || res.status === 409) {
+        // 202 = paid, not confirmed yet — the asset-service registers it from the
+        // payment's own event. 409 is a refused payment (refund), never success.
+        const f = await readFollowUp(res);
+        if (f.state === 'done' || f.state === 'pending') {
           onSuccess?.();
           onClose();
+        } else if (f.state === 'rejected') {
+          setError(f.message);
         } else {
-          setError('NFT minted but registration failed — contact support');
+          setError('Payment received — the NFT will be registered from it shortly');
         }
       } else if (result.status === 'cancelled') {
         setError('Payment cancelled');
