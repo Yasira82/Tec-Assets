@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL, gatewayGet } from '@/lib/bff/createHandler';
+import { shownInAssets } from '@/lib/tradable';
 
 interface RawAsset {
   id:        string;
@@ -64,7 +65,8 @@ export const GET = createHandler({
     const listingsData  = listingsRes.ok ? await listingsRes.json() : {};
     const userListings: RawListing[] = listingsData?.data?.listings ?? [];
 
-    const assets = (raw?.data ?? []).map((a: RawAsset) => {
+    // A property is recorded in asset-service but lives in TEC Estate (lib/tradable).
+    const assets = (raw?.data ?? []).filter((a: RawAsset) => shownInAssets(a.category)).map((a: RawAsset) => {
       const activeListing = userListings.find(
         l => l.assetId === a.id && l.status === 'ACTIVE',
       );
