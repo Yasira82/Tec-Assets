@@ -5,6 +5,7 @@ import { Asset }              from '../types';
 import { NFTTraits }          from './NFTTraits';
 import { SimilarAssets }      from './SimilarAssets';
 import { MintAsNftButton }    from './MintAsNftButton';
+import { isSoldForPi }        from '@/lib/tradable';
 
 const assetColors: Record<string, { border: string; status: string }> = {
   nft:           { border: '#7b6bc840', status: '#b39ddb' },
@@ -242,7 +243,8 @@ export function AssetPreviewModal({
               />
             )}
 
-            {!isDomain && asset.status === 'active' && (
+            {/* A property is never sold for Pi (C-114) — the service refuses; don't offer it. */}
+            {!isDomain && asset.status === 'active' && isSoldForPi(asset.asset_type) && (
               <button
                 onClick={() => { navigator.vibrate?.(10); onClose(); onListForSale(asset); }}
                 style={{
