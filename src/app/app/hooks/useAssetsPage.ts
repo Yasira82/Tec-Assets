@@ -58,7 +58,6 @@ export function useAssetsPage() {
   const [cancellingListing, setCancellingListing] = useState<Listing | null>(null);
   const [cancelLoading,     setCancelLoading]     = useState(false);
   const [mintingNFT,        setMintingNFT]        = useState(false);
-  const [transferringAsset, setTransferringAsset] = useState<Asset | null>(null);
   const [toast,   setToast]   = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [piReady, setPiReady] = useState(false);
 
@@ -252,16 +251,6 @@ export function useAssetsPage() {
     finally { setCancelLoading(false); setCancellingListing(null); }
   }, [cancellingListing, fetchListings, fetchData]);
 
-  const handleTransfer = useCallback((asset: Asset) => {
-    setTransferringAsset(asset);
-  }, []);
-
-  const handleTransferSuccess = useCallback(() => {
-    setTransferringAsset(null);
-    showToast('Asset transferred! ↗');
-    fetchData();
-  }, [fetchData, showToast]);
-
   const handleCancelFromAssets = useCallback((listingId: string) => {
     setCancellingListing({
       id: listingId, asset_id: '', seller_id: '', price: 0,
@@ -289,7 +278,6 @@ export function useAssetsPage() {
     cancellingListing, setCancellingListing,
     cancelLoading,
     mintingNFT, setMintingNFT,
-    transferringAsset, setTransferringAsset,
     toast, piReady,
     settings,
     // handlers
@@ -297,8 +285,6 @@ export function useAssetsPage() {
     fetchData, fetchListings, fetchPurchases,
     handleBuy,
     handleCancelConfirm,
-    handleTransfer,
-    handleTransferSuccess,
     handleCancelFromAssets,
   };
             }

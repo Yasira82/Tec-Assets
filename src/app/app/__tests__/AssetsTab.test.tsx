@@ -8,7 +8,6 @@ vi.mock('../components/AssetCard', () => ({
     React.createElement('div', { 'data-testid': `asset-${props.asset.id}` },
       React.createElement('span', null, props.asset.name),
       React.createElement('button', { 'data-testid': `list-${props.asset.id}`,     onClick: () => props.onListForSale(props.asset)                    }, 'List'),
-      React.createElement('button', { 'data-testid': `transfer-${props.asset.id}`, onClick: () => props.onTransfer(props.asset)                       }, 'Transfer'),
       React.createElement('button', { 'data-testid': `cancel-${props.asset.id}`,   onClick: () => props.onCancelListing(props.asset.listing_id ?? '') }, 'Cancel'),
     ),
 }));
@@ -38,7 +37,6 @@ const defaultProps = {
   onCancelListing: vi.fn(),
   onMintNFT:       vi.fn(),
   onGoMarketplace: vi.fn(),
-  onTransfer:      vi.fn(),
   onRefresh:       vi.fn(),
 };
 
@@ -97,13 +95,6 @@ describe('AssetsTab', () => {
     render(React.createElement(AssetsTab, { ...defaultProps, assets, filtered: assets }));
     fireEvent.click(screen.getByTestId('list-a1'));
     expect(defaultProps.onListForSale).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
-  });
-
-  it('onTransfer يتعمل', () => {
-    const assets = [makeAsset({ id: 'a1' })];
-    render(React.createElement(AssetsTab, { ...defaultProps, assets, filtered: assets }));
-    fireEvent.click(screen.getByTestId('transfer-a1'));
-    expect(defaultProps.onTransfer).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
   });
 
   it('onCancelListing يتعمل', () => {
