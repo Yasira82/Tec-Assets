@@ -16,9 +16,11 @@ import { PurchasesTab }   from './components/PurchasesTab';
 import { PortfolioTab }   from './components/PortfolioTab';
 import { BottomNav }      from './components/BottomNav';
 import { MainTab }        from './types';
+import { useTranslation } from '@/lib/i18n';
 
 function AssetsPageInner() {
   const s = useAssetsPage();
+  const { t } = useTranslation();
 
   const token = typeof window !== 'undefined' ? getTokenFromCookie() : null;
   if (s.isLoading || (!s.isAuthenticated && !token)) return <Skeleton />;
@@ -136,7 +138,7 @@ function AssetsPageInner() {
             border: '1px solid rgba(251,191,36,0.15)',
           }}>
             <div style={{ fontSize: 10, color: '#4a4a5a', letterSpacing: 3,
-              textTransform: 'uppercase', marginBottom: 8 }}>PORTFOLIO VALUE</div>
+              textTransform: 'uppercase', marginBottom: 8 }}>{t.assets.portfolioValue}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
               {s.dataLoading ? (
                 <span style={{ fontSize: 36, fontWeight: 900, color: '#FBBF24', letterSpacing: -1 }}>—</span>

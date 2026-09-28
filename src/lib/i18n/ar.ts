@@ -25,8 +25,8 @@ export const ar = {
   assets: {
     title:           'الأصول',
     ecosystem:       'منظومة TEC',
-    portfolioValue:  'قيمة المحفظة',
-    totalPortfolio:  'إجمالي المحفظة',
+    portfolioValue:  'قيمة الأصول',
+    totalPortfolio:  'قيمة الأصول',
     balance:         'الرصيد',
     assets:          'الأصول',
     domains:         'الدومينات',

@@ -25,8 +25,10 @@ export const en = {
   assets: {
     title:           'Assets',
     ecosystem:       'TEC ECOSYSTEM',
-    portfolioValue:  'PORTFOLIO VALUE',
-    totalPortfolio:  'TOTAL PORTFOLIO',
+    // C4 — this figure is the ASSETS' estimated value only; the Pi balance is shown
+    // beside it, never added in (wallet truth + an estimate is a number nobody owns).
+    portfolioValue:  'ASSETS VALUE',
+    totalPortfolio:  'ASSETS VALUE',
     balance:         'Balance',
     assets:          'Assets',
     domains:         'Domains',

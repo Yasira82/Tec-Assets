@@ -2,6 +2,7 @@
 
 import { Asset, WalletData } from '../types';
 import { goToTEC }           from '@/lib/tec-navigation';
+import { useTranslation }    from '@/lib/i18n';
 
 export function PortfolioTab({
   assets, wallet, showValues, hideBalance,
@@ -11,6 +12,7 @@ export function PortfolioTab({
   showValues:  boolean;
   hideBalance: boolean;
 }) {
+  const { t }       = useTranslation();
   const totalValue  = assets.reduce((sum, a) => sum + Number(a.value ?? 0), 0);
   const fmt = (v: string) => hideBalance ? '****' : v;
 
@@ -33,7 +35,7 @@ export function PortfolioTab({
         border: '1px solid #FBBF2420',
       }}>
         <div style={{ fontSize: 10, color: '#6b6b7a', letterSpacing: 3, marginBottom: 8 }}>
-          TOTAL PORTFOLIO
+          {t.assets.totalPortfolio}
         </div>
         <div style={{ fontSize: 32, fontWeight: 900, color: '#FBBF24', marginBottom: 16 }}>
           {fmt(`${totalValue.toFixed(2)} π`)}
