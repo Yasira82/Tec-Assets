@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getStoredUser, logout as piLogout } from '@/lib-client/pi/pi-auth';
 import { TecUser } from '@/types/pi.types';
+import { piVisitSignIn } from '@/lib/pi/visit-sign-in';
 
 interface AuthState {
   user:            TecUser | null;
@@ -50,12 +51,9 @@ export const usePiAuth = () => {
 
     if (!stored) return;
 
-    const doSilentAuth = async () => {
-      try {
-        if (typeof window === 'undefined' || !window.Pi) return;
-        await window.Pi.authenticate(['username', 'payments'], () => {});
-      } catch { /* silent */ }
-    };
+    // The shared visit sign-in: one handshake per page load, and never inside a
+    // Hub-owned session (ADR-007) — the old inline call had no such check.
+    const doSilentAuth = () => { void piVisitSignIn(); };
 
     if (window.__TEC_PI_READY) {
       doSilentAuth();
