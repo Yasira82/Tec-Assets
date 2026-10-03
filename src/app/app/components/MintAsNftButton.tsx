@@ -2,7 +2,7 @@
 
 import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
-import { readFollowUp } from '@/lib/purchase-followup';
+import { followUntilSettled, PENDING_MESSAGE } from '@/lib/purchase-followup';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 import { hubPaymentOrigin } from '@/lib/pi-network';
@@ -103,7 +103,7 @@ export function MintAsNftButton({
         return;
       }
 
-      const res = await fetch('/api/bff/assets/mint-as-nft', {
+      const mint = () => fetch('/api/bff/assets/mint-as-nft', {
         method:      'POST',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrf() },
@@ -114,11 +114,16 @@ export function MintAsNftButton({
       });
 
       // 202 = paid, not confirmed yet — the asset-service mints it from the payment's
-      // own event. 409 is no longer "already done": it is a refused payment (refund).
-      const f = await readFollowUp(res);
-      if (f.state === 'done' || f.state === 'pending') {
+      // own event. Ask again until it is done, THEN refresh (a refresh on the 202
+      // showed the domain un-minted until the app was reopened). 409 is a refused
+      // payment (refund), not "already done".
+      const f = await followUntilSettled(mint);
+      if (f.state === 'done') {
         onSuccess();
         onClose();
+      } else if (f.state === 'pending') {
+        onSuccess();
+        setError(PENDING_MESSAGE);
       } else {
         setError(f.message);
       }

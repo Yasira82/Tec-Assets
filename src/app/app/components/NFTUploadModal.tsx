@@ -2,7 +2,7 @@
 
 import { useState }         from 'react';
 import { createPaymentRecord, createU2APayment } from '@/lib/pi-payment';
-import { readFollowUp } from '@/lib/purchase-followup';
+import { followUntilSettled, PENDING_MESSAGE } from '@/lib/purchase-followup';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 import { hubPaymentOrigin } from '@/lib/pi-network';
@@ -171,7 +171,7 @@ export function NFTUploadModal({
       );
 
       if (result.success) {
-        const res = await fetch('/api/bff/nft/register', {
+        const register = () => fetch('/api/bff/nft/register', {
           method:      'POST',
           credentials: 'include',
           headers:     { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
@@ -185,15 +185,18 @@ export function NFTUploadModal({
           }),
         });
         // 202 = paid, not confirmed yet — the asset-service registers it from the
-        // payment's own event. 409 is a refused payment (refund), never success.
-        const f = await readFollowUp(res);
-        if (f.state === 'done' || f.state === 'pending') {
+        // payment's own event, usually a second or two later. Ask again until it is
+        // there, THEN refresh: refreshing on the 202 showed a list without the new
+        // NFT until the app was reopened. 409 is a refused payment (refund).
+        const f = await followUntilSettled(register);
+        if (f.state === 'done') {
           onSuccess?.();
           onClose();
-        } else if (f.state === 'rejected') {
+        } else if (f.state === 'rejected' || f.state === 'failed') {
           setError(f.message);
         } else {
-          setError('Payment received — the NFT will be registered from it shortly');
+          onSuccess?.();                 // refresh anyway; the event still delivers it
+          setError(PENDING_MESSAGE);
         }
       } else if (result.status === 'cancelled') {
         setError('Payment cancelled');
