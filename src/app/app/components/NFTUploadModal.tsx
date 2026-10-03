@@ -109,6 +109,18 @@ export function NFTUploadModal({
   const handleMint = async () => {
     if (!name || !uploadedUrl) return;
 
+    // A new NFT is a new asset: a FREE plan at its cap is told so HERE, before
+    // anyone is sent to pay. Advice only — payment/create (here and in the Hub)
+    // enforces it; a failed check lets the server decide.
+    try {
+      const q = await fetch('/api/bff/assets/quota', { credentials: 'include', cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null));
+      if (q && q.allowed === false) {
+        setError(`Your Free plan allows up to ${q.limit} assets — you have ${q.owned}. Upgrade to Pro in the Hub to mint more.`);
+        return;
+      }
+    } catch { /* the server check still runs */ }
+
     const nftMeta = btoa(JSON.stringify({
       n: name, d: description,
       u: uploadedUrl, k: uploadedKey ?? '',
