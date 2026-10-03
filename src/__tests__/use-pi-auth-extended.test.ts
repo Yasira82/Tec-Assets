@@ -1,6 +1,7 @@
 /**
  * Extended tests for usePiAuth hook
- * Targets uncovered lines: 37-39 (doSilentAuth), 44 (__TEC_PI_READY), 51-52 (logout state)
+ * The Pi handshake on a visit belongs to PiVisitSignIn (app/layout.tsx), once per
+ * page load. usePiAuth must never start one of its own (2026-10-03).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
@@ -29,7 +30,7 @@ describe('usePiAuth extended', () => {
     delete (window as any).Pi;
   });
 
-  it('calls doSilentAuth when Pi is ready and user is stored', async () => {
+  it('does not call Pi.authenticate when Pi is ready and a user is stored', async () => {
     const user = { id: 'u1', piUsername: 'yas55eR82', role: 'user', subscriptionPlan: 'Free' };
     mockGetStoredUser.mockReturnValue(user);
 
@@ -43,11 +44,11 @@ describe('usePiAuth extended', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.isAuthenticated).toBe(true);
-    // Silent auth should have been attempted
-    expect(authenticateMock).toHaveBeenCalledWith(['username', 'payments'], expect.any(Function));
+    // The visit handshake is PiVisitSignIn's — not this hook's.
+    expect(authenticateMock).not.toHaveBeenCalled();
   });
 
-  it('listens for tec-pi-ready event when __TEC_PI_READY is not set', async () => {
+  it('does not call Pi.authenticate on tec-pi-ready either', async () => {
     const user = { id: 'u2', piUsername: 'test2', role: 'user', subscriptionPlan: 'Free' };
     mockGetStoredUser.mockReturnValue(user);
 
@@ -60,12 +61,12 @@ describe('usePiAuth extended', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // Fire the event to trigger silent auth
     act(() => {
       window.dispatchEvent(new Event('tec-pi-ready'));
     });
 
-    await waitFor(() => expect(authenticateMock).toHaveBeenCalled(), { timeout: 1000 });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(authenticateMock).not.toHaveBeenCalled();
   });
 
   it('logout callback resets auth state', async () => {
@@ -88,7 +89,7 @@ describe('usePiAuth extended', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
-  it('handles Pi authenticate failure gracefully in silent auth', async () => {
+  it('stays authenticated from the stored user without asking Pi', async () => {
     const user = { id: 'u4', piUsername: 'yas55eR82', role: 'user', subscriptionPlan: 'Free' };
     mockGetStoredUser.mockReturnValue(user);
 
@@ -101,8 +102,8 @@ describe('usePiAuth extended', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // Should still be authenticated from stored user — silent auth failure is swallowed
     expect(result.current.isAuthenticated).toBe(true);
+    expect(authenticateMock).not.toHaveBeenCalled();
     expect(result.current.error).toBeNull();
   });
 });

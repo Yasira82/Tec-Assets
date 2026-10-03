@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getStoredUser, logout as piLogout } from '@/lib-client/pi/pi-auth';
 import { TecUser } from '@/types/pi.types';
-import { piVisitSignIn } from '@/lib/pi/visit-sign-in';
 
 interface AuthState {
   user:            TecUser | null;
@@ -49,17 +48,11 @@ export const usePiAuth = () => {
       })
       .catch(() => { /* fail closed — keep cookie-derived state */ });
 
-    if (!stored) return;
-
-    // The shared visit sign-in: one handshake per page load, and never inside a
-    // Hub-owned session (ADR-007) — the old inline call had no such check.
-    const doSilentAuth = () => { void piVisitSignIn(); };
-
-    if (window.__TEC_PI_READY) {
-      doSilentAuth();
-    } else {
-      window.addEventListener('tec-pi-ready', doSilentAuth, { once: true });
-    }
+    // No Pi handshake here. PiVisitSignIn (app/layout.tsx) signs the visitor in
+    // with Pi once per page load — skipped in a Hub-owned session (ADR-007) — and
+    // the payment authenticates again at the tap. A second call here ran at the
+    // same moment as that one, and Pi Browser answers neither of two concurrent
+    // authenticate calls (owner decision, 2026-10-03).
   }, []);
 
   const logout = useCallback(async () => {
