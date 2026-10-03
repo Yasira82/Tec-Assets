@@ -110,7 +110,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Clear TS cache
         run: rm -f tsconfig.tsbuildinfo
