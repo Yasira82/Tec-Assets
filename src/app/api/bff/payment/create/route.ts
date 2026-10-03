@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { networkMetadata } from '@/lib/pi-network';
+import { checkAssetQuota, createsAsset, quotaRefusal } from '@/lib/server/asset-quota';
 
 const GW = process.env.API_GATEWAY_URL ?? '';
 
@@ -31,6 +32,12 @@ export async function POST(req: NextRequest) {
   const parsed = CreateSchema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  // A NEW asset is checked against the Hub plan's cap before any π moves.
+  if (createsAsset(parsed.data.product_id)) {
+    const quota = await checkAssetQuota(GW, token, userId);
+    if (!quota.allowed) return NextResponse.json(quotaRefusal(quota), { status: 402 });
   }
 
   const res = await fetch(`${GW}/api/payment/create`, {
