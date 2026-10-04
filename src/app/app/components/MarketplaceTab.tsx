@@ -2,6 +2,7 @@
 
 import { Listing }         from '../types';
 import { MarketplaceCard } from './MarketplaceCard';
+import { PayoutsNote }     from './PayoutsNote';
 
 export function MarketplaceTab({
   listings, currentUserId, onBuy, onEditPrice, onCancel, onGoAssets,
@@ -31,8 +32,12 @@ export function MarketplaceTab({
     </div>
   );
 
+  // A seller with something listed is told where the money for it is recorded.
+  const sellingSomething = !!currentUserId && listings.some(l => l.seller_id === currentUserId);
+
   return (
     <>
+      {sellingSomething && <PayoutsNote />}
       {listings.map(listing => (
         <MarketplaceCard
           key={listing.id}
