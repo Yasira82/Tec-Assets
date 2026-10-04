@@ -2,6 +2,7 @@
 
 import { useState }        from 'react';
 import { Asset, Listing }  from '../types';
+import { PayoutsNote } from './PayoutsNote';
 
 const getCsrf = (): string => {
   if (typeof document === 'undefined') return '';
@@ -131,6 +132,8 @@ export function ListForSaleModal({
             />
           </div>
         )}
+
+        <PayoutsNote compact />
 
         {error && <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12 }}>{error}</div>}
 
