@@ -1,5 +1,7 @@
 'use client';
 
+import { SignInGate } from '@/components/pi/SignInGate';
+
 import { useEffect } from 'react';
 
 import { CountUp }         from '@yasser172/tec-ui';
@@ -261,9 +263,16 @@ function AssetsPageInner() {
   );
 }
 
-export default function AssetsPage() {
+function AssetsPage() {
   // Fire-and-forget backend warmup (Railway cold starts — see /api/warmup).
   useEffect(() => { fetch('/api/warmup').catch(() => {}); }, []);
 
   return <ErrorBoundary><AssetsPageInner /></ErrorBoundary>;
+}
+
+// The door: a sign-in button before any screen when there is no session
+// (SignInGate — C-123 §10; owner, 2026-10-06). A visit from the Hub arrives
+// signed in (§12) and goes straight through.
+export default function AssetsPageGated() {
+  return <SignInGate><AssetsPage /></SignInGate>;
 }
