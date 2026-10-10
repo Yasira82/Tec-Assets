@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookieDomainFor } from '@/lib/cookie-domain';
 
 const GATEWAY = process.env.API_GATEWAY_URL ?? '';
 
@@ -48,7 +49,9 @@ export async function POST(req: NextRequest) {
       sameSite: 'none',
       partitioned: true,
       maxAge:   60 * 60 * 24,
-      domain:   '.tecosystem.app',
+      // Host-only on the Testnet host (`*.vercel.app`), where a `.tecosystem.app`
+      // Domain is dropped silently and the refreshed session never lands (cookie-domain.ts).
+      domain:   cookieDomainFor(req.nextUrl.hostname, process.env.COOKIE_DOMAIN ?? process.env.NEXT_PUBLIC_SSO_DOMAIN ?? '.tecosystem.app'),
       path:     '/',
     } as const;
     response.cookies.set('tec_access_token', newToken, sessionCookieOpts);
