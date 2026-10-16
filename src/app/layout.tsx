@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Script                   from 'next/script';
 import { LocaleProvider }       from '@/lib/i18n';
 import { BackendOfflineBanner } from '@/components/BackendOfflineBanner';
+import { SessionExpiredNotice } from '@/components/session/SessionExpiredNotice';
 import { ArrivalReport } from '@/components/pioneer/ArrivalReport';
 import { PiVisitSignIn } from '@/components/pi/PiVisitSignIn';
 import { QuestReturn } from '@/components/pioneer/QuestReturn';
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ArrivalReport />
           <QuestReturn />
           <BackendOfflineBanner />
+          <SessionExpiredNotice />
           {children}
         </LocaleProvider>
       </body>

@@ -82,4 +82,10 @@ export const ar = {
     auto:            '⚙️ تلقائي',
     back:            '→',
   },
+  session: {
+    expiredTitle: 'انتهت جلستك',
+    expiredBody:  'افتح التطبيق من الـ Hub مرة أخرى للمتابعة.',
+    reopen:       'المتابعة عبر الـ Hub',
+    dismiss:      'ليس الآن',
+  },
 };
