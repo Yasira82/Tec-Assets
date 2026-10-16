@@ -84,4 +84,10 @@ export const en = {
     auto:            '⚙️ Auto',
     back:            '←',
   },
+  session: {
+    expiredTitle: 'Your session has ended',
+    expiredBody:  'Open the app again from the Hub to continue.',
+    reopen:       'Continue with the Hub',
+    dismiss:      'Not now',
+  },
 };
