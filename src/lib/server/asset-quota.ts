@@ -12,6 +12,8 @@
 // never grant on doubt); an asset count that cannot be read lets the payment
 // through (a backend blip must not block a legitimate buy).
 
+import { APP_SOURCE } from '@/lib/app-source';
+
 export const FREE_ASSET_LIMIT = 5;
 
 export type PlanId = 'FREE' | 'PRO' | 'ENTERPRISE';
@@ -22,11 +24,17 @@ export type QuotaCheck =
 /** A product that CREATES an asset. `domain-nft:` re-mints an asset the user already owns. */
 export const createsAsset = (productId: string): boolean => productId.startsWith('nft:');
 
-/** The Hub plan in force now — only a live ACTIVE subscription grants its plan. */
-export async function fetchHubPlan(gateway: string, token: string): Promise<PlanId> {
+/**
+ * A plan in force now — only a live ACTIVE subscription grants its plan.
+ * No `app` → the Hub's TEC plan. `app` → that app's own Pro (each app's Pro is
+ * its own, owner 2026-10-02), which commerce also answers PRO for the Founding
+ * gift that covers every app.
+ */
+export async function fetchPlan(gateway: string, token: string, app?: string): Promise<PlanId> {
   if (!gateway || !token) return 'FREE';
+  const query = app ? `?app=${encodeURIComponent(app)}` : '';
   try {
-    const res = await fetch(`${gateway}/api/commerce/subscriptions/status`, {
+    const res = await fetch(`${gateway}/api/commerce/subscriptions/status${query}`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       cache:   'no-store',
     });
@@ -42,6 +50,9 @@ export async function fetchHubPlan(gateway: string, token: string): Promise<Plan
     return 'FREE';
   }
 }
+
+/** The Hub plan in force now. */
+export const fetchHubPlan = (gateway: string, token: string): Promise<PlanId> => fetchPlan(gateway, token);
 
 /** How many assets the user owns, or null when it cannot be read. */
 export async function countOwnedAssets(gateway: string, token: string, userId: string): Promise<number | null> {
@@ -63,9 +74,18 @@ export async function countOwnedAssets(gateway: string, token: string, userId: s
   }
 }
 
+/**
+ * Unlimited for a live Hub Pro OR a live Assets Pro. Assets used to read the Hub
+ * plan only, so the cap told people to "upgrade in the Hub" from an app with no
+ * Pro of its own — Assets Pro (the card on /app/pro) is that Pro.
+ */
 export async function checkAssetQuota(gateway: string, token: string, userId: string): Promise<QuotaCheck> {
-  const plan = await fetchHubPlan(gateway, token);
-  if (plan !== 'FREE') return { allowed: true };
+  const [hub, own] = await Promise.all([
+    fetchPlan(gateway, token),
+    fetchPlan(gateway, token, APP_SOURCE),
+  ]);
+  if (hub !== 'FREE' || own !== 'FREE') return { allowed: true };
+  const plan: PlanId = 'FREE';
   const owned = await countOwnedAssets(gateway, token, userId);
   if (owned === null || owned < FREE_ASSET_LIMIT) return { allowed: true };
   return { allowed: false, plan, limit: FREE_ASSET_LIMIT, owned };
@@ -73,7 +93,7 @@ export async function checkAssetQuota(gateway: string, token: string, userId: st
 
 /** The refusal, in the Hub's shape (tec-app api/assets/provision: 402 UPGRADE_REQUIRED). */
 export const quotaRefusal = (q: Extract<QuotaCheck, { allowed: false }>) => ({
-  error:        `Your Free plan allows up to ${q.limit} assets — you have ${q.owned}. Upgrade to Pro in the Hub for unlimited assets.`,
+  error:        `Your Free plan allows up to ${q.limit} assets — you have ${q.owned}. Get Assets Pro for unlimited assets.`,
   code:         'UPGRADE_REQUIRED',
   requiredPlan: 'PRO',
   limit:        q.limit,

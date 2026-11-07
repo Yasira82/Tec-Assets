@@ -103,3 +103,56 @@ describe('GET /api/bff/assets/quota', () => {
     expect((await GET(new NextRequest('https://assets.tecosystem.app/api/bff/assets/quota'))).status).toBe(401);
   });
 });
+
+describe('Assets Pro lifts the cap — the app now has a Pro of its own', () => {
+  const stubPlans = (hub: string, own: string, owned: number) => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/api/commerce/subscriptions/status')) {
+        const plan = url.includes('?app=assets') ? own : hub;
+        return new Response(JSON.stringify({ success: true, data: { subscription: { plan, status: 'ACTIVE', isActive: plan !== 'FREE' } } }), { status: 200 });
+      }
+      if (url.includes('/api/assets/user/')) {
+        return new Response(JSON.stringify({ data: Array.from({ length: owned }, (_, i) => ({ id: i })) }), { status: 200 });
+      }
+      if (url.includes('/api/payment/create')) {
+        return new Response(JSON.stringify({ success: true, data: { payment: { id: 'pay-1' } } }), { status: 201 });
+      }
+      return new Response('{}', { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+
+  it('Hub FREE + Assets Pro: unlimited', async () => {
+    stubPlans('FREE', 'PRO', 79);
+    const { POST } = await import('@/app/api/bff/payment/create/route');
+    expect((await POST(createReq('nft:abc'))).status).toBe(201);
+  });
+
+  it('Hub Pro + no Assets Pro: unlimited, as before', async () => {
+    stubPlans('PRO', 'FREE', 79);
+    const { POST } = await import('@/app/api/bff/payment/create/route');
+    expect((await POST(createReq('nft:abc'))).status).toBe(201);
+  });
+
+  it('neither: refused, and the refusal names Assets Pro', async () => {
+    stubPlans('FREE', 'FREE', 79);
+    const { POST } = await import('@/app/api/bff/payment/create/route');
+    const res = await POST(createReq('nft:abc'));
+    expect(res.status).toBe(402);
+    expect((await res.json()).error).toMatch(/Assets Pro/);
+  });
+
+  it('asks commerce for THIS app’s Pro', async () => {
+    const f = stubPlans('FREE', 'FREE', 1);
+    const { POST } = await import('@/app/api/bff/payment/create/route');
+    await POST(createReq('nft:abc'));
+    expect(f.mock.calls.some(([u]) => String(u).includes('/api/commerce/subscriptions/status?app=assets'))).toBe(true);
+  });
+
+  it('paying for Assets Pro itself is never blocked by the cap', async () => {
+    stubPlans('FREE', 'FREE', 79);
+    const { POST } = await import('@/app/api/bff/payment/create/route');
+    expect((await POST(createReq('assets_pro_monthly'))).status).toBe(201);
+  });
+});
