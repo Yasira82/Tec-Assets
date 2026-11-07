@@ -48,6 +48,7 @@ export function NFTUploadModal({
   onSuccess?: () => void;
 }) {
   const [step,        setStep]        = useState<'upload' | 'details'>('upload');
+  const [needsPro,    setNeedsPro]    = useState(false);
   const [file,        setFile]        = useState<File | null>(null);
   const [preview,     setPreview]     = useState<string | null>(null);
   const [name,        setName]        = useState('');
@@ -116,7 +117,8 @@ export function NFTUploadModal({
       const q = await fetch('/api/bff/assets/quota', { credentials: 'include', cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null));
       if (q && q.allowed === false) {
-        setError(`Your Free plan allows up to ${q.limit} assets — you have ${q.owned}. Upgrade to Pro in the Hub to mint more.`);
+        setError(`Your Free plan allows up to ${q.limit} assets — you have ${q.owned}. Get Assets Pro to mint more.`);
+        setNeedsPro(true);
         return;
       }
     } catch { /* the server check still runs */ }
@@ -338,6 +340,16 @@ export function NFTUploadModal({
               <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 12, textAlign: 'center' }}>
                 {error}
               </div>
+            )}
+
+            {needsPro && (
+              <a href="/app/pro" style={{
+                display: 'block', width: '100%', padding: '14px', marginBottom: 12,
+                background: 'linear-gradient(135deg,#FBBF24,#F59E0B)', borderRadius: 16,
+                color: '#0a0800', fontSize: 15, fontWeight: 800, textAlign: 'center', textDecoration: 'none',
+              }}>
+                ★ Get Assets Pro
+              </a>
             )}
 
             <button onClick={handleMint} disabled={!name || loading} style={{

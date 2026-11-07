@@ -6,6 +6,7 @@ import { usePiAuth }       from '@/lib-client/hooks/usePiAuth';
 import { useSettings }     from '@/lib/hooks/useSettings';
 import { useTranslation }  from '@/lib/i18n';
 import { ErrorBoundary }   from '@/components/ErrorBoundary';
+import AssetsPro           from '../components/AssetsPro';
 
 // ── Theme Colors ──────────────────────────────────────────
 const THEMES = {
@@ -252,6 +253,13 @@ function SettingsPageInner() {
               ]}
             />
           </Row>
+        </Section>
+
+        {/* ── Assets Pro ── */}
+        <Section title="Assets Pro" icon="★" theme={theme}>
+          <div style={{ padding: 16 }}>
+            <AssetsPro />
+          </div>
         </Section>
 
         {/* ── Assets Display ── */}
