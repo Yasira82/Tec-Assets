@@ -6,6 +6,7 @@ import { followUntilSettled, PENDING_MESSAGE } from '@/lib/purchase-followup';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 import { hubPaymentOrigin } from '@/lib/pi-network';
+import { authenticateAtTap } from '@/lib/tap-auth';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -65,14 +66,11 @@ export function MintAsNftButton({
     }
 
     // ✅ Direct Assets: authenticate at mint-time
-    if (!(window as any).__TEC_PI_AUTHENTICATED) {
-      try {
-        await window.Pi.authenticate(['username', 'payments'], () => {});
-        (window as any).__TEC_PI_AUTHENTICATED = true;
-      } catch {
-        redirectToHub();
-        return;
-      }
+    // With a deadline: a tab Pi Browser does not answer never settles a bare
+    // Pi.authenticate, and the tap did nothing. No answer = Mode 1 (lib/tap-auth).
+    if (!(await authenticateAtTap())) {
+      redirectToHub();
+      return;
     }
 
     // ── Mode 2: Direct payment (only for direct Assets entry) ──
