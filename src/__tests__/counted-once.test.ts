@@ -58,4 +58,16 @@ describe('visit sign-in: once per person, not per visit', () => {
     vi.resetModules();
     await expect((await import('@/components/pi/PiVisitSignIn')).visitSignInOnce()).resolves.toBe('signed-in');
   });
+
+  it('a repeat visit still reports the arrival — the Round 3 mission ticks without a new handshake', async () => {
+    vi.stubGlobal('fetch', me({ authenticated: true, user: { username: 'yas55eR82' } }));
+    await (await import('@/components/pi/PiVisitSignIn')).visitSignInOnce();
+    vi.resetModules();
+    const mod = await import('@/lib/pi/visit-sign-in');
+    const arrived = vi.fn();
+    mod.onPiSignedIn(arrived);
+    await expect((await import('@/components/pi/PiVisitSignIn')).visitSignInOnce()).resolves.toBe('counted-before');
+    expect(arrived).toHaveBeenCalledTimes(1);
+    expect(authenticate).toHaveBeenCalledTimes(1);
+  });
 });
