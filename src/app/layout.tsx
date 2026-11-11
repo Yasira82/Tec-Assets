@@ -7,6 +7,7 @@ import { SessionExpiredNotice } from '@/components/session/SessionExpiredNotice'
 import { ArrivalReport } from '@/components/pioneer/ArrivalReport';
 import { PiVisitSignIn } from '@/components/pi/PiVisitSignIn';
 import { QuestReturn } from '@/components/pioneer/QuestReturn';
+import { SAFE_BOTTOM_BOOT_SCRIPT } from '@/lib/safe-bottom';
 
 export const metadata: Metadata = {
   title:       'TEC Assets — Digital Ownership',
@@ -61,6 +62,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" style={{ height: '100%' }}>
       <head>
+        {/* Room under the bottom bar for Android's buttons when Pi Browser reports none (lib/safe-bottom). */}
+        <script dangerouslySetInnerHTML={{ __html: SAFE_BOTTOM_BOOT_SCRIPT }} />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <style>{`
           *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
