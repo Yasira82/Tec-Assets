@@ -6,6 +6,7 @@ import { followUntilSettled, PENDING_MESSAGE } from '@/lib/purchase-followup';
 import { isHubNavigation }  from '@/lib-client/pi/hub-entry';
 
 import { hubPaymentOrigin } from '@/lib/pi-network';
+import { authenticateAtTap } from '@/lib/tap-auth';
 
 const HUB_URL    = process.env.NEXT_PUBLIC_HUB_URL    ?? 'https://hub.tecosystem.app';
 const ASSETS_URL = process.env.NEXT_PUBLIC_ASSETS_URL ?? 'https://assets.tecosystem.app';
@@ -135,21 +136,17 @@ export function NFTUploadModal({
       return;
     }
 
-    // ✅ Direct Assets: authenticate at mint-time
-    if (!(window as any).__TEC_PI_AUTHENTICATED) {
-      try {
-        await window.Pi.authenticate(['username', 'payments'], () => {});
-        (window as any).__TEC_PI_AUTHENTICATED = true;
-      } catch {
-        // Auth failed → Mode 1 fallback
-        redirectToHubPayment(name, nftMeta);
-        return;
-      }
+    // ✅ Direct Assets: authenticate at mint-time — with a deadline. A tab Pi
+    //    Browser does not answer never settles this call, and a bare await made
+    //    the button do nothing at all. No answer = hand the payment to the Hub.
+    setLoading(true);
+    setError('');
+    if (!(await authenticateAtTap())) {
+      redirectToHubPayment(name, nftMeta);
+      return;
     }
 
     // ── Mode 2: Direct payment (only for direct Assets entry) ──
-    setLoading(true);
-    setError('');
 
     try {
       // ✅ canonical flow: pre-create the backend record with the REAL fee,
