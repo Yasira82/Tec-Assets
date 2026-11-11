@@ -40,3 +40,10 @@ describe('authenticateAtTap — a tap never waits on a sign-in Pi does not answe
     }));
   });
 });
+
+describe('the wallet-did-not-open message', () => {
+  it('tells the person the one thing that fixes it', async () => {
+    const { PI_WALLET_DID_NOT_OPEN } = await import('@/lib/pi-payment');
+    expect(PI_WALLET_DID_NOT_OPEN).toMatch(/Close Pi Browser completely/);
+  });
+});
