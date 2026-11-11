@@ -56,7 +56,10 @@ export const createU2APayment = async (
     };
 
     const timer = setTimeout(() => {
-      done({ status: 'error', success: false, message: 'Payment timed out' });
+      // The wallet never opened. After several Pi apps in one Pi Browser session
+      // Pi stops answering until the browser restarts (owner, 10 Nov 2026) —
+      // say so, rather than "timed out", which tells the person nothing to do.
+      done({ status: 'error', success: false, message: PI_WALLET_DID_NOT_OPEN });
     }, 90_000);
 
     const token   = getToken();
@@ -134,3 +137,7 @@ export const createU2APayment = async (
     }
   });
 };
+
+/** Shown when Pi never opened the wallet. The one fix a person can do: restart Pi Browser. */
+export const PI_WALLET_DID_NOT_OPEN =
+  'The Pi wallet did not open. Close Pi Browser completely, open it again, and try once more.';
