@@ -22,7 +22,7 @@ export function BottomNav({
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
       background: 'rgba(2,2,5,0.92)', backdropFilter: 'blur(20px)',
       borderTop: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)',
+      display: 'flex', paddingBottom: 'max(env(safe-area-inset-bottom), var(--tec-safe-bottom-fallback, 0px))',
     }}>
       {items.map(item => {
         const isActive = activeTab === item.key;
