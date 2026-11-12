@@ -1,83 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookieDomainFor } from '@/lib/cookie-domain';
+import { REFRESH_COOKIE, refreshAtGateway, writeRotated, dropRefresh } from '@/lib/session-refresh';
 
-const GATEWAY = process.env.API_GATEWAY_URL ?? '';
-
+// Refreshes the session on request. CSRF enforced in middleware.
+//
+// It used to send the ACCESS token where auth-service expects the REFRESH token, so it
+// never succeeded (TEC-AUDIT-0029). It now spends the HttpOnly refresh cookie through the
+// same single-flight helper the middleware uses — one rule, one place (C-123 §4) — and
+// renews the access token with tec_user + tec_csrf on THIS response.
 export async function POST(req: NextRequest) {
-  if (!GATEWAY) {
-    return NextResponse.json({ error: 'Gateway not configured' }, { status: 503 });
+  const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
+  const gateway = process.env.API_GATEWAY_URL;
+  if (!refresh || !gateway) return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
+
+  const out = await refreshAtGateway(refresh, gateway);
+  if (out === 'rejected') {
+    const res = NextResponse.json({ error: 'Refresh token rejected' }, { status: 401 });
+    dropRefresh(res.cookies);
+    return res;
   }
+  if (out === 'unavailable') return NextResponse.json({ error: 'Refresh unavailable' }, { status: 503 });
 
-  const refreshToken = req.cookies.get('tec_refresh_token')?.value;
-  if (!refreshToken) {
-    return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
-  }
-
-  try {
-    const res = await fetch(`${GATEWAY}/api/auth/refresh`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        ...(process.env.INTERNAL_SECRET && { 'x-internal-key': process.env.INTERNAL_SECRET }),
-      },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Refresh failed' }, { status: 401 });
-    }
-
-    const data     = await res.json();
-    const newToken = data?.data?.accessToken ?? data?.accessToken ?? data?.token ?? null;
-    if (!newToken) {
-      return NextResponse.json({ error: 'No token returned' }, { status: 401 });
-    }
-
-    const response = NextResponse.json({ ok: true });
-    // A session is BOTH cookies, so a refresh renews both.
-    //
-    // This used to renew the token alone. `tec_user` kept the lifetime the
-    // sign-in gave it, so a day later the name cookie expired while the token
-    // was still being renewed — a half session: the page opened, and every
-    // screen said "Not signed in" with no way to sign in again. The values are
-    // re-issued exactly as they are, never invented: a cookie that has already
-    // lapsed stays lapsed, and the page guard sends that visitor back through
-    // SSO (P6).
-    const sessionCookieOpts = {
-      httpOnly: false,   // intentional: Pi Browser WebView reads via document.cookie
-      secure:   true,
-      sameSite: 'none',
-      partitioned: true,
-      maxAge:   60 * 60 * 24,
-      // Host-only on the Testnet host (`*.vercel.app`), where a `.tecosystem.app`
-      // Domain is dropped silently and the refreshed session never lands (cookie-domain.ts).
-      domain:   cookieDomainFor(req.nextUrl.hostname, process.env.COOKIE_DOMAIN ?? process.env.NEXT_PUBLIC_SSO_DOMAIN ?? '.tecosystem.app'),
-      path:     '/',
-    } as const;
-    response.cookies.set('tec_access_token', newToken, sessionCookieOpts);
-    for (const name of ['tec_user', 'tec_csrf'] as const) {
-      const raw   = req.cookies.get(name)?.value;
-      const value = name === 'tec_user' ? onceEncoded(raw) : raw;
-      if (value) response.cookies.set(name, value, sessionCookieOpts);
-    }
-
-    return response;
-  } catch {
-    return NextResponse.json({ error: 'Refresh error' }, { status: 500 });
-  }
-}
-
-// `tec_user` as the browser must hold it: JSON, which `cookies.set` encodes once.
-// A copy written by the SSO landing before 2026-10-10 was encoded twice and reads
-// here as `%7B…`; re-issuing it unchanged renewed, for another day, a cookie that
-// getStoredUser() cannot read — a signed-in member shown the sign-in again.
-function onceEncoded(value: string | undefined): string | undefined {
-  if (!value || value.startsWith('{')) return value;
-  try {
-    const decoded = decodeURIComponent(value);
-    JSON.parse(decoded);
-    return decoded;
-  } catch {
-    return value;
-  }
+  const res = NextResponse.json({ token: out.token }, { status: 200 });
+  const domain = cookieDomainFor(
+    req.nextUrl.hostname,
+    process.env.COOKIE_DOMAIN ?? process.env.NEXT_PUBLIC_SSO_DOMAIN ?? undefined,
+  );
+  writeRotated(res.cookies, out, domain, (name) => req.cookies.get(name)?.value);
+  return res;
 }
