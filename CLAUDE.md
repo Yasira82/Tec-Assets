@@ -109,7 +109,7 @@ style(assets):  UI polish
 |---|------|----------|-----------|
 | R1 | Hub→Assets payment_not_found (C-76) | P0 | `isHubNavigation()` → Mode 1 — DO NOT REMOVE |
 | R2 | Railway URL in client bundle | P1 | server-only `API_GATEWAY_URL` |
-| R3 | Auth token in localStorage | P1 | HttpOnly cookies ONLY |
+| R3 | Auth token in localStorage | P1 | Cookies ONLY (the access token is script-readable by decision, ADR-001; CSP `connect-src` names its hosts) |
 | R4 | Asset ownership derived client-side | P0 | Always from tec-asset-service |
 
 ---
