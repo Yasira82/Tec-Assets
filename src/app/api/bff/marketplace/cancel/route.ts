@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 export const PATCH = createHandler({
   requireAuth: true,
@@ -10,7 +11,7 @@ export const PATCH = createHandler({
       return Response.json({ error: 'listingId required' }, { status: 400 });
     }
 
-    const res = await fetch(
+    const res = await gatewayFetch(
       `${GATEWAY_URL}/api/assets/marketplace/${body.listingId}/cancel`,
       {
         method:  'PATCH',

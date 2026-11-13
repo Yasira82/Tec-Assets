@@ -21,6 +21,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { APP_SOURCE } from '@/lib/app-source';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 const GW = process.env.API_GATEWAY_URL ?? '';
 
@@ -67,7 +68,7 @@ function unwrap(d: Record<string, unknown>): Record<string, unknown> {
 export async function resolveProState(token: string): Promise<ProState> {
   if (!GW || !token) return FREE;
   try {
-    const res = await fetch(`${GW}/api/commerce/subscriptions/status?app=${encodeURIComponent(APP_SOURCE)}`, {
+    const res = await gatewayFetch(`${GW}/api/commerce/subscriptions/status?app=${encodeURIComponent(APP_SOURCE)}`, {
       headers: gwHeaders(token), cache: 'no-store',
     });
     if (!res.ok) return FREE;

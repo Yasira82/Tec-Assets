@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 /**
  * POST /api/bff/assets/mint-as-nft — the follow-up after Pi reports a domain→NFT
@@ -28,7 +29,7 @@ export const POST = createHandler({
       return Response.json({ error: 'asset_id and transactionId required' }, { status: 400 });
     }
 
-    const res = await fetch(`${GATEWAY_URL}/api/assets/${encodeURIComponent(assetId)}/mint-as-nft`, {
+    const res = await gatewayFetch(`${GATEWAY_URL}/api/assets/${encodeURIComponent(assetId)}/mint-as-nft`, {
       method:  'POST',
       cache:   'no-store',
       headers: {

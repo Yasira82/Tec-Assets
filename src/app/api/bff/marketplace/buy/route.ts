@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 export const POST = createHandler({
   requireAuth: true,
@@ -17,7 +18,7 @@ export const POST = createHandler({
       );
     }
 
-    const res = await fetch(
+    const res = await gatewayFetch(
       `${GATEWAY_URL}/api/assets/marketplace/${encodeURIComponent(body.listing_id)}/buy`,
       {
         method: 'POST',

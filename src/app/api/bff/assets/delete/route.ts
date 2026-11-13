@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 export const DELETE = createHandler({
   requireAuth: true,
@@ -14,7 +15,7 @@ export const DELETE = createHandler({
       );
     }
 
-    const res = await fetch(`${GATEWAY_URL}/api/assets/${assetId}`, {
+    const res = await gatewayFetch(`${GATEWAY_URL}/api/assets/${assetId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type':   'application/json',

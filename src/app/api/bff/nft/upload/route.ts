@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify }                 from 'jose';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 const GATEWAY_URL   = process.env.API_GATEWAY_URL ?? '';
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(base64, 'base64');
 
   // Step 1: Get presigned URL
-  const urlRes = await fetch(`${GATEWAY_URL}/api/storage/upload-url`, {
+  const urlRes = await gatewayFetch(`${GATEWAY_URL}/api/storage/upload-url`, {
     method:  'POST',
     headers: {
       'Content-Type': 'application/json',

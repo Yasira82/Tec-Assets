@@ -1,11 +1,12 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 export const GET = createHandler({
   requireAuth: true,
   handler: async ({ ctx, req }) => {
     const token = req.cookies.get('tec_access_token')?.value ?? '';
 
-    const res = await fetch(
+    const res = await gatewayFetch(
       `${GATEWAY_URL}/api/wallets?userId=${encodeURIComponent(ctx.userId)}`,
       {
         headers: {

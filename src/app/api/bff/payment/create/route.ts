@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { networkMetadata } from '@/lib/pi-network';
 import { checkAssetQuota, createsAsset, quotaRefusal } from '@/lib/server/asset-quota';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 const GW = process.env.API_GATEWAY_URL ?? '';
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (!quota.allowed) return NextResponse.json(quotaRefusal(quota), { status: 402 });
   }
 
-  const res = await fetch(`${GW}/api/payment/create`, {
+  const res = await gatewayFetch(`${GW}/api/payment/create`, {
     method:  'POST',
     headers: {
       'Content-Type':    'application/json',

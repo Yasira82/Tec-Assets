@@ -13,6 +13,7 @@
 // through (a backend blip must not block a legitimate buy).
 
 import { APP_SOURCE } from '@/lib/app-source';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 export const FREE_ASSET_LIMIT = 5;
 
@@ -34,7 +35,7 @@ export async function fetchPlan(gateway: string, token: string, app?: string): P
   if (!gateway || !token) return 'FREE';
   const query = app ? `?app=${encodeURIComponent(app)}` : '';
   try {
-    const res = await fetch(`${gateway}/api/commerce/subscriptions/status${query}`, {
+    const res = await gatewayFetch(`${gateway}/api/commerce/subscriptions/status${query}`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       cache:   'no-store',
     });
@@ -58,7 +59,7 @@ export const fetchHubPlan = (gateway: string, token: string): Promise<PlanId> =>
 export async function countOwnedAssets(gateway: string, token: string, userId: string): Promise<number | null> {
   if (!gateway || !token || !userId) return null;
   try {
-    const res = await fetch(`${gateway}/api/assets/user/${encodeURIComponent(userId)}`, {
+    const res = await gatewayFetch(`${gateway}/api/assets/user/${encodeURIComponent(userId)}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         ...(process.env.INTERNAL_SECRET && { 'x-internal-key': process.env.INTERNAL_SECRET }),

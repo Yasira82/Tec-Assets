@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 interface RawPurchase {
   id:      string;
@@ -32,11 +33,11 @@ export const GET = createHandler({
 
     // ✅ جيب marketplace purchases + user assets في نفس الوقت
     const [purchasesRes, assetsRes] = await Promise.all([
-      fetch(
+      gatewayFetch(
         `${GATEWAY_URL}/api/assets/marketplace/user/${encodeURIComponent(ctx.userId)}/purchases`,
         { headers, cache: 'no-store' },
       ),
-      fetch(
+      gatewayFetch(
         `${GATEWAY_URL}/api/assets/user/${encodeURIComponent(ctx.userId)}`,
         { headers, cache: 'no-store' },
       ),

@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 interface RegisterBody {
   name?:      string;
@@ -34,7 +35,7 @@ export const POST = createHandler({
 
     // Record the uploaded file in storage — bookkeeping for the image, not the NFT.
     if (body.key) {
-      await fetch(`${GATEWAY_URL}/api/storage/files`, {
+      await gatewayFetch(`${GATEWAY_URL}/api/storage/files`, {
         method:  'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +51,7 @@ export const POST = createHandler({
       }).catch(() => {});
     }
 
-    const res = await fetch(
+    const res = await gatewayFetch(
       `${GATEWAY_URL}/api/assets/purchases/${encodeURIComponent(paymentId)}/claim`,
       {
         method:  'POST',

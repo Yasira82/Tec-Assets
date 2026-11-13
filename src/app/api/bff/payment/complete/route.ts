@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 const GW = process.env.API_GATEWAY_URL ?? '';
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const res = await fetch(`${GW}/api/payment/complete`, {
+  const res = await gatewayFetch(`${GW}/api/payment/complete`, {
     method:  'POST',
     headers: {
       'Content-Type':    'application/json',

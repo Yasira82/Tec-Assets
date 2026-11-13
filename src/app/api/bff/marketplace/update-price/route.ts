@@ -1,4 +1,5 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
+import { gatewayFetch } from '@/lib/gateway-fetch';
 
 export const PATCH = createHandler({
   requireAuth: true,
@@ -6,7 +7,7 @@ export const PATCH = createHandler({
     const token = req.cookies.get('tec_access_token')?.value ?? '';
     const body  = await req.json() as { listingId: string; price: number };
 
-    const res = await fetch(
+    const res = await gatewayFetch(
       `${GATEWAY_URL}/api/assets/marketplace/${body.listingId}/price`,
       {
         method: 'PATCH',
