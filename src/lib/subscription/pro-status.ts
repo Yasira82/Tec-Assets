@@ -32,35 +32,9 @@ const gwHeaders = (token: string) => ({
   ...(process.env.INTERNAL_SECRET && { 'x-internal-key': process.env.INTERNAL_SECRET }),
 });
 
-export interface ProState {
-  pro:              boolean;           // live entitlement (active + not expired + paid plan)
-  plan:             string;            // 'FREE' | 'PRO' | 'ENTERPRISE'
-  isExpired:        boolean;
-  daysRemaining:    number | null;     // whole days left in the period, if any
-  currentPeriodEnd: string | null;     // ISO, if any
-  /**
-   * True when this Pro is NOT this app's own purchase — the Founding gift that
-   * covers every app, or a Pro bought before the per-app split. There is nothing
-   * here to cancel, so <CancelProButton /> hides. Commerce reads it `false` for an
-   * admin's gift, so the admin can switch the gift off in one app to test it as
-   * FREE (tec-core-backend #365). Passed through as commerce says it, never guessed.
-   */
-  legacy:           boolean;
-  /** True for the every-app gift (the Founding Pioneers' Pro) — a card can say so. */
-  gift:             boolean;
-}
-
-const FREE: ProState = {
-  pro: false, plan: 'FREE', isExpired: false, daysRemaining: null, currentPeriodEnd: null, legacy: false, gift: false,
-};
-
-// Unwrap the commerce envelope to the subscription object. Nested is the contract
-// (`data.subscription`); a flat `data` / bare object is tolerated as a fallback so
-// a shape tweak degrades instead of throwing — but the nested read is what pins Pro.
-function unwrap(d: Record<string, unknown>): Record<string, unknown> {
-  const root = (d.data ?? d) as Record<string, unknown>;
-  return ((root.subscription ?? root) ?? {}) as Record<string, unknown>;
-}
+// The shape and the rule live in read-pro-state.ts (pure — screens use it too).
+export type { ProState } from './read-pro-state';
+import { readProState, FREE_STATE as FREE, type ProState } from './read-pro-state';
 
 // The caller's LIVE Pro entitlement IN THIS APP (`?app=` — each app's Pro is its
 // own, owner decision 2026-10-02; the Hub plan is separate) + renewal signal. Any failure → FREE (fail
@@ -72,26 +46,7 @@ export async function resolveProState(token: string): Promise<ProState> {
       headers: gwHeaders(token), cache: 'no-store',
     });
     if (!res.ok) return FREE;
-    const d = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    const s = unwrap(d);
-
-    const plan       = String(s.plan ?? s.tier ?? 'FREE').toUpperCase();
-    const paid       = plan !== '' && plan !== 'FREE';
-    const isExpired  = s.isExpired === true;
-    const end        = (s.current_period_end ?? s.currentPeriodEnd ?? s.expires_at) as string | undefined;
-    const endLive    = !end || new Date(String(end)).getTime() > Date.now();
-    const active     = (s.isActive === true || s.active === true || paid) && !isExpired && endLive;
-    const daysLeft   = s.daysRemaining;
-
-    return {
-      pro:              paid && active,
-      plan:             paid ? plan : 'FREE',
-      isExpired,
-      daysRemaining:    typeof daysLeft === 'number' ? daysLeft : null,
-      currentPeriodEnd: end ? String(end) : null,
-      legacy:           s.legacy === true,
-      gift:             s.gift === true,
-    };
+    return readProState(await res.json().catch(() => null));
   } catch { return FREE; }
 }
 

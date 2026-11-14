@@ -15,6 +15,7 @@ import { isHubNavigation } from '@/lib-client/pi/hub-entry';
 import { hubPaymentOrigin } from '@/lib/pi-network';
 import { APP_SOURCE } from '@/lib/app-source';
 import { CancelProButton } from '@/components/pro/CancelProButton';
+import { readProState } from '@/lib/subscription/read-pro-state';
 
 export const ASSETS_PRO = { id: 'assets_pro_monthly', name: 'Assets Pro (monthly)', price: 5 } as const;
 
@@ -41,20 +42,12 @@ export default function AssetsPro() {
 
   useEffect(() => {
     fetch('/api/bff/subscription', { credentials: 'include', cache: 'no-store' })
-      .then((r) => r.json()).catch(() => ({}))
-      .then((j: Record<string, unknown>) => {
-        const d = (j?.data ?? j ?? {}) as Record<string, unknown>;
-        if (typeof d.pro === 'boolean') {
-          setIsSubscribed(d.pro);
-          setDays(typeof d.daysRemaining === 'number' ? d.daysRemaining : null);
-          return;
-        }
-        const s    = ((d?.subscription ?? d) ?? {}) as Record<string, unknown>;
-        const end  = typeof s.current_period_end === 'string' ? new Date(s.current_period_end) : null;
-        const live = s.isActive !== false && !(s.isExpired === true || (end !== null && end.getTime() < Date.now()));
-        const plan = String(s.plan ?? '').toUpperCase();
-        setIsSubscribed(live && (plan === 'PRO' || plan === 'ENTERPRISE'));
-        setDays(typeof s.daysRemaining === 'number' ? s.daysRemaining : null);
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((j: unknown) => {
+        // One reading, fail-closed — the same as the server's (TEC-AUDIT-0044).
+        const st = readProState(j);
+        setIsSubscribed(st.pro);
+        setDays(st.daysRemaining);
       })
       .catch(() => {});
   }, []);
