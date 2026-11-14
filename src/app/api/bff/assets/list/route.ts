@@ -1,5 +1,6 @@
 import { createHandler, GATEWAY_URL, gatewayGet } from '@/lib/bff/createHandler';
 import { shownInAssets } from '@/lib/tradable';
+import { piAmount } from '@/lib/pi-amount';
 
 interface RawAsset {
   id:        string;
@@ -14,11 +15,12 @@ interface RawListing {
   id:      string;
   assetId: string;
   status:  string;
-  price:   number;
+  price:   number | string;   // a decimal string once the column is DECIMAL(20,8) (C-71 §3)
 }
 
 const estimateValue = (a: RawAsset, activeListing?: RawListing): number => {
-  if (activeListing?.price) return activeListing.price;
+  const listed = piAmount(activeListing?.price);
+  if (listed) return listed;
   const category = a.category?.toLowerCase();
   if (category === 'domain') {
     const name = a.slug.replace('.pi', '');
@@ -79,7 +81,7 @@ export const GET = createHandler({
         status:        a.status?.toLowerCase() ?? 'active',
         created_at:    a.createdAt,
         listing_id:    activeListing?.id    ?? null,
-        listing_price: activeListing?.price ?? null,
+        listing_price: piAmount(activeListing?.price),
         metadata:      a.metadata ?? {},
       };
     });

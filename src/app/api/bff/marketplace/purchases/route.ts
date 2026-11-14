@@ -1,9 +1,10 @@
 import { createHandler, GATEWAY_URL } from '@/lib/bff/createHandler';
 import { gatewayFetch } from '@/lib/gateway-fetch';
+import { piAmount } from '@/lib/pi-amount';
 
 interface RawPurchase {
   id:      string;
-  price:   number;
+  price:   number | string;   // a decimal string once the column is DECIMAL(20,8) (C-71 §3)
   soldAt?: string;
   asset: {
     slug:      string;
@@ -68,7 +69,7 @@ export const GET = createHandler({
 
     // ── دمج وترتيب بالتاريخ ────────────────────────────────
     const allHistory = [
-      ...marketplacePurchases.map(p => ({ ...p, isMint: false })),
+      ...marketplacePurchases.map(p => ({ ...p, price: piAmount(p.price), isMint: false })),
       ...nftMints,
     ].sort((a, b) =>
       new Date(b.soldAt ?? 0).getTime() - new Date(a.soldAt ?? 0).getTime(),

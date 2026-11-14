@@ -1,10 +1,11 @@
+import { piAmount } from '@/lib/pi-amount';
 import { createHandler, GATEWAY_URL, gatewayGet } from '@/lib/bff/createHandler';
 
 interface RawListing {
   id:           string;
   assetId:      string;
   sellerId:     string;
-  price:        number;
+  price:        number | string;   // a decimal string once the column is DECIMAL(20,8) (C-71 §3)
   currency:     string;
   status:       string;
   title?:       string;
@@ -45,7 +46,7 @@ export const GET = createHandler({
         id:          l.id,
         asset_id:    l.assetId,
         seller_id:   l.sellerId,
-        price:       l.price,
+        price:       piAmount(l.price),   // a decimal string from the service (C-71 §3) → a number here (ADR-009)
         currency:    l.currency    ?? 'PI',
         status:      l.status?.toLowerCase() ?? 'active',
         title:       l.title       ?? l.asset?.slug ?? 'Unknown Asset',
@@ -53,7 +54,9 @@ export const GET = createHandler({
         category:    l.asset?.category?.toLowerCase() ?? 'domain',
         created_at:  l.createdAt,
         metadata:    l.asset?.metadata ?? {},       // ✅ NFT images
-      }));
+      }))
+      // A listing with no readable price cannot be bought — it is not shown (never as 0π).
+      .filter((l: { price: number | null }) => l.price !== null);
 
     return { listings, total: listings.length };
   },
