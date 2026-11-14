@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify }                 from 'jose';
 import { gatewayFetch } from '@/lib/gateway-fetch';
 
+// The upload goes to object storage, not the gateway; it still needs a deadline,
+// or a stalled PUT holds the function until the platform kills it (TEC-AUDIT-0033).
+const UPLOAD_TIMEOUT_MS = 60_000;
+
 const GATEWAY_URL   = process.env.API_GATEWAY_URL ?? '';
 
 const R2_PUBLIC_URL = 'https://pub-fe60d4ae820b4c5cb91064081595e666.r2.dev';
@@ -76,6 +80,7 @@ export async function POST(req: NextRequest) {
 
   // Step 2: Upload to R2 server-side
   const r2Res = await fetch(uploadUrl, {
+      signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
     method:  'PUT',
     body:    buffer,
     headers: { 'Content-Type': mimeType },
