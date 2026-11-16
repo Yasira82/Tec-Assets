@@ -60,6 +60,10 @@ export default function HomePage() {
         <div style={{ fontSize: 9, color: '#4a4a5a', letterSpacing: 3, marginBottom: 32 }}>
           TEC ECOSYSTEM
         </div>
+        {/* What this app is, in the Hub registry's words (tec-app domains/_registry.ts valueProp). */}
+        <div style={{ fontSize: 13, color: '#9ca3af', margin: '-20px auto 28px', maxWidth: 320, lineHeight: 1.5 }}>
+          Own and manage your Pi-native assets — NFTs, domains and more — in one wallet.
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <div style={{
             width: 16, height: 16, borderRadius: '50%',
