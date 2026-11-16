@@ -6,6 +6,8 @@ import { NFTTraits }          from './NFTTraits';
 import { SimilarAssets }      from './SimilarAssets';
 import { MintAsNftButton }    from './MintAsNftButton';
 import { isSoldForPi }        from '@/lib/tradable';
+import { copyLink }           from '@/lib/copy-link';
+import { useTranslation }     from '@/lib/i18n';
 
 const assetColors: Record<string, { border: string; status: string }> = {
   nft:           { border: '#7b6bc840', status: '#b39ddb' },
@@ -22,15 +24,18 @@ const getCsrf = (): string => {
   return match ? match[1] : '';
 };
 
-const handleShare = async (assetName: string, price?: number | null) => {
+const handleShare = async (
+  assetName: string, price: number | null | undefined,
+  msgs: { linkCopied: string; linkCopyFailed: string },
+) => {
   const text = price
     ? `Check out "${assetName}" on TEC Assets — listed for ${price}π! 🎨`
     : `Check out "${assetName}" on TEC Assets! 🎨`;
   if (navigator.share) {
     await navigator.share({ title: assetName, text, url: window.location.href }).catch(() => {});
   } else {
-    await navigator.clipboard.writeText(`${text}\n${window.location.href}`).catch(() => {});
-    alert('Link copied!');
+    // "Copied" only when it was — this used to alert it after swallowing a clipboard refusal.
+    await copyLink(`${text}\n${window.location.href}`, msgs);
   }
 };
 
@@ -50,6 +55,7 @@ export function AssetPreviewModal({
   allAssets?:      Asset[];
   onRefresh?:      () => void;
 }) {
+  const { t } = useTranslation();
   const colors    = assetColors[asset.asset_type] ?? assetColors.default;
   const metadata  = (asset.metadata ?? {}) as Record<string, unknown>;
   const hasTraits = Object.keys(metadata).some(k => !['imageUrl', 'piPaymentId', 'name'].includes(k));
@@ -185,7 +191,7 @@ export function AssetPreviewModal({
               </div>
             </div>
             <button
-              onClick={() => handleShare(assetName, asset.listing_price)}
+              onClick={() => handleShare(assetName, asset.listing_price, t.common)}
               style={{
                 background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255,255,255,0.1)',
