@@ -17,7 +17,9 @@
 //
 // `vercel.app` is on the Public Suffix List, so no wildcard cookie could be set
 // on it even if one were wanted. The only correct cookie there is host-only.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+// The first use, as auth-service answers it (src/lib/sso-once.ts; sso-once.test.ts covers the rest).
+vi.mock('@/lib/sso-once', () => ({ firstUse: vi.fn(async () => 'first') }));
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 // The REAL function the route calls — not a copy of the rule written here. A
